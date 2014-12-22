@@ -5,6 +5,6 @@ from ncauth import views
 
 urlpatterns = patterns(
     '',
-    url(r'^auth/signup/$', views.SignupView.as_view(), name='ncauth_signup'),
-    url(r'^auth/signin/$', views.SigninView.as_view(), name='ncauth_signin'),
+    url(r'^signup/$', views.SignupView.as_view(), name='ncauth_signup'),
+    url(r'^signin/$', views.SigninView.as_view(), name='ncauth_signin'),
 )

@@ -18,11 +18,29 @@ if __name__ == '__main__':
             'django.contrib.sessions.middleware.SessionMiddleware',
             'django.contrib.auth.middleware.AuthenticationMiddleware'
         ),
+        REST_FRAMEWORK = {
+            'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+            'DEFAULT_AUTHENTICATION_CLASSES': (
+                'rest_framework.authentication.TokenAuthentication',
+                'rest_framework.authentication.SessionAuthentication',
+            ),
+            'DEFAULT_PERMISSION_CLASSES': (
+                'rest_framework.permissions.IsAuthenticated',
+            ),
+            'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+            'DEFAULT_RENDERER_CLASSES': (
+                'rest_framework.renderers.JSONRenderer',
+            ),
+            'PAGINATE_BY_PARAM': 'page_size',
+            'MAX_PAGINATE_BY': 100,
+            'PAGINATE_BY': 10
+        },
         ROOT_URLCONF='ncauth.urls',
         INSTALLED_APPS=('django.contrib.auth',
                         'django.contrib.contenttypes',
                         'django.contrib.sessions',
                         'django.contrib.admin',
+                        'rest_framework.authtoken',
                         'ncauth',))
 
     test_runner = DiscoverRunner(verbosity=1)
