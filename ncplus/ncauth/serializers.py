@@ -21,4 +21,13 @@ class SigninSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
 
-    # TODO
+    def validate(self, attrs):
+        self.user = authenticate(username=attrs['username'], password=attrs['password'])
+        if self.user is None:
+            raise serializers.ValidationError('User with such attributes does not exist')
+        if not self.user.is_active:
+            raise serializers.ValidationError('User with such attributes is not active')
+        return attrs
+
+    def restore_object(self, attrs, instance=None):
+        return self.user
