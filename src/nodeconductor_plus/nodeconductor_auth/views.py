@@ -15,8 +15,8 @@ from .models import AuthProfile
 
 
 nc_plus_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
-GOOGLE_SECRET = nc_plus_settings.get('GOOGLE_SECRET', '5ivAldGqEv3K5rKZL2QIUfme')
-FACEBOOK_SECRET = nc_plus_settings.get('FACEBOOK_SECRET', 'fdd9d7ed8cee4a97ff49d2209d3d3db6')
+GOOGLE_SECRET = nc_plus_settings['GOOGLE_SECRET']
+FACEBOOK_SECRET = nc_plus_settings['FACEBOOK_SECRET']
 
 
 def generate_password(length=10):

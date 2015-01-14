@@ -38,6 +38,6 @@ Add NODECONDUCTOR_PLUS dictionary to NodeConductor settings. It will contain set
 
 NodeConductorAuth
 ^^^^^^^^^^^^^^^^^
- * GOOGLE_SECRET - secret key of GooglePlus application
- * FACEBOOK_SECRET - secret key of Facebook application
+ * GOOGLE_SECRET - secret key of GooglePlus application (key from test application: 5ivAldGqEv3K5rKZL2QIUfme)
+ * FACEBOOK_SECRET - secret key of Facebook application (key from test application: fdd9d7ed8cee4a97ff49d2209d3d3db6)
 
