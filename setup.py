@@ -27,8 +27,8 @@ setup(
     url='http://nodeconductor.com',
     description='NodeConductor Plus is an extension of NodeConductor with extra features',
     long_description=open('README.rst').read(),
-    package_dir={'': 'ncplus'},
-    packages=find_packages('ncplus', exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    package_dir={'': 'src'},
+    packages=find_packages('src', exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=install_requires,
     zip_safe=False,
     extras_require={
