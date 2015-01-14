@@ -7,7 +7,7 @@ from django.conf import settings
 from .handlers import create_auth_profile
 
 
-class IaasConfig(AppConfig):
+class NodeConductorAuthConfig(AppConfig):
     name = 'nodeconductor_plus.nodeconductor_auth'
     verbose_name = "NodeConductorPlus Auth"
 
