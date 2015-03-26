@@ -53,11 +53,16 @@ class GoogleView(views.APIView):
 
         # Step 2. Retrieve information about the current user.
         r = requests.get(people_api_url, headers=headers)
-        profile = json.loads(r.text)
+        response_data = json.loads(r.text)
+
+        # Step 3. Check is response valid.
+        if 'error' in response_data:
+            return response.Response(
+                {'message': response_data['error']['message']}, status=response_data['error']['code'])
 
         # Step 3. Create a new user or get existing one.
         try:
-            profile = AuthProfile.objects.get(google=profile['sub'])
+            profile = AuthProfile.objects.get(google=response_data['sub'])
             token, _ = Token.objects.get_or_create(user=profile.user)
             return response.Response({'token': token.key}, status=status.HTTP_200_OK)
         except AuthProfile.DoesNotExist:
