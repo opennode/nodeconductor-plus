@@ -67,8 +67,8 @@ class GoogleView(views.APIView):
             return response.Response({'token': token.key}, status=status.HTTP_200_OK)
         except AuthProfile.DoesNotExist:
             user = get_user_model().objects.create_user(
-                username=generate_username(profile['name']), password=generate_password())
-            user.auth_profile.google = profile['sub']
+                username=generate_username(response_data['name']), password=generate_password())
+            user.auth_profile.google = response_data['sub']
             user.auth_profile.save()
             token, _ = Token.objects.get_or_create(user=user)
             return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
