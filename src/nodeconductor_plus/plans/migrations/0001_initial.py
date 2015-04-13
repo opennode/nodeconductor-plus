@@ -48,4 +48,8 @@ class Migration(migrations.Migration):
             },
             bases=(models.Model,),
         ),
+        migrations.AlterUniqueTogether(
+            name='planquota',
+            unique_together=set([('plan', 'name')]),
+        ),
     ]
