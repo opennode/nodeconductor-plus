@@ -13,22 +13,22 @@ class Command(BaseCommand):
             {
                 'name': 'Default',
                 'price': 9.99,
-                'quotas': (('nc_user_count', 2), ('nc_project_count', 2), ('nc_instance_count', 4),)
+                'quotas': (('nc_user_count', 2), ('nc_project_count', 2), ('nc_resource_count', 4),)
             },
             {
                 'name': 'Small',
                 'price': 19.99,
-                'quotas': (('nc_user_count', 10), ('nc_project_count', 10), ('nc_instance_count', 40),)
+                'quotas': (('nc_user_count', 10), ('nc_project_count', 10), ('nc_resource_count', 40),)
             },
             {
                 'name': 'Medium',
                 'price': 29.99,
-                'quotas': (('nc_user_count', 30), ('nc_project_count', 30), ('nc_instance_count', 100),)
+                'quotas': (('nc_user_count', 30), ('nc_project_count', 30), ('nc_resource_count', 100),)
             },
             {
                 'name': 'Large',
                 'price': 49.99,
-                'quotas': (('nc_user_count', 100), ('nc_project_count', 100), ('nc_instance_count', 1000),)
+                'quotas': (('nc_user_count', 100), ('nc_project_count', 100), ('nc_resource_count', 1000),)
             },
         ]
         for plan_data in plans_data:
