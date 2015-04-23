@@ -4,7 +4,7 @@ from django.apps import AppConfig
 from django.db.models import signals
 from django.conf import settings
 
-from .handlers import create_auth_profile
+from .handlers import create_auth_profile, create_user_first_customer_and_project
 
 
 class NodeConductorAuthConfig(AppConfig):
@@ -17,4 +17,10 @@ class NodeConductorAuthConfig(AppConfig):
             create_auth_profile,
             sender=settings.AUTH_USER_MODEL,
             dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_auth_profile',
+        )
+
+        signals.post_save.connect(
+            create_user_first_customer_and_project,
+            sender=settings.AUTH_USER_MODEL,
+            dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_user_first_customer_and_project',
         )
