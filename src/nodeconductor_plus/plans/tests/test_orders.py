@@ -58,7 +58,6 @@ class OrderCreateTest(test.APITransactionTestCase):
             'customer': structure_factories.CustomerFactory.get_url(self.customer),
             'plan': factories.PlanFactory.get_url(self.plan),
         }
-        print data
 
         self.client.force_authenticate(self.owner)
         response = self.client.post(factories.OrderFactory.get_list_url(), data=data)
