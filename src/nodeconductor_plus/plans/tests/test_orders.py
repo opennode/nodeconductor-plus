@@ -113,3 +113,18 @@ class OrderActionsTest(test.APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         reread_order = models.Order.objects.get(pk=self.order.pk)
         self.assertEqual(reread_order.state, models.Order.States.PROCESSING)
+
+    def test_not_processing_order_cannot_be_executed_with_enabled_dummy_mode(self):
+        if hasattr(settings, 'NODECONDUCTOR'):
+            settings.NODECONDUCTOR['PAYMENTS_DUMMY'] = True
+        else:
+            settings.NODECONDUCTOR = {'PAYMENTS_DUMMY': True}
+        self.order.state = models.Order.States.FAILED
+        self.order.save()
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(factories.OrderFactory.get_url(self.order, action='execute'))
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        reread_order = models.Order.objects.get(pk=self.order.pk)
+        self.assertEqual(reread_order.state, models.Order.States.FAILED)
