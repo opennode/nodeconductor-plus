@@ -4,7 +4,6 @@ from django_fsm import FSMField, transition
 
 from nodeconductor.core.models import UuidMixin
 from nodeconductor.structure import models as structure_models
-from .managers import OrderManager, CustomQuerySet
 
 
 @python_2_unicode_compatible
