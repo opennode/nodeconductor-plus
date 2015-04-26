@@ -1,9 +1,9 @@
-Authentication
-==============
+Plan management
+===============
 
 .. include:: plan.rst
 
-Backup management
-=================
+Order management
+================
 
 .. include:: order.rst
