@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models, transaction, IntegrityError
 from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import FSMField, transition
@@ -48,6 +49,7 @@ class Order(UuidMixin, models.Model):
     plan = models.ForeignKey(Plan, related_name='orders', null=True)
     plan_name = models.CharField(max_length=120)
     plan_price = models.DecimalField(max_digits=12, decimal_places=2)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     state = FSMField(
         default=States.PROCESSING, max_length=20, choices=States.CHOICES,
         help_text="WARNING! Should not be changed manually unless you really know what you are doing.")
@@ -71,6 +73,7 @@ class Order(UuidMixin, models.Model):
         with transaction.atomic():
             PlanCustomer.objects.create(plan=self.plan, customer=self.customer)
             self._set_completed()
+            self.save()
 
     def _pre_populate_customer_fields(self):
         if self.customer is None:

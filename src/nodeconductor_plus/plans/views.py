@@ -32,7 +32,14 @@ class OrderViewSet(mixins.CreateModelMixin,
                 customer__roles__role_type=structure_models.CustomerRole.OWNER)
         return queryset
 
-    @detail_route()
+    def perform_create(self, serializer):
+        customer = serializer.validated_data['customer']
+        if not customer.has_user(self.request.user) and not self.request.user.is_staff:
+            raise exceptions.PermissionDenied('You do not have permission to perform this action.')
+
+        super(OrderViewSet, self).perform_create(serializer)
+
+    @detail_route(methods=['post'])
     def execute(self, request, uuid):
         try:
             is_dummy_payments_enabled = settings.NODECONDUCTOR.get('PAYMENTS_DUMMY', False)
