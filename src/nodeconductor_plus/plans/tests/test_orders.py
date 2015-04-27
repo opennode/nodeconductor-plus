@@ -34,7 +34,7 @@ class OrderListTest(test.APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertItemsEqual([o['uuid'] for o in response.data], [o.uuid.hex for o in orders])
 
-    def test_owner_cannot_see_other_cusotmer_orders(self):
+    def test_owner_cannot_see_other_customer_orders(self):
         [factories.OrderFactory(plan=self.plan) for _ in range(3)]
 
         self.client.force_authenticate(self.owner)

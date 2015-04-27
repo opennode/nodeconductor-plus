@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models, transaction, IntegrityError
 from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import FSMField, transition
+from model_utils.models import TimeStampedModel
 
 from nodeconductor.core.models import UuidMixin
 from nodeconductor.structure import models as structure_models
@@ -30,7 +31,7 @@ class PlanCustomer(models.Model):
     customer = models.OneToOneField(structure_models.Customer, related_name='+')
 
 
-class Order(UuidMixin, models.Model):
+class Order(UuidMixin, TimeStampedModel):
     class States(object):
         PROCESSING = 'processing'
         FAILED = 'failed'

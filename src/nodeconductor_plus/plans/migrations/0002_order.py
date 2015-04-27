@@ -2,9 +2,11 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
+import model_utils.fields
+import django.utils.timezone
 from django.conf import settings
-import uuidfield.fields
 import django_fsm
+import uuidfield.fields
 
 
 class Migration(migrations.Migration):
@@ -20,6 +22,8 @@ class Migration(migrations.Migration):
             name='Order',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', model_utils.fields.AutoCreatedField(default=django.utils.timezone.now, verbose_name='created', editable=False)),
+                ('modified', model_utils.fields.AutoLastModifiedField(default=django.utils.timezone.now, verbose_name='modified', editable=False)),
                 ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
                 ('customer_name', models.CharField(max_length=150)),
                 ('plan_name', models.CharField(max_length=120)),
