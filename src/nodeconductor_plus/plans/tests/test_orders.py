@@ -1,7 +1,7 @@
-from django.conf import settings
+from django.test import override_settings
 from rest_framework import test, status
 
-import factories
+from . import factories
 from .. import models
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.tests import factories as structure_factories
@@ -87,12 +87,8 @@ class OrderActionsTest(test.APITransactionTestCase):
         self.customer.add_user(self.owner, structure_models.CustomerRole.OWNER)
         self.order = factories.OrderFactory(customer=self.customer)
 
+    @override_settings(NODECONDUCTOR={'PAYMENTS_DUMMY': True})
     def test_order_can_be_executed_manually_with_enabled_payments_dummy_mode(self):
-        if hasattr(settings, 'NODECONDUCTOR'):
-            settings.NODECONDUCTOR['PAYMENTS_DUMMY'] = True
-        else:
-            settings.NODECONDUCTOR = {'PAYMENTS_DUMMY': True}
-
         self.client.force_authenticate(self.owner)
         response = self.client.post(factories.OrderFactory.get_url(self.order, action='execute'))
 
@@ -101,12 +97,8 @@ class OrderActionsTest(test.APITransactionTestCase):
         self.assertEqual(reread_order.state, models.Order.States.COMPLETED)
         self.assertTrue(models.PlanCustomer.objects.filter(plan=self.order.plan, customer=self.customer).exists())
 
+    @override_settings(NODECONDUCTOR={'PAYMENTS_DUMMY': False})
     def test_order_cannot_be_executed_manually_with_disabled_payments_dummy_mode(self):
-        if hasattr(settings, 'NODECONDUCTOR'):
-            settings.NODECONDUCTOR['PAYMENTS_DUMMY'] = False
-        else:
-            settings.NODECONDUCTOR = {'PAYMENTS_DUMMY': False}
-
         self.client.force_authenticate(self.owner)
         response = self.client.post(factories.OrderFactory.get_url(self.order, action='execute'))
 
@@ -114,11 +106,8 @@ class OrderActionsTest(test.APITransactionTestCase):
         reread_order = models.Order.objects.get(pk=self.order.pk)
         self.assertEqual(reread_order.state, models.Order.States.PROCESSING)
 
+    @override_settings(NODECONDUCTOR={'PAYMENTS_DUMMY': True})
     def test_not_processing_order_cannot_be_executed_with_enabled_dummy_mode(self):
-        if hasattr(settings, 'NODECONDUCTOR'):
-            settings.NODECONDUCTOR['PAYMENTS_DUMMY'] = True
-        else:
-            settings.NODECONDUCTOR = {'PAYMENTS_DUMMY': True}
         self.order.state = models.Order.States.FAILED
         self.order.save()
 

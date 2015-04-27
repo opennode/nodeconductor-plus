@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-import models
+from . import models
 
 
 class PlanSerializer(serializers.HyperlinkedModelSerializer):

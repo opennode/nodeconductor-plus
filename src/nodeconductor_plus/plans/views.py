@@ -3,9 +3,8 @@ from django_fsm import TransitionNotAllowed
 from rest_framework import viewsets, permissions, mixins, exceptions, response, status
 from rest_framework.decorators import detail_route
 
+from . import models, serializers
 from nodeconductor.structure import models as structure_models
-import models
-import serializers
 
 
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
@@ -43,7 +42,7 @@ class OrderViewSet(mixins.CreateModelMixin,
     def execute(self, request, uuid):
         try:
             is_dummy_payments_enabled = settings.NODECONDUCTOR.get('PAYMENTS_DUMMY', False)
-        except KeyError:
+        except AttributeError:
             is_dummy_payments_enabled = False
 
         if not is_dummy_payments_enabled:
