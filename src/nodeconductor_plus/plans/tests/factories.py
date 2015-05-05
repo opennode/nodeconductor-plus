@@ -40,3 +40,23 @@ class PlanCustomerFactory(factory.DjangoModelFactory):
     @classmethod
     def get_list_url(cls):
         return 'http://testserver' + reverse('plan_customer-list')
+
+
+class OrderFactory(factory.DjangoModelFactory):
+    class Meta(object):
+        model = models.Order
+
+    plan = factory.SubFactory(PlanFactory)
+    customer = factory.SubFactory(structure_factories.CustomerFactory)
+    user = factory.SubFactory(structure_factories.UserFactory)
+
+    @classmethod
+    def get_url(self, order=None, action=None):
+        if order is None:
+            order = OrderFactory()
+        url = 'http://testserver' + reverse('order-detail', kwargs={'uuid': order.uuid})
+        return url if action is None else url + action + '/'
+
+    @classmethod
+    def get_list_url(cls):
+        return 'http://testserver' + reverse('order-list')

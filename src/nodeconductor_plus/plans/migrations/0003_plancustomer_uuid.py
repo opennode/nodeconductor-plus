@@ -8,7 +8,7 @@ import uuidfield.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('plans', '0001_initial'),
+        ('plans', '0002_order'),
     ]
 
     operations = [
