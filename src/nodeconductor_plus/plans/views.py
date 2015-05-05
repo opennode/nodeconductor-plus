@@ -1,6 +1,7 @@
 from django.conf import settings
+import django_filters
 from django_fsm import TransitionNotAllowed
-from rest_framework import viewsets, permissions, mixins, exceptions, response, status
+from rest_framework import viewsets, permissions, mixins, exceptions, response, status, filters
 from rest_framework.decorators import detail_route
 
 from . import models, serializers
@@ -14,12 +15,24 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
 
+class PlanCustomerFilter(django_filters.FilterSet):
+    customer = django_filters.CharFilter(
+        name='customer__uuid',
+        distinct=True,
+    )
+
+    class Meta(object):
+        model = models.PlanCustomer
+        fields = ['customer']
+
+
 class PlanCustomerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.PlanCustomer.objects.all()
     serializer_class = serializers.PlanCustomerSerializer
     lookup_field = 'uuid'
-    filter_backends = (structure_filters.GenericRoleFilter,)
+    filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
+    filter_class = PlanCustomerFilter
 
 
 class OrderViewSet(mixins.CreateModelMixin,
