@@ -26,7 +26,12 @@ class PlanQuota(models.Model):
         unique_together = (('plan', 'name'),)
 
 
-class PlanCustomer(models.Model):
+class PlanCustomer(UuidMixin, models.Model):
+    class Permissions(object):
+        customer_path = 'customer'
+        project_path = 'customer__projects'
+        project_group_path = 'customer__project_groups'
+
     plan = models.ForeignKey(Plan, related_name='plan_customers')
     customer = models.OneToOneField(structure_models.Customer, related_name='+')
 

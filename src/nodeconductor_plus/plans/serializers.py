@@ -18,6 +18,20 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
         return obj.quotas.values('name', 'value')
 
 
+class PlanCustomerSerializer(serializers.HyperlinkedModelSerializer):
+
+    plan = PlanSerializer()
+
+    class Meta:
+        model = models.PlanCustomer
+        fields = ('url', 'uuid', 'customer', 'plan')
+        view_name = 'plan_customer-detail'
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+            'customer': {'lookup_field': 'uuid'},
+        }
+
+
 class OrderSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
