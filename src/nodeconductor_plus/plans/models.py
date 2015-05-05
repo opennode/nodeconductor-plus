@@ -72,13 +72,7 @@ class Order(UuidMixin, TimeStampedModel):
             self._set_erred()
 
         with transaction.atomic():
-            try:
-                plan_customer = PlanCustomer.objects.get(customer=self.customer)
-            except PlanCustomer.DoesNotExist:
-                plan_customer = PlanCustomer(customer=self.customer)
-            plan_customer.plan = self.plan
-            plan_customer.save()
-
+            PlanCustomer.objects.update_or_create(customer=self.customer, defaults={'plan': self.plan})
             self._set_completed()
             self.save()
 
