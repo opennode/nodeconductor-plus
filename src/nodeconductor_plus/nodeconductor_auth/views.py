@@ -67,7 +67,10 @@ class GoogleView(views.APIView):
             return response.Response({'token': token.key}, status=status.HTTP_200_OK)
         except AuthProfile.DoesNotExist:
             user = get_user_model().objects.create_user(
-                username=generate_username(response_data['name']), password=generate_password())
+                username=generate_username(response_data['name']),
+                password=generate_password(),
+                full_name=response_data['name'],
+            )
             user.auth_profile.google = response_data['sub']
             user.auth_profile.save()
             token, _ = Token.objects.get_or_create(user=user)
@@ -105,7 +108,7 @@ class FacebookView(views.APIView):
             return response.Response({'token': token.key}, status=status.HTTP_200_OK)
         except AuthProfile.DoesNotExist:
             user = get_user_model().objects.create_user(
-                username=generate_username(profile['name']), password=generate_password())
+                username=generate_username(profile['name']), password=generate_password(), full_name=profile['name'])
             user.auth_profile.facebook = profile['id']
             user.auth_profile.save()
             token, _ = Token.objects.get_or_create(user=user)
