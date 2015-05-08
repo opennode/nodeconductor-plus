@@ -1,6 +1,6 @@
 from rest_framework import test, status
 
-import factories
+from . import factories
 from nodeconductor.structure.tests import factories as structure_factories
 
 
