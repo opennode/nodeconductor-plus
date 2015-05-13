@@ -47,13 +47,6 @@ NodeConductorAuth
 
 Plans
 ^^^^^
- * DEFAULT_PLAN - plan that will be added to all customers on creation(optional). Default value:
-
-  .. code:: python
-
-    {
-        'name': 'Default',
-        'price': 9.99,
-        'quotas': (('nc_user_count', 2), ('nc_project_count', 2), ('nc_resource_count', 4),)
-    }
+ * DEFAULT_PLAN - plan that will be added to all customers on creation(optional). Default value of default plan is
+   specified in plans.settings file.
 
