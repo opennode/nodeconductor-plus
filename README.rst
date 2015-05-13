@@ -21,12 +21,16 @@ Installation
     cd /path/to/ncplus/
     python setup.py install
 
- * Add NodeConductorPlus applications('nodeconductor_plus.nodeconductor_auth') to NodeConductor INSTALLED_APPS
+ * Add NodeConductorPlus applications('nodeconductor_plus.nodeconductor_auth' and 'nodeconductor_plus.plans') to
+   NodeConductor INSTALLED_APPS
  * Register NodeConductorAuth urls (add next line to server/urls.py urlpatterns):
 
   .. code:: python
 
+    plans_urls.register_in(router)
+    ...
     url(r'^api-auth/', include('nodeconductor_plus.nodeconductor_auth.urls')),
+
 
  * Install `django cors  <https://github.com/ottoyiu/django-cors-headers>`_ into NodeConductor virtual environment
  * Configure `django cors  <https://github.com/ottoyiu/django-cors-headers>`_
@@ -43,6 +47,13 @@ NodeConductorAuth
 
 Plans
 ^^^^^
-To enable plans application:
- * Add 'nodeconductor_plus.plans' to INSTALLED_APPS
- * Register plans URLs in main router
+ * DEFAULT_PLAN - plan that will be added to all customers on creation(optional). Default value:
+
+  .. code:: python
+
+    {
+        'name': 'Default',
+        'price': 9.99,
+        'quotas': (('nc_user_count', 2), ('nc_project_count', 2), ('nc_resource_count', 4),)
+    }
+
