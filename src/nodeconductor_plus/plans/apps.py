@@ -6,13 +6,6 @@ from django.db.models import signals
 from nodeconductor.structure import models as structure_models
 from . import handlers
 
-# This is plan from plans.settings
-DEFAULT_PLAN = {
-    'name': 'Default',
-    'price': 9.99,
-    'quotas': (('nc_user_count', 2), ('nc_project_count', 2), ('nc_resource_count', 4),)
-}
-
 
 class PlansConfig(AppConfig):
     name = 'nodeconductor_plus.plans'
