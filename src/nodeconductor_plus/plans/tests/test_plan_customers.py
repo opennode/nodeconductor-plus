@@ -1,6 +1,7 @@
 from rest_framework import test, status
 
 from . import factories
+from .. import models
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.tests import factories as structure_factories
 
@@ -25,7 +26,7 @@ class PlanCustomerListTest(test.APITransactionTestCase):
         self.plan = factories.PlanFactory()
 
     def test_customer_owner_can_see_his_customer_plan(self):
-        plan_customer = factories.PlanCustomerFactory(plan=self.plan, customer=self.customer)
+        plan_customer = models.PlanCustomer.objects.get(customer=self.customer)
 
         self.client.force_authenticate(self.owner)
         response = self.client.get(factories.PlanCustomerFactory.get_list_url())
@@ -34,7 +35,7 @@ class PlanCustomerListTest(test.APITransactionTestCase):
         self.assertIn(plan_customer.uuid.hex, [el['uuid'] for el in response.data])
 
     def test_project_admin_can_see_his_project_customer_plan(self):
-        plan_customer = factories.PlanCustomerFactory(plan=self.plan, customer=self.customer)
+        plan_customer = models.PlanCustomer.objects.get(customer=self.customer)
 
         self.client.force_authenticate(self.admin)
         response = self.client.get(factories.PlanCustomerFactory.get_list_url())
@@ -43,7 +44,7 @@ class PlanCustomerListTest(test.APITransactionTestCase):
         self.assertIn(plan_customer.uuid.hex, [el['uuid'] for el in response.data])
 
     def test_project_group_manager_can_see_his_project_group_customer_plan(self):
-        plan_customer = factories.PlanCustomerFactory(plan=self.plan, customer=self.customer)
+        plan_customer = models.PlanCustomer.objects.get(customer=self.customer)
 
         self.client.force_authenticate(self.group_manager)
         response = self.client.get(factories.PlanCustomerFactory.get_list_url())
@@ -52,7 +53,8 @@ class PlanCustomerListTest(test.APITransactionTestCase):
         self.assertIn(plan_customer.uuid.hex, [el['uuid'] for el in response.data])
 
     def test_customer_owner_can_not_see_plan_of_other_customers(self):
-        plan_customer = factories.PlanCustomerFactory(plan=self.plan)
+        other_customer = structure_factories.CustomerFactory()
+        plan_customer = models.PlanCustomer.objects.get(customer=other_customer)
 
         self.client.force_authenticate(self.owner)
         response = self.client.get(factories.PlanCustomerFactory.get_list_url())

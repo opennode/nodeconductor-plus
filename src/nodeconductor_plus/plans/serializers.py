@@ -45,6 +45,12 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
             'user': {'lookup_field': 'uuid'},
         }
 
+    def get_fields(self):
+        fields = super(OrderSerializer, self).get_fields()
+        fields['customer'].required = True
+        fields['plan'].required = True
+        return fields
+
     def create(self, validated_data):
         try:
             validated_data['user'] = self.context['request'].user

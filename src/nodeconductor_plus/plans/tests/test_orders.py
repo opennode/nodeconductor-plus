@@ -78,6 +78,28 @@ class OrderCreateTest(test.APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(models.Order.objects.filter(plan=self.plan, customer=other_customer).exists())
 
+    def test_order_cannot_be_created_without_customer(self):
+        data = {
+            'plan': factories.PlanFactory.get_url(self.plan),
+        }
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(factories.OrderFactory.get_list_url(), data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(models.Order.objects.filter(plan=self.plan, user=self.owner).exists())
+
+    def test_order_cannot_be_created_without_plan(self):
+        data = {
+            'customer': structure_factories.CustomerFactory.get_url(self.customer),
+        }
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(factories.OrderFactory.get_list_url(), data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(models.Order.objects.filter(customer=self.customer, user=self.owner).exists())
+
 
 class OrderActionsTest(test.APITransactionTestCase):
 
