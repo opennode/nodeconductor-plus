@@ -20,7 +20,7 @@ def connect_existed_cusotmers_with_default_plan(apps, schema_editor):
     PlanQuota = apps.get_model('plans', 'PlanQuota')
 
     default_plan, created = Plan.objects.get_or_create(
-        name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
+        uuid=uuid4().hex, name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
     if created:
         for quota_name, quota_value in DEFAULT_PLAN['quotas']:
             PlanQuota.objects.get_or_create(name=quota_name, value=quota_value, plan=default_plan)

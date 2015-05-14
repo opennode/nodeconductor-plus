@@ -16,3 +16,14 @@ def create_user_first_customer_and_project(sender, instance=None, created=False,
     customer.add_user(user, structure_models.CustomerRole.OWNER)
     project = structure_models.Project.objects.create(customer=customer, name='My First Project')
     project.add_user(user, structure_models.ProjectRole.ADMINISTRATOR)
+
+
+def update_user_first_customer_name_on_user_name_change(sender, instance=None, created=False, **kwargs):
+    if created:
+        return
+
+    if instance.full_name != instance._old_values['full_name']:
+        for customer in structure_models.Customer.objects.filter(name=instance._old_values['full_name']):
+            if customer.has_user(instance, structure_models.CustomerRole.OWNER):
+                customer.name = instance.full_name
+                customer.save()
