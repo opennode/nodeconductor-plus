@@ -23,5 +23,7 @@ def update_user_first_customer_name_on_user_name_change(sender, instance=None, c
         return
 
     if instance.full_name != instance._old_values['full_name']:
-        structure_models.Customer.objects.filter(
-            name=instance._old_values['full_name']).update(name=instance.full_name)
+        for customer in structure_models.Customer.objects.filter(name=instance._old_values['full_name']):
+            if customer.has_user(instance, structure_models.CustomerRole.OWNER):
+                customer.name = instance.full_name
+                customer.save()

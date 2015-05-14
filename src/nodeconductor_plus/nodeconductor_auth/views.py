@@ -63,7 +63,7 @@ class GoogleView(views.APIView):
         # Step 4. Create a new user or get existing one.
         try:
             profile = AuthProfile.objects.get(google=response_data['sub'])
-            token, _ = Token.objects.get_or_create(user=profile.user)
+            token = Token.objects.get(user=profile.user)
             if profile.user.full_name != response_data['name']:
                 profile.user.full_name = response_data['name']
                 profile.user.save()
@@ -76,7 +76,7 @@ class GoogleView(views.APIView):
             )
             user.auth_profile.google = response_data['sub']
             user.auth_profile.save()
-            token, _ = Token.objects.get_or_create(user=user)
+            token = Token.objects.get(user=user)
             return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
 
 
@@ -107,7 +107,7 @@ class FacebookView(views.APIView):
         # Step 3. Create a new user or get existing one.
         try:
             profile = AuthProfile.objects.get(facebook=response_data['id'])
-            token, _ = Token.objects.get_or_create(user=profile.user)
+            token = Token.objects.get(user=profile.user)
             if profile.user.full_name != response_data['name']:
                 profile.user.full_name = response_data['name']
                 profile.user.save()
@@ -120,5 +120,5 @@ class FacebookView(views.APIView):
             )
             user.auth_profile.facebook = response_data['id']
             user.auth_profile.save()
-            token, _ = Token.objects.get_or_create(user=user)
+            token = Token.objects.get(user=user)
             return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
