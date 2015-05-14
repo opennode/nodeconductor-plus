@@ -25,11 +25,9 @@ class NodeConductorAuthConfig(AppConfig):
             dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_user_first_customer_and_project',
         )
 
-        signals.pre_save.connect(
+        signals.post_save.connect(
             handlers.update_user_first_customer_name_on_user_name_change,
             sender=settings.AUTH_USER_MODEL,
             dispatch_uid=('nodeconductor_plus.nodeconductor_auth.handlers.'
                           'update_user_first_customer_name_on_user_name_change'),
         )
-
-

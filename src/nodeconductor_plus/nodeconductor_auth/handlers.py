@@ -1,5 +1,3 @@
-from django.contrib.auth import get_user_model
-
 from nodeconductor.structure import models as structure_models
 from .models import AuthProfile
 
@@ -21,10 +19,9 @@ def create_user_first_customer_and_project(sender, instance=None, created=False,
 
 
 def update_user_first_customer_name_on_user_name_change(sender, instance=None, created=False, **kwargs):
-    if instance.id is None:
+    if created:
         return
 
-    new_user = instance
-    old_user = get_user_model().objects.get(id=instance.id)
-    if new_user.full_name != old_user.full_name:
-        structure_models.Customer.objects.filter(name=old_user.full_name).update(name=new_user.full_name)
+    if instance.full_name != instance._old_values['full_name']:
+        structure_models.Customer.objects.filter(
+            name=instance._old_values['full_name']).update(name=instance.full_name)
