@@ -14,28 +14,28 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='DigitalOceanProjectLink',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('state', django_fsm.FSMIntegerField(default=1, choices=[(1, 'Sync Scheduled'), (2, 'Syncing'), (3, 'In Sync'), (4, 'Erred')])),
-                ('project', models.ForeignKey(to='structure.Project')),
-            ],
-            options={
-                'abstract': False,
-            },
-            bases=(models.Model,),
-        ),
-        migrations.CreateModel(
             name='DigitalOceanService',
             fields=[
                 ('service_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='structure.Service')),
                 ('auth_token', models.CharField(max_length=64)),
-                ('projects', models.ManyToManyField(related_name='services', through='digitalocean.DigitalOceanProjectLink', to='structure.Project')),
             ],
             options={
                 'abstract': False,
             },
             bases=('structure.service',),
+        ),
+        migrations.CreateModel(
+            name='DigitalOceanServiceProjectLink',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('state', django_fsm.FSMIntegerField(default=1, choices=[(1, 'Sync Scheduled'), (2, 'Syncing'), (3, 'In Sync'), (4, 'Erred')])),
+                ('project', models.ForeignKey(to='structure.Project')),
+                ('service', models.ForeignKey(to='digitalocean.DigitalOceanService')),
+            ],
+            options={
+                'abstract': False,
+            },
+            bases=(models.Model,),
         ),
         migrations.CreateModel(
             name='Image',
@@ -77,9 +77,9 @@ class Migration(migrations.Migration):
             preserve_default=True,
         ),
         migrations.AddField(
-            model_name='digitaloceanprojectlink',
-            name='service',
-            field=models.ForeignKey(to='digitalocean.DigitalOceanService'),
+            model_name='digitaloceanservice',
+            name='projects',
+            field=models.ManyToManyField(related_name='services', through='digitalocean.DigitalOceanServiceProjectLink', to='structure.Project'),
             preserve_default=True,
         ),
     ]

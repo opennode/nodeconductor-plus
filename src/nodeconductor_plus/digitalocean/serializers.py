@@ -8,11 +8,15 @@ from nodeconductor.structure import serializers as structure_serializers
 from . import models
 
 
-class ImageSerializer(serializers.ModelSerializer):
+class ImageSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta(object):
         model = models.Image
-        fields = ('uuid', 'name')
+        view_name = 'digitalocean-image-detail'
+        fields = ('url', 'uuid', 'name')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
 
 
 class ServiceSerializer(structure_serializers.PermissionFieldFilteringMixin,
@@ -20,11 +24,11 @@ class ServiceSerializer(structure_serializers.PermissionFieldFilteringMixin,
                         serializers.HyperlinkedModelSerializer):
     images = ImageSerializer(many=True, read_only=True)
     projects = structure_serializers.BasicProjectSerializer(many=True, read_only=True)
-    auth_token = serializers.CharField(write_only=True)
     customer_native_name = serializers.ReadOnlyField(source='customer.native_name')
 
     class Meta(object):
         model = models.DigitalOceanService
+        view_name = 'digitalocean-detail'
         fields = (
             'uuid',
             'url',
@@ -32,7 +36,7 @@ class ServiceSerializer(structure_serializers.PermissionFieldFilteringMixin,
             'customer', 'customer_name', 'customer_native_name',
             'projects', 'images', 'auth_token', 'dummy'
         )
-        readonly_fields = 'customer',
+        protected_fields = 'customer', 'auth_token'
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'customer': {'lookup_field': 'uuid'},
