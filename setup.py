@@ -15,7 +15,9 @@ tests_requires = [
 ]
 
 install_requires = [
+    # FIXME: update it after structure.Service goes to release
     'nodeconductor>=0.7.0',
+    'python-digitalocean>=1.5',
 ]
 
 
