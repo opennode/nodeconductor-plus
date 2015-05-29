@@ -1,47 +1,27 @@
 from __future__ import unicode_literals
 
 from rest_framework import (
-    viewsets, decorators, exceptions, permissions,
+    viewsets, decorators, permissions,
     filters, mixins, response, status)
 
 from nodeconductor.core import mixins as core_mixins
 from nodeconductor.core import models as core_models
 from nodeconductor.core import exceptions as core_exceptions
-from nodeconductor.core.models import SynchronizationStates
-from nodeconductor.structure.models import CustomerRole, VirtualMachineStates
-from nodeconductor.structure.tasks import sync_services
+from nodeconductor.iaas.models import VirtualMachineStates
 from nodeconductor.structure import filters as structure_filters
 
 from . import models, serializers
 
 
-class ServiceViewSet(core_mixins.UpdateOnlyStableMixin, viewsets.ModelViewSet):
+class ServiceViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
     queryset = models.DigitalOceanService.objects.all()
     serializer_class = serializers.ServiceSerializer
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
     filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
 
-    def _can_create_or_update_service(self, serializer):
-        customer = serializer.validated_data.get('customer') or serializer.instance.customer
-        if self.request.user.is_staff:
-            return True
-        if customer.has_user(self.request.user, CustomerRole.OWNER):
-            return True
 
-    def perform_create(self, serializer):
-        if not self._can_create_or_update_service(serializer):
-            raise exceptions.PermissionDenied()
-        service = serializer.save(state=SynchronizationStates.IN_SYNC)
-        sync_services.delay([service.uuid.hex])
-
-    def perform_update(self, serializer):
-        if not self._can_create_or_update_service(serializer):
-            raise exceptions.PermissionDenied()
-        super(ServiceViewSet, self).perform_update(serializer)
-
-
-class ResourceViewSet(viewsets.ModelViewSet):
+class ResourceViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
     queryset = models.Droplet.objects.all()
     serializer_class = serializers.ResourceSerializer
     lookup_field = 'uuid'
@@ -52,11 +32,6 @@ class ResourceViewSet(viewsets.ModelViewSet):
         if self.request.method == 'POST':
             return serializers.ResourceCreateSerializer
         return super(ResourceViewSet, self).get_serializer_class()
-
-    def get_serializer_context(self):
-        context = super(ResourceViewSet, self).get_serializer_context()
-        context['user'] = self.request.user
-        return context
 
     def initial(self, request, *args, **kwargs):
         if self.action in ('update', 'partial_update', 'destroy'):

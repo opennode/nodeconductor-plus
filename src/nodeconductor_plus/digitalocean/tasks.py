@@ -53,7 +53,7 @@ def restart(droplet_uuid, transition_entity=None):
 @shared_task
 def provision_droplet(droplet_uuid, **kwargs):
     droplet = Droplet.objects.get(uuid=droplet_uuid)
-    backend = droplet.get_backend(droplet)
+    backend = droplet.get_backend()
     backend.provision_droplet(droplet, **kwargs)
 
 

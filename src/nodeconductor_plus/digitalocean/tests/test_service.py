@@ -1,6 +1,5 @@
 from rest_framework import status, test
 
-from nodeconductor.core.models import SynchronizationStates
 from nodeconductor.structure.models import ProjectRole, CustomerRole, ProjectGroupRole
 from nodeconductor.structure.tests import factories as structure_factories
 
@@ -34,17 +33,15 @@ class ServicePermissionTest(test.APITransactionTestCase):
         }
 
         self.services = {
-            'owned': factories.DigitalOceanServiceFactory(
-                state=SynchronizationStates.IN_SYNC, customer=self.customers['owned']),
-            'admined': factories.DigitalOceanServiceFactory(
-                state=SynchronizationStates.IN_SYNC, customer=self.customers['has_admined_project']),
-            'managed': factories.DigitalOceanServiceFactory(
-                state=SynchronizationStates.IN_SYNC, customer=self.customers['has_managed_project']),
+            'owned': factories.DigitalOceanServiceFactory(customer=self.customers['owned']),
+            'admined': factories.DigitalOceanServiceFactory(customer=self.customers['has_admined_project']),
+            'managed': factories.DigitalOceanServiceFactory(customer=self.customers['has_managed_project']),
             'managed_by_group_manager': factories.DigitalOceanServiceFactory(
-                state=SynchronizationStates.IN_SYNC, customer=self.customers['has_managed_by_group_manager']),
+                customer=self.customers['has_managed_by_group_manager']),
             'not_in_project': factories.DigitalOceanServiceFactory(),
         }
 
+        self.settings = structure_factories.ServiceSettingsFactory()
         self.customers['owned'].add_user(self.users['customer_owner'], CustomerRole.OWNER)
 
         self.projects['admined'].add_user(self.users['project_admin'], ProjectRole.ADMINISTRATOR)
@@ -174,38 +171,11 @@ class ServicePermissionTest(test.APITransactionTestCase):
                 'User (role=' + user_role + ') should not see service (type=not_in_project)',
             )
 
-    # Nested objects filtration tests
-    def test_user_can_see_images_within_service(self):
-        for user_role, service_type in {
-            'project_admin': 'admined',
-            'project_manager': 'managed',
-            'group_manager': 'managed_by_group_manager',
-        }.iteritems():
-            self.client.force_authenticate(user=self.users[user_role])
-
-            seen_image = factories.ImageFactory(service=self.services[service_type])
-
-            response = self.client.get(factories.DigitalOceanServiceFactory.get_url(self.services[service_type]))
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertIn(
-                'images',
-                response.data,
-                'Cloud (type=' + service_type + ') must contain image list',
-            )
-
-            image_urls = set([image['url'] for image in response.data['images']])
-            self.assertIn(
-                factories.ImageFactory.get_url(seen_image),
-                image_urls,
-                'User (role=' + user_role + ') should see image',
-            )
-
     # Creation tests
     def test_user_can_add_service_to_the_customer_he_owns(self):
         self.client.force_authenticate(user=self.users['customer_owner'])
 
-        new_service = factories.DigitalOceanServiceFactory.build(customer=self.customers['owned'])
+        new_service = factories.DigitalOceanServiceFactory.build(settings=self.settings, customer=self.customers['owned'])
         response = self.client.post(factories.DigitalOceanServiceFactory.get_list_url(), self._get_valid_payload(new_service))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -216,7 +186,8 @@ class ServicePermissionTest(test.APITransactionTestCase):
                 }.items():
             self.client.force_authenticate(user=self.users[user_role])
 
-            new_service = factories.DigitalOceanServiceFactory.build(customer=self.customers[customer_type])
+            new_service = factories.DigitalOceanServiceFactory.build(
+                settings=self.settings, customer=self.customers[customer_type])
             response = self.client.post(factories.DigitalOceanServiceFactory.get_list_url(), self._get_valid_payload(new_service))
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -270,21 +241,10 @@ class ServicePermissionTest(test.APITransactionTestCase):
         reread_service = DigitalOceanService.objects.get(pk=service.pk)
         self.assertEqual(reread_service.name, 'new name')
 
-    def test_user_cannot_modify_in_unstable_state(self):
-        self.client.force_authenticate(user=self.users['customer_owner'])
-
-        for state in SynchronizationStates.UNSTABLE_STATES:
-            service = factories.DigitalOceanServiceFactory(state=state, customer=self.customers['owned'])
-            url = factories.DigitalOceanServiceFactory.get_url(service)
-
-            for method in ('PUT', 'PATCH', 'DELETE'):
-                func = getattr(self.client, method.lower())
-                response = func(url)
-                self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-
     def _get_valid_payload(self, resource):
         return {
             'name': resource.name,
+            'settings': structure_factories.ServiceSettingsFactory.get_url(resource.settings),
             'customer': structure_factories.CustomerFactory.get_url(resource.customer),
             'auth_token': resource.auth_token,
         }

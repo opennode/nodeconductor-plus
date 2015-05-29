@@ -12,6 +12,7 @@ class DigitalOceanServiceFactory(factory.DjangoModelFactory):
         model = models.DigitalOceanService
 
     name = factory.Sequence(lambda n: 'service%s' % n)
+    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
     customer = factory.SubFactory(structure_factories.CustomerFactory)
     auth_token = 'qwerty'
 
@@ -39,7 +40,7 @@ class RegionFactory(factory.DjangoModelFactory):
         model = models.Region
 
     name = factory.Sequence(lambda n: 'region%s' % n)
-    service = factory.SubFactory(DigitalOceanServiceFactory)
+    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
 
 
 class ImageFactory(factory.DjangoModelFactory):
@@ -47,7 +48,7 @@ class ImageFactory(factory.DjangoModelFactory):
         model = models.Image
 
     name = factory.Sequence(lambda n: 'image%s' % n)
-    service = factory.SubFactory(DigitalOceanServiceFactory)
+    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
     backend_id = factory.Sequence(lambda n: 'image-id%s' % n)
 
     @classmethod

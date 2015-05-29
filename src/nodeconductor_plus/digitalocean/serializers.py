@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 
 from nodeconductor.core import models as core_models
 from nodeconductor.core import serializers as core_serializers
@@ -22,23 +22,23 @@ class ImageSerializer(serializers.HyperlinkedModelSerializer):
         }
 
 
-class RegionSerializer(serializers.ModelSerializer):
+class RegionSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta(object):
         model = models.Region
         view_name = 'digitalocean-region-detail'
-        fields = ('uuid', 'name')
+        fields = ('url', 'uuid', 'name')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
 
 
-class SizeSerializer(serializers.ModelSerializer):
+class SizeSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta(object):
         model = models.Size
         view_name = 'digitalocean-size-detail'
-        fields = ('uuid', 'name')
+        fields = ('url', 'uuid', 'name')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
@@ -47,7 +47,7 @@ class SizeSerializer(serializers.ModelSerializer):
 class ServiceSerializer(structure_serializers.PermissionFieldFilteringMixin,
                         core_serializers.AugmentedSerializerMixin,
                         serializers.HyperlinkedModelSerializer):
-    images = ImageSerializer(many=True, read_only=True)
+
     projects = structure_serializers.BasicProjectSerializer(many=True, read_only=True)
     customer_native_name = serializers.ReadOnlyField(source='customer.native_name')
 
@@ -57,14 +57,14 @@ class ServiceSerializer(structure_serializers.PermissionFieldFilteringMixin,
         fields = (
             'uuid',
             'url',
-            'name',
+            'name', 'projects', 'settings',
             'customer', 'customer_name', 'customer_native_name',
-            'projects', 'images', 'auth_token', 'dummy'
         )
-        protected_fields = 'customer', 'auth_token'
+        protected_fields = 'customer', 'settings'
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'customer': {'lookup_field': 'uuid'},
+            'settings': {'lookup_field': 'uuid'},
         }
 
     def get_filtered_field_names(self):
@@ -73,16 +73,18 @@ class ServiceSerializer(structure_serializers.PermissionFieldFilteringMixin,
     def get_related_paths(self):
         return 'customer',
 
+    def validate(self, attrs):
+        user = self.context['user']
+        customer = attrs.get('customer') or self.instance.customer
+        if not user.is_staff and not customer.has_user(user, structure_models.CustomerRole.OWNER):
+            raise exceptions.PermissionDenied()
+
+        return attrs
+
 
 class ServiceProjectLinkSerializer(structure_serializers.PermissionFieldFilteringMixin,
                                    core_serializers.AugmentedSerializerMixin,
                                    serializers.HyperlinkedModelSerializer):
-
-    service = serializers.HyperlinkedRelatedField(
-        view_name='digitalocean-detail',
-        lookup_field='uuid',
-        queryset=models.DigitalOceanService.objects.all(),
-        required=True)
 
     state = MappedChoiceField(
         choices=[(v, k) for k, v in core_models.SynchronizationStates.CHOICES],
@@ -99,7 +101,7 @@ class ServiceProjectLinkSerializer(structure_serializers.PermissionFieldFilterin
         )
         view_name = 'digitalocean-spl-detail'
         extra_kwargs = {
-            'service': {'lookup_field': 'uuid'},
+            'service': {'lookup_field': 'uuid', 'view_name': 'digitalocean-detail'},
             'project': {'lookup_field': 'uuid'},
         }
 
@@ -154,7 +156,7 @@ class ResourceSerializer(core_serializers.AugmentedSerializerMixin,
             'service', 'service_name', 'service_uuid',
             'project', 'project_name', 'project_uuid',
             'customer', 'customer_name', 'customer_native_name', 'customer_abbreviation',
-            'cores', 'ram', 'disk', 'bandwidth',
+            'cores', 'ram', 'disk', 'transfer',
             'project_groups',
             'state',
             'created',
@@ -169,31 +171,31 @@ class ResourceSerializer(core_serializers.AugmentedSerializerMixin,
 class ResourceCreateSerializer(structure_serializers.PermissionFieldFilteringMixin,
                                serializers.HyperlinkedModelSerializer):
 
-    project = serializers.HyperlinkedRelatedField(
-        view_name='project-detail',
-        lookup_field='uuid',
-        queryset=structure_models.Project.objects.all(),
+    service_project_link = serializers.HyperlinkedRelatedField(
+        view_name='digitalocean-spl-detail',
+        queryset=models.DigitalOceanServiceProjectLink.objects.filter(
+            service__settings__type=structure_models.ServiceSettings.Types.DigitalOcean),
         required=True,
         write_only=True)
 
     region = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-region-detail',
         lookup_field='uuid',
-        queryset=models.Region.objects.all(),
+        queryset=models.Region.objects.all().select_related('settings'),
         required=True,
         write_only=True)
 
     image = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-image-detail',
         lookup_field='uuid',
-        queryset=models.Image.objects.all(),
+        queryset=models.Image.objects.all().select_related('settings'),
         required=True,
         write_only=True)
 
     size = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-size-detail',
         lookup_field='uuid',
-        queryset=models.Size.objects.all(),
+        queryset=models.Size.objects.all().select_related('settings'),
         required=True,
         write_only=True)
 
@@ -207,44 +209,28 @@ class ResourceCreateSerializer(structure_serializers.PermissionFieldFilteringMix
     class Meta(object):
         model = models.Droplet
         fields = (
-            'url', 'uuid',
-            'name', 'description',
-            'project', 'region', 'image', 'size',
-            'ssh_public_key', 'user_data',
+            'name', 'description', 'service_project_link',
+            'region', 'image', 'size', 'ssh_public_key', 'user_data',
         )
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
 
     def get_filtered_field_names(self):
-        return 'project', 'region', 'image', 'size'
+        return 'service_project_link',
 
     def get_fields(self):
-        user = self.context['view'].request.user
+        user = self.context['user']
         fields = super(ResourceCreateSerializer, self).get_fields()
         fields['ssh_public_key'].queryset = fields['ssh_public_key'].queryset.filter(user=user)
         return fields
 
-    def to_internal_value(self, data):
-        validated_data = super(ResourceCreateSerializer, self).to_internal_value(data)
-        try:
-            validated_data['service_project_link'] = \
-                models.DigitalOceanServiceProjectLink.objects.get(
-                    project=validated_data['project'],
-                    service=validated_data['image'].service)
-        except models.DigitalOceanServiceProjectLink.DoesNotExist:
-            raise serializers.ValidationError({"image": "Image is not within project's service."})
-
-        return validated_data
-
     def validate(self, attrs):
+        settings = attrs['service_project_link'].service.settings
         region = attrs['region']
         image = attrs['image']
         size = attrs['size']
 
-        if region.service != image.service or region.service != size.service:
+        if any([region.settings != settings, image.settings != settings, size.settings != settings]):
             raise serializers.ValidationError(
-                "Region, image and size must belong to the same service.")
+                "Region, image and size must belong to the same service settings.")
 
         if not image.regions.filter(pk=region.pk).exists():
             raise serializers.ValidationError("Image is missed in region %s" % region)
@@ -257,7 +243,7 @@ class ResourceCreateSerializer(structure_serializers.PermissionFieldFilteringMix
     def create(self, validated_data):
         data = validated_data.copy()
         # Remove `virtual` properties which ain't actually belong to the model
-        for prop in ('project', 'region', 'image', 'size', 'ssh_public_key'):
+        for prop in ('region', 'image', 'size', 'ssh_public_key'):
             if prop in data:
                 del data[prop]
 
