@@ -112,7 +112,7 @@ class ServiceProjectLinkSerializer(structure_serializers.PermissionFieldFilterin
         return 'project', 'service'
 
 
-class ResourceSerializer(core_serializers.AugmentedSerializerMixin,
+class DropletSerializer(core_serializers.AugmentedSerializerMixin,
                          serializers.HyperlinkedModelSerializer):
 
     state = serializers.ReadOnlyField(source='get_state_display')
@@ -162,14 +162,14 @@ class ResourceSerializer(core_serializers.AugmentedSerializerMixin,
             'created',
             'user_data',
         )
-        view_name = 'digitalocean-resource-detail'
+        view_name = 'digitalocean-droplet-detail'
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
 
 
-class ResourceCreateSerializer(structure_serializers.PermissionFieldFilteringMixin,
-                               serializers.HyperlinkedModelSerializer):
+class DropletCreateSerializer(structure_serializers.PermissionFieldFilteringMixin,
+                              serializers.HyperlinkedModelSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
@@ -218,7 +218,7 @@ class ResourceCreateSerializer(structure_serializers.PermissionFieldFilteringMix
 
     def get_fields(self):
         user = self.context['user']
-        fields = super(ResourceCreateSerializer, self).get_fields()
+        fields = super(DropletCreateSerializer, self).get_fields()
         fields['ssh_public_key'].queryset = fields['ssh_public_key'].queryset.filter(user=user)
         return fields
 
@@ -247,4 +247,4 @@ class ResourceCreateSerializer(structure_serializers.PermissionFieldFilteringMix
             if prop in data:
                 del data[prop]
 
-        return super(ResourceCreateSerializer, self).create(data)
+        return super(DropletCreateSerializer, self).create(data)

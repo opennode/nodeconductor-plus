@@ -21,17 +21,17 @@ class ServiceViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
     filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
 
 
-class ResourceViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
+class DropletViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
     queryset = models.Droplet.objects.all()
-    serializer_class = serializers.ResourceSerializer
+    serializer_class = serializers.DropletSerializer
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
     filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
-            return serializers.ResourceCreateSerializer
-        return super(ResourceViewSet, self).get_serializer_class()
+            return serializers.DropletCreateSerializer
+        return super(DropletViewSet, self).get_serializer_class()
 
     def initial(self, request, *args, **kwargs):
         if self.action in ('update', 'partial_update', 'destroy'):
@@ -46,7 +46,7 @@ class ResourceViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
                 raise core_exceptions.IncorrectStateException(
                     'Provisioning scheduled. Disabled modifications.')
 
-        super(ResourceViewSet, self).initial(request, *args, **kwargs)
+        super(DropletViewSet, self).initial(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         if serializer.validated_data['service_project_link'].state == core_models.SynchronizationStates.ERRED:
