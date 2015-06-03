@@ -114,7 +114,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             region=backend_region_id,
             image=backend_image_id,
             size_slug=backend_size_id,
-            ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else None)
+            ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
 
         backend_droplet.create()
 

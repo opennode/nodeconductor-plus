@@ -51,7 +51,7 @@ class DropletViewSet(BaseResourceViewSet):
     queryset = models.Droplet.objects.all()
     serializer_class = serializers.DropletSerializer
 
-    def perform_provision(self, resource, serializer):
+    def perform_provision(self, serializer):
         resource = serializer.save()
         backend = resource.get_backend()
         backend.provision(
