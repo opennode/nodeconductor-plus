@@ -69,44 +69,28 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         read_only=True,
         lookup_field='uuid')
 
-    class Meta(structure_serializers.BaseResourceSerializer.Meta):
-        model = models.Droplet
-        view_name = 'digitalocean-droplet-detail'
-        fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'cores', 'ram', 'disk', 'transfer',
-            'user_data',
-        )
-
-
-class DropletCreateSerializer(structure_serializers.PermissionFieldFilteringMixin,
-                              serializers.HyperlinkedModelSerializer):
-
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
         queryset=models.DigitalOceanServiceProjectLink.objects.filter(
             service__settings__type=structure_models.ServiceSettings.Types.DigitalOcean),
-        required=True,
         write_only=True)
 
     region = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-region-detail',
         lookup_field='uuid',
         queryset=models.Region.objects.all().select_related('settings'),
-        required=True,
         write_only=True)
 
     image = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-image-detail',
         lookup_field='uuid',
         queryset=models.Image.objects.all().select_related('settings'),
-        required=True,
         write_only=True)
 
     size = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-size-detail',
         lookup_field='uuid',
         queryset=models.Size.objects.all().select_related('settings'),
-        required=True,
         write_only=True)
 
     ssh_public_key = serializers.HyperlinkedRelatedField(
@@ -116,19 +100,19 @@ class DropletCreateSerializer(structure_serializers.PermissionFieldFilteringMixi
         required=False,
         write_only=True)
 
-    class Meta(object):
+    class Meta(structure_serializers.BaseResourceSerializer.Meta):
         model = models.Droplet
-        fields = (
-            'name', 'description', 'service_project_link',
-            'region', 'image', 'size', 'ssh_public_key', 'user_data',
+        view_name = 'digitalocean-droplet-detail'
+        read_only_fields = ('start_time', 'cores', 'ram', 'disk', 'transfer')
+        fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
+            'cores', 'ram', 'disk', 'transfer',
+            'region', 'image', 'size', 'ssh_public_key',
+            'user_data',
         )
-
-    def get_filtered_field_names(self):
-        return 'service_project_link',
 
     def get_fields(self):
         user = self.context['user']
-        fields = super(DropletCreateSerializer, self).get_fields()
+        fields = super(DropletSerializer, self).get_fields()
         fields['ssh_public_key'].queryset = fields['ssh_public_key'].queryset.filter(user=user)
         return fields
 
@@ -149,12 +133,3 @@ class DropletCreateSerializer(structure_serializers.PermissionFieldFilteringMixi
             raise serializers.ValidationError("Size is missed in region %s" % region)
 
         return attrs
-
-    def create(self, validated_data):
-        data = validated_data.copy()
-        # Remove `virtual` properties which ain't actually belong to the model
-        for prop in ('region', 'image', 'size', 'ssh_public_key'):
-            if prop in data:
-                del data[prop]
-
-        return super(DropletCreateSerializer, self).create(data)

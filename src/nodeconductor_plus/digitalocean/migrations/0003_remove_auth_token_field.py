@@ -24,6 +24,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='droplet',
+            name='backend_id',
+            field=models.CharField(max_length=255, blank=True),
+            preserve_default=True,
+        ),
+        migrations.AlterField(
+            model_name='droplet',
             name='service_project_link',
             field=models.ForeignKey(related_name='droplets', on_delete=django.db.models.deletion.PROTECT, to='digitalocean.DigitalOceanServiceProjectLink'),
             preserve_default=True,

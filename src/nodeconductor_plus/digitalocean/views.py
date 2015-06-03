@@ -49,11 +49,7 @@ class SizeViewSet(viewsets.ReadOnlyModelViewSet):
 
 class DropletViewSet(BaseResourceViewSet):
     queryset = models.Droplet.objects.all()
-
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return serializers.DropletCreateSerializer
-        return serializers.DropletSerializer
+    serializer_class = serializers.DropletSerializer
 
     def perform_provision(self, resource, serializer):
         resource = serializer.save()
