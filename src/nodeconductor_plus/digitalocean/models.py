@@ -7,9 +7,9 @@ from nodeconductor.iaas import models as iaas_models
 
 
 class DigitalOceanService(structure_models.Service):
-    auth_token = models.CharField(max_length=64)
     projects = models.ManyToManyField(
-        structure_models.Project, related_name='services', through='DigitalOceanServiceProjectLink')
+        structure_models.Project, related_name='digitalocean_services',
+        through='DigitalOceanServiceProjectLink')
 
 
 class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
@@ -35,7 +35,7 @@ class Size(structure_models.ServiceProperty):
 
 class Droplet(structure_models.Resource, iaas_models.VirtualMachineMixin):
     service_project_link = models.ForeignKey(
-        DigitalOceanServiceProjectLink, related_name='resources', on_delete=models.PROTECT)
+        DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
     cores = models.PositiveSmallIntegerField(default=0, help_text='Number of cores in a VM')
     ram = models.PositiveIntegerField(default=0, help_text='Memory size in MiB')

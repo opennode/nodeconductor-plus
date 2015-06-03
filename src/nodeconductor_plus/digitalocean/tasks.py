@@ -8,8 +8,7 @@ from .models import Droplet
 
 
 @shared_task(name='nodeconductor.digitalocean.provision', is_heavy_task=True)
-@transition(Droplet, 'begin_provisioning')
-def provision(droplet_uuid, transition_entity=None, **kwargs):
+def provision(droplet_uuid, **kwargs):
     provision_droplet.apply_async(
         args=(droplet_uuid,),
         kwargs=kwargs,
@@ -18,8 +17,7 @@ def provision(droplet_uuid, transition_entity=None, **kwargs):
 
 
 @shared_task(name='nodeconductor.digitalocean.start')
-@transition(Droplet, 'begin_starting')
-def start(droplet_uuid, transition_entity=None):
+def start(droplet_uuid):
     chain(
         begin_starting.s(droplet_uuid),
         wait_for_action_complete.s(droplet_uuid),
@@ -29,8 +27,7 @@ def start(droplet_uuid, transition_entity=None):
 
 
 @shared_task(name='nodeconductor.digitalocean.stop')
-@transition(Droplet, 'begin_stopping')
-def stop(droplet_uuid, transition_entity=None):
+def stop(droplet_uuid):
     chain(
         begin_stopping.s(droplet_uuid),
         wait_for_action_complete.s(droplet_uuid),
@@ -40,21 +37,13 @@ def stop(droplet_uuid, transition_entity=None):
 
 
 @shared_task(name='nodeconductor.digitalocean.restart')
-@transition(Droplet, 'begin_restarting')
-def restart(droplet_uuid, transition_entity=None):
+def restart(droplet_uuid):
     chain(
         begin_restarting.s(droplet_uuid),
         wait_for_action_complete.s(droplet_uuid),
     ).apply_async(
         link=set_online.si(droplet_uuid),
         link_error=set_erred.si(droplet_uuid))
-
-
-@shared_task
-def provision_droplet(droplet_uuid, **kwargs):
-    droplet = Droplet.objects.get(uuid=droplet_uuid)
-    backend = droplet.get_backend()
-    backend.provision_droplet(droplet, **kwargs)
 
 
 @shared_task(max_retries=300, default_retry_delay=3)
@@ -64,6 +53,14 @@ def wait_for_action_complete(action_id, droplet_uuid):
     backend = droplet.get_backend()
     action = backend.manager.get_action(action_id)
     return action.status == 'completed'
+
+
+@shared_task
+@transition(Droplet, 'begin_provisioning')
+def provision_droplet(droplet_uuid, transition_entity=None, **kwargs):
+    droplet = transition_entity
+    backend = droplet.get_backend()
+    backend.provision_droplet(droplet, **kwargs)
 
 
 @shared_task

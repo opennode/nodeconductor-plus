@@ -14,7 +14,6 @@ class DigitalOceanServiceFactory(factory.DjangoModelFactory):
     name = factory.Sequence(lambda n: 'service%s' % n)
     settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
     customer = factory.SubFactory(structure_factories.CustomerFactory)
-    auth_token = 'qwerty'
 
     @classmethod
     def get_url(self, service=None):

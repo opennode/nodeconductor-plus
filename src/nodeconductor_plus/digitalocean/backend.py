@@ -32,7 +32,7 @@ class DigitalOceanBaseBackend(ServiceBackend):
         self.manager = digitalocean.Manager(token=settings.token)
 
     def sync(self):
-        self.pull_resources()
+        self.pull_service_properties()
 
     def provision(self, droplet, region=None, image=None, size=None, ssh_key=None):
         send_task('digitalocean', 'provision')(
@@ -66,7 +66,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         https://developers.digitalocean.com/documentation/v2/
     """
 
-    def pull_resources(self):
+    def pull_service_properties(self):
         self.pull_regions()
         self.pull_images()
         self.pull_sizes()
