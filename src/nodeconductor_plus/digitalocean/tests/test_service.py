@@ -199,19 +199,6 @@ class ServicePermissionTest(test.APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     # Mutation tests
-    def test_user_cannot_change_auth_token_of_service_he_owns(self):
-        self.client.force_authenticate(user=self.users['customer_owner'])
-
-        service = self.services['owned']
-
-        payload = {'auth_token': 'abrakadabra'}
-        response = self.client.patch(factories.DigitalOceanServiceFactory.get_url(service),
-                                     data=payload)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        reread_service = DigitalOceanService.objects.get(pk=service.pk)
-        self.assertEqual(reread_service.auth_token, service.auth_token)
-
     def test_user_cannot_change_customer_of_service_he_owns(self):
         user = self.users['customer_owner']
 
@@ -246,5 +233,4 @@ class ServicePermissionTest(test.APITransactionTestCase):
             'name': resource.name,
             'settings': structure_factories.ServiceSettingsFactory.get_url(resource.settings),
             'customer': structure_factories.CustomerFactory.get_url(resource.customer),
-            'auth_token': resource.auth_token,
         }
