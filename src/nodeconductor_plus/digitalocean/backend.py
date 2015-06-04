@@ -126,7 +126,8 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         droplet.cores = backend_droplet.vcpus
         droplet.ram = backend_droplet.memory
         droplet.disk = self.gb2mb(backend_droplet.disk)
-        droplet.transfer = int(self.tb2mb(backend_droplet.transfer))
+        # XXX: disabled as library doesn't contain this attribute
+        # droplet.transfer = int(self.tb2mb(backend_droplet.transfer))
         droplet.save()
 
     def delete_droplet(self, droplet):
