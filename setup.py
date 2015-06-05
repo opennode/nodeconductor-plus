@@ -38,7 +38,7 @@ setup(
         'dev': dev_requires,
     },
     entry_points={
-        'applications': (
+        'nodeconductor_extensions': (
             'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.urls',
             'digitalocean = nodeconductor_plus.digitalocean.urls',
             'plans = nodeconductor_plus.plans.urls',
