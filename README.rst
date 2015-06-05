@@ -21,7 +21,7 @@ Installation
     cd /path/to/ncplus/
     python setup.py install
 
- * NodeConductorPlus applications will be automatically plugged in then.
+ * Add NodeConductorPlus applications to NodeConductor's INSTALLED_APPS
  * Install `django cors  <https://github.com/ottoyiu/django-cors-headers>`_ into NodeConductor virtual environment
  * Configure `django cors  <https://github.com/ottoyiu/django-cors-headers>`_
 
