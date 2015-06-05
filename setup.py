@@ -37,6 +37,13 @@ setup(
         'test': tests_requires,
         'dev': dev_requires,
     },
+    entry_points={
+        'applications': (
+            'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.urls',
+            'digitalocean = nodeconductor_plus.digitalocean.urls',
+            'plans = nodeconductor_plus.plans.urls',
+        ),
+    },
     tests_require=tests_requires,
     include_package_data=True,
     classifiers=[

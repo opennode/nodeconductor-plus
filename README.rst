@@ -21,17 +21,7 @@ Installation
     cd /path/to/ncplus/
     python setup.py install
 
- * Add NodeConductorPlus applications('nodeconductor_plus.nodeconductor_auth' and 'nodeconductor_plus.plans') to
-   NodeConductor INSTALLED_APPS
- * Register NodeConductorAuth urls (add next line to server/urls.py urlpatterns):
-
-  .. code:: python
-
-    plans_urls.register_in(router)
-    ...
-    url(r'^api-auth/', include('nodeconductor_plus.nodeconductor_auth.urls')),
-
-
+ * NodeConductorPlus applications will be automatically plugged in then.
  * Install `django cors  <https://github.com/ottoyiu/django-cors-headers>`_ into NodeConductor virtual environment
  * Configure `django cors  <https://github.com/ottoyiu/django-cors-headers>`_
 
@@ -44,12 +34,6 @@ NodeConductorAuth
 ^^^^^^^^^^^^^^^^^
  * GOOGLE_SECRET - secret key of GooglePlus application (key from test application: 5ivAldGqEv3K5rKZL2QIUfme)
  * FACEBOOK_SECRET - secret key of Facebook application (key from test application: fdd9d7ed8cee4a97ff49d2209d3d3db6)
-
-DigitalOcean
-^^^^^^^^^^^^
-To enable digitalocean application:
- * Add 'nodeconductor_plus.digitalocean' to INSTALLED_APPS
- * Register digitalocean URLs in main router
 
 Plans
 ^^^^^
