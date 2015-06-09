@@ -7,12 +7,16 @@ from django.db import transaction
 
 from nodeconductor.core.tasks import send_task
 from nodeconductor.core.models import SshPublicKey
-from nodeconductor.iaas.backend import ServiceBackend
+from nodeconductor.iaas.backend import ServiceBackend, ServiceBackendError
 
 from . import models
 
 
 logger = logging.getLogger(__name__)
+
+
+class OracleBackendError(ServiceBackendError):
+    pass
 
 
 class DigitalOceanBackend(object):
@@ -134,7 +138,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         backend_droplet = self.manager.get_droplet(droplet.backend_id)
         backend_droplet.destroy()
 
-    def add_ssh_key(self, ssh_key):
+    def add_ssh_key(self, ssh_key, service_project_link=None):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
             name=ssh_key.name,
@@ -143,10 +147,11 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         backend_ssh_key.create()
         return backend_ssh_key
 
-    def remove_ssh_key(self, ssh_key):
+    def remove_ssh_key(self, ssh_key, service_project_link=None):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
-            fingerprint=ssh_key.fingerprint)
+            fingerprint=ssh_key.fingerprint,
+            id=None)
 
         backend_ssh_key.load()
         backend_ssh_key.destroy()
