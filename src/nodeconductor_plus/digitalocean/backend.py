@@ -4,6 +4,7 @@ import logging
 import digitalocean
 
 from django.db import transaction
+from django.utils import six
 
 from nodeconductor.core.tasks import send_task
 from nodeconductor.core.models import SshPublicKey
@@ -15,7 +16,7 @@ from . import models
 logger = logging.getLogger(__name__)
 
 
-class OracleBackendError(ServiceBackendError):
+class DigitalOceanBackendError(ServiceBackendError):
     pass
 
 
@@ -39,6 +40,12 @@ class DigitalOceanBaseBackend(ServiceBackend):
         self.pull_service_properties()
 
     def provision(self, droplet, region=None, image=None, size=None, ssh_key=None):
+        droplet.cores = size.cores
+        droplet.ram = size.ram
+        droplet.disk = size.disk
+        droplet.transfer = size.transfer
+        droplet.save()
+
         send_task('digitalocean', 'provision')(
             droplet.uuid.hex,
             backend_region_id=region.backend_id,
@@ -47,7 +54,7 @@ class DigitalOceanBaseBackend(ServiceBackend):
             ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
 
     def destroy(self, droplet):
-        self.delete_droplet(droplet)
+        send_task('digitalocean', 'destroy')(droplet.uuid.hex)
 
     def start(self, droplet):
         droplet.schedule_starting()
@@ -64,6 +71,21 @@ class DigitalOceanBaseBackend(ServiceBackend):
         droplet.save()
         send_task('digitalocean', 'restart')(droplet.uuid.hex)
 
+    def add_ssh_key(self, ssh_key, service_project_link=None):
+        try:
+            self.push_ssh_key(ssh_key)
+        except digitalocean.DataReadError as e:
+            logger.exception('Failed to propagate ssh public key %s to backend', ssh_key.name)
+            six.reraise(DigitalOceanBackendError, e)
+
+    def remove_ssh_key(self, ssh_key, service_project_link=None):
+        try:
+            backend_ssh_key = self.pull_ssh_key(ssh_key)
+            backend_ssh_key.destroy()
+        except digitalocean.DataReadError as e:
+            logger.exception('Failed to delete ssh public key %s from backend', ssh_key.name)
+            six.reraise(DigitalOceanBackendError, e)
+
 
 class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     """ NodeConductor interface to Digital Ocean API.
@@ -76,14 +98,21 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         self.pull_sizes()
 
     def pull_regions(self):
+        cur_regions = self._get_current_properties(models.Region)
         for backend_region in self.manager.get_all_regions():
-            models.Region.objects.update_or_create(
-                settings=self.settings,
-                backend_id=backend_region.slug,
-                defaults={'name': backend_region.name})
+            if backend_region.available:
+                cur_regions.pop(backend_region.slug, None)
+                models.Region.objects.update_or_create(
+                    settings=self.settings,
+                    backend_id=backend_region.slug,
+                    defaults={'name': backend_region.name})
+
+        map(lambda i: i.delete(), cur_regions.values())
 
     def pull_images(self):
+        cur_images = self._get_current_properties(models.Image)
         for backend_image in self.manager.get_all_images():
+            cur_images.pop(str(backend_image.id), None)
             with transaction.atomic():
                 image, _ = models.Image.objects.update_or_create(
                     settings=self.settings,
@@ -91,8 +120,12 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
                     defaults={'name': backend_image.name})
                 self._update_entity_regions(image, backend_image)
 
+        map(lambda i: i.delete(), cur_images.values())
+
     def pull_sizes(self):
+        cur_sizes = self._get_current_properties(models.Size)
         for backend_size in self.manager.get_all_sizes():
+            cur_sizes.pop(backend_size.slug, None)
             with transaction.atomic():
                 size, _ = models.Size.objects.update_or_create(
                     settings=self.settings,
@@ -105,40 +138,44 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
                         'transfer': int(self.tb2mb(backend_size.transfer))})
                 self._update_entity_regions(size, backend_size)
 
+        map(lambda i: i.delete(), cur_sizes.values())
+
     def provision_droplet(self, droplet, backend_region_id=None, backend_image_id=None,
                           backend_size_id=None, ssh_key_uuid=None):
         if ssh_key_uuid:
-            ssh_key = SshPublicKey.object.get(uuid=ssh_key_uuid)
-            backend_ssh_key = self.add_ssh_key(ssh_key)
+            ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
+            backend_ssh_key = self.get_or_create_ssh_key(ssh_key)
 
-        backend_droplet = digitalocean.Droplet(
-            token=self.manager.token,
-            name=droplet.name,
-            user_data=droplet.user_data,
-            region=backend_region_id,
-            image=backend_image_id,
-            size_slug=backend_size_id,
-            ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
-
-        backend_droplet.create()
+        try:
+            backend_droplet = digitalocean.Droplet(
+                token=self.manager.token,
+                name=droplet.name,
+                user_data=droplet.user_data,
+                region=backend_region_id,
+                image=backend_image_id,
+                size_slug=backend_size_id,
+                ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
+            backend_droplet.create()
+        except digitalocean.DataReadError as e:
+            logger.exception('Failed to provision droplet %s', droplet.name)
+            six.reraise(DigitalOceanBackendError, e)
 
         if ssh_key_uuid:
             droplet.key_name = ssh_key.name
             droplet.key_fingerprint = ssh_key.fingerprint
 
         droplet.backend_id = backend_droplet.id
-        droplet.cores = backend_droplet.vcpus
-        droplet.ram = backend_droplet.memory
-        droplet.disk = self.gb2mb(backend_droplet.disk)
-        # XXX: disabled as library doesn't contain this attribute
-        # droplet.transfer = int(self.tb2mb(backend_droplet.transfer))
         droplet.save()
+        return backend_droplet
 
-    def delete_droplet(self, droplet):
-        backend_droplet = self.manager.get_droplet(droplet.backend_id)
-        backend_droplet.destroy()
+    def get_or_create_ssh_key(self, ssh_key):
+        try:
+            backend_ssh_key = self.push_ssh_key(ssh_key)
+        except digitalocean.DataReadError:
+            backend_ssh_key = self.pull_ssh_key(ssh_key)
+        return backend_ssh_key
 
-    def add_ssh_key(self, ssh_key, service_project_link=None):
+    def push_ssh_key(self, ssh_key):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
             name=ssh_key.name,
@@ -147,14 +184,17 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         backend_ssh_key.create()
         return backend_ssh_key
 
-    def remove_ssh_key(self, ssh_key, service_project_link=None):
+    def pull_ssh_key(self, ssh_key):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
             fingerprint=ssh_key.fingerprint,
             id=None)
 
         backend_ssh_key.load()
-        backend_ssh_key.destroy()
+        return backend_ssh_key
+
+    def _get_current_properties(self, model):
+        return {p.backend_id: p for p in model.objects.filter(settings=self.settings)}
 
     def _update_entity_regions(self, entity, backend_entity):
         all_regions = set(entity.regions.all())
