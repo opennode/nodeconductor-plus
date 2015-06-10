@@ -20,10 +20,15 @@ def provision(droplet_uuid, **kwargs):
 @shared_task(name='nodeconductor.digitalocean.destroy')
 def destroy(droplet_uuid):
     droplet = Droplet.objects.get(uuid=droplet_uuid)
-    backend = droplet.get_backend()
-    backend_droplet = backend.manager.get_droplet(droplet.backend_id)
-    backend_droplet.destroy()
-    droplet.delete()
+    try:
+        backend = droplet.get_backend()
+        backend_droplet = backend.manager.get_droplet(droplet.backend_id)
+        backend_droplet.destroy()
+    except:
+        set_erred(droplet_uuid)
+        raise
+    else:
+        droplet.delete()
 
 
 @shared_task(name='nodeconductor.digitalocean.start')
