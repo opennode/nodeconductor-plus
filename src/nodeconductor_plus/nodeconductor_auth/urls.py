@@ -5,6 +5,6 @@ import views
 
 urlpatterns = patterns(
     '',
-    url(r'^google/$', views.GoogleView.as_view(), name='auth_google'),
-    url(r'^facebook/$', views.FacebookView.as_view(), name='auth_facebook')
+    url(r'^api-auth/google/$', views.GoogleView.as_view(), name='auth_google'),
+    url(r'^api-auth/facebook/$', views.FacebookView.as_view(), name='auth_facebook')
 )
