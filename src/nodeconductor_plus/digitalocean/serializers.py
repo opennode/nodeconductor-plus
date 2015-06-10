@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+import re
+
 from rest_framework import serializers
 
 from nodeconductor.core import models as core_models
@@ -121,6 +123,10 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         region = attrs['region']
         image = attrs['image']
         size = attrs['size']
+
+        if not re.match(r'[a-z0-9-]+\.[a-z0-9]{1,4}', attrs['name']):
+            raise serializers.ValidationError(
+                "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
 
         if any([region.settings != settings, image.settings != settings, size.settings != settings]):
             raise serializers.ValidationError(

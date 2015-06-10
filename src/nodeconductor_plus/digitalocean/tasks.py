@@ -9,11 +9,26 @@ from .models import Droplet
 
 @shared_task(name='nodeconductor.digitalocean.provision', is_heavy_task=True)
 def provision(droplet_uuid, **kwargs):
-    provision_droplet.apply_async(
-        args=(droplet_uuid,),
-        kwargs=kwargs,
-        link=set_offline.si(droplet_uuid),
+    chain(
+        provision_droplet.s(droplet_uuid, **kwargs),
+        wait_for_action_complete.s(droplet_uuid),
+    ).apply_async(
+        link=set_online.si(droplet_uuid),
         link_error=set_erred.si(droplet_uuid))
+
+
+@shared_task(name='nodeconductor.digitalocean.destroy')
+def destroy(droplet_uuid):
+    droplet = Droplet.objects.get(uuid=droplet_uuid)
+    try:
+        backend = droplet.get_backend()
+        backend_droplet = backend.manager.get_droplet(droplet.backend_id)
+        backend_droplet.destroy()
+    except:
+        set_erred(droplet_uuid)
+        raise
+    else:
+        droplet.delete()
 
 
 @shared_task(name='nodeconductor.digitalocean.start')
@@ -60,7 +75,8 @@ def wait_for_action_complete(action_id, droplet_uuid):
 def provision_droplet(droplet_uuid, transition_entity=None, **kwargs):
     droplet = transition_entity
     backend = droplet.get_backend()
-    backend.provision_droplet(droplet, **kwargs)
+    backend_droplet = backend.provision_droplet(droplet, **kwargs)
+    return backend_droplet.action_ids[-1]
 
 
 @shared_task
@@ -70,7 +86,7 @@ def begin_starting(droplet_uuid, transition_entity=None):
     backend = droplet.get_backend()
     backend_droplet = backend.manager.get_droplet(droplet.backend_id)
     action = backend_droplet.power_on()
-    return action.id
+    return action['action']['id']
 
 
 @shared_task
@@ -80,7 +96,7 @@ def begin_stopping(droplet_uuid, transition_entity=None):
     backend = droplet.get_backend()
     backend_droplet = backend.manager.get_droplet(droplet.backend_id)
     action = backend_droplet.shutdown()
-    return action.id
+    return action['action']['id']
 
 
 @shared_task
@@ -90,7 +106,7 @@ def begin_restarting(droplet_uuid, transition_entity=None):
     backend = droplet.get_backend()
     backend_droplet = backend.manager.get_droplet(droplet.backend_id)
     action = backend_droplet.reboot()
-    return action.id
+    return action['action']['id']
 
 
 @shared_task
