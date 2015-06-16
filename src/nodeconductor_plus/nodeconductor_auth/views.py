@@ -36,7 +36,7 @@ class GoogleView(views.APIView):
     authentication_classes = []
 
     def post(self, request, format=None):
-        access_token_url = 'https://accounts.google.com/o/oauth2/token'
+        access_token_url = 'https://www.googleapis.com/oauth2/v3/token'
         people_api_url = 'https://www.googleapis.com/plus/v1/people/me/openIdConnect'
 
         payload = dict(client_id=request.DATA['clientId'],
