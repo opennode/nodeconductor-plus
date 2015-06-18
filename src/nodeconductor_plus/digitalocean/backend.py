@@ -43,7 +43,7 @@ class DigitalOceanBaseBackend(ServiceBackend):
         droplet.cores = size.cores
         droplet.ram = size.ram
         droplet.disk = size.disk
-        droplet.transfer = size.transfer
+        droplet.transfer = self.tb2mb(size.transfer)
         droplet.save()
 
         send_task('digitalocean', 'provision')(
@@ -103,7 +103,6 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             if backend_region.available:
                 cur_regions.pop(backend_region.slug, None)
                 models.Region.objects.update_or_create(
-                    settings=self.settings,
                     backend_id=backend_region.slug,
                     defaults={'name': backend_region.name})
 
@@ -115,7 +114,6 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             cur_images.pop(str(backend_image.id), None)
             with transaction.atomic():
                 image, _ = models.Image.objects.update_or_create(
-                    settings=self.settings,
                     backend_id=backend_image.id,
                     defaults={'name': backend_image.name})
                 self._update_entity_regions(image, backend_image)
@@ -128,7 +126,6 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             cur_sizes.pop(backend_size.slug, None)
             with transaction.atomic():
                 size, _ = models.Size.objects.update_or_create(
-                    settings=self.settings,
                     backend_id=backend_size.slug,
                     defaults={
                         'name': backend_size.slug,
@@ -167,6 +164,26 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         droplet.backend_id = backend_droplet.id
         droplet.save()
         return backend_droplet
+
+    def get_droplet(self, backend_droplet_id):
+        try:
+            return self.manager.get_droplet(backend_droplet_id)
+        except digitalocean.DataReadError as e:
+            six.reraise(DigitalOceanBackendError, e)
+
+    def get_droplets_for_import(self):
+        cur_droplets = models.Droplet.objects.all().values_list('backend_id', flat=True)
+        statuses = ('active', 'off')
+        return [{
+            'id': droplet.id,
+            'name': droplet.name,
+            'created_at': droplet.created_at,
+            'kernel': droplet.kernel['name'],
+            'cores': droplet.vcpus,
+            'ram': droplet.memory,
+            'disk': self.gb2mb(droplet.disk),
+        } for droplet in self.manager.get_all_droplets()
+            if str(droplet.id) not in cur_droplets and droplet.status in statuses]
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
