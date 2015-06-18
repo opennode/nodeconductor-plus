@@ -2,6 +2,8 @@ from __future__ import unicode_literals
 
 import re
 
+from django.utils import dateparse
+
 from rest_framework import serializers
 
 from nodeconductor.core import models as core_models
@@ -9,6 +11,7 @@ from nodeconductor.structure import models as structure_models
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
+from .backend import DigitalOceanBackendError
 
 
 class ImageSerializer(serializers.HyperlinkedModelSerializer):
@@ -73,8 +76,7 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
-        queryset=models.DigitalOceanServiceProjectLink.objects.filter(
-            service__settings__type=structure_models.ServiceSettings.Types.DigitalOcean),
+        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
         write_only=True)
 
     region = serializers.HyperlinkedRelatedField(
@@ -119,7 +121,6 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         return fields
 
     def validate(self, attrs):
-        settings = attrs['service_project_link'].service.settings
         region = attrs['region']
         image = attrs['image']
         size = attrs['size']
@@ -128,14 +129,61 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
             raise serializers.ValidationError(
                 "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
 
-        if any([region.settings != settings, image.settings != settings, size.settings != settings]):
-            raise serializers.ValidationError(
-                "Region, image and size must belong to the same service settings.")
-
         if not image.regions.filter(pk=region.pk).exists():
             raise serializers.ValidationError("Image is missed in region %s" % region)
 
         if not size.regions.filter(pk=region.pk).exists():
             raise serializers.ValidationError("Size is missed in region %s" % region)
+
+        return attrs
+
+
+class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixin,
+                              serializers.HyperlinkedModelSerializer):
+
+    backend_id = serializers.CharField(write_only=True)
+    service_project_link = serializers.HyperlinkedRelatedField(
+        view_name='digitalocean-spl-detail',
+        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
+        write_only=True)
+
+    state = serializers.ReadOnlyField(source='get_state_display')
+    created = serializers.DateTimeField(read_only=True)
+
+    class Meta(object):
+        model = models.Droplet
+        view_name = 'digitalocean-droplet-detail'
+        fields = (
+            'url', 'uuid', 'name', 'state', 'created',
+            'backend_id', 'service_project_link'
+        )
+        read_only_fields = ('name',)
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+    def get_filtered_field_names(self):
+        return 'service_project_link',
+
+    def validate(self, attrs):
+        backend = attrs['service_project_link'].get_backend()
+
+        if models.Droplet.objects.filter(backend_id=attrs['backend_id']).exists():
+            raise serializers.ValidationError("This droplet is already linked to NodeConductor")
+
+        try:
+            droplet = backend.get_droplet(attrs['backend_id'])
+        except DigitalOceanBackendError:
+            raise serializers.ValidationError("Can't find droplet with ID %s" % attrs['backend_id'])
+        else:
+            attrs['name'] = droplet.name
+            attrs['cores'] = droplet.vcpus
+            attrs['ram'] = droplet.memory
+            attrs['disk'] = backend.gb2mb(droplet.disk)
+            attrs['transfer'] = backend.tb2mb(droplet.size['transfer'])
+            attrs['name'] = droplet.name
+            attrs['created'] = dateparse.parse_datetime(droplet.created_at)
+            attrs['state'] = models.Droplet.States.ONLINE if droplet.status == 'active' else \
+                models.Droplet.States.OFFLINE
 
         return attrs
