@@ -115,7 +115,11 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             with transaction.atomic():
                 image, _ = models.Image.objects.update_or_create(
                     backend_id=backend_image.id,
-                    defaults={'name': backend_image.name})
+                    defaults={
+                        'name': backend_image.name,
+                        'type': backend_image.type,
+                        'distribution': backend_image.distribution,
+                    })
                 self._update_entity_regions(image, backend_image)
 
         map(lambda i: i.delete(), cur_images.values())

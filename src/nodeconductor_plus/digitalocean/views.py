@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+import django_filters
+
 from rest_framework import viewsets, permissions, decorators, response, status, filters, mixins
 
 from nodeconductor.core import mixins as core_mixins
@@ -51,9 +53,24 @@ class DigitalOceanServiceProjectLinkViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
 
+class ImageFilter(django_filters.FilterSet):
+
+    class Meta(object):
+        model = models.Image
+        fields = 'distribution', 'type'
+        order_by = (
+            'distribution',
+            'type',
+            # desc
+            '-distribution',
+            '-type',
+        )
+
+
 class ImageViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
+    filter_class = ImageFilter
     lookup_field = 'uuid'
 
 

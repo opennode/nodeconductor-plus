@@ -22,6 +22,8 @@ class Region(structure_models.ServiceProperty):
 
 class Image(structure_models.ServiceProperty):
     regions = models.ManyToManyField(Region)
+    distribution = models.CharField(max_length=100)
+    type = models.CharField(max_length=100)
 
 
 class Size(structure_models.ServiceProperty):
