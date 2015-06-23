@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 from nodeconductor.structure import models as structure_models
 from nodeconductor.iaas import models as iaas_models
@@ -20,10 +21,14 @@ class Region(structure_models.ServiceProperty):
     pass
 
 
+@python_2_unicode_compatible
 class Image(structure_models.ServiceProperty):
     regions = models.ManyToManyField(Region)
     distribution = models.CharField(max_length=100)
     type = models.CharField(max_length=100)
+
+    def __str__(self):
+        return '{} {} ({}) | {}'.format(self.name, self.distribution, self.type, self.settings)
 
 
 class Size(structure_models.ServiceProperty):
