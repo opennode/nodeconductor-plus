@@ -27,6 +27,12 @@ class Image(structure_models.ServiceProperty):
     distribution = models.CharField(max_length=100)
     type = models.CharField(max_length=100)
 
+    @property
+    def is_ssh_key_mandatory(self):
+        OPTIONAL = 'Fedora', 'CentOS', 'Debian'
+        MANDATORY = 'Ubuntu', 'FreeBSD', 'CoreOS'
+        return self.distribution in MANDATORY
+
     def __str__(self):
         return '{} {} ({}) | {}'.format(self.name, self.distribution, self.type, self.settings)
 

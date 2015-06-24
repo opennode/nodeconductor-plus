@@ -101,6 +101,7 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         view_name='sshpublickey-detail',
         lookup_field='uuid',
         queryset=core_models.SshPublicKey.objects.all(),
+        required=False,
         write_only=True)
 
     class Meta(structure_serializers.BaseResourceSerializer.Meta):
@@ -124,9 +125,12 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         image = attrs['image']
         size = attrs['size']
 
-        if not re.match(r'[a-z0-9.-]+', attrs['name']):
+        if not re.match(r'[a-zA-Z0-9.-]+', attrs['name']):
             raise serializers.ValidationError(
                 "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
+
+        if not attrs.get('ssh_public_key') and image.is_ssh_key_mandatory:
+            raise serializers.ValidationError("SSH public key is required for this image")
 
         if not image.regions.filter(pk=region.pk).exists():
             raise serializers.ValidationError("Image is missed in region %s" % region)
