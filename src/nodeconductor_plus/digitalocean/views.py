@@ -33,7 +33,8 @@ class DigitalOceanServiceViewSet(core_mixins.UserContextMixin, viewsets.ModelVie
             backend = self.get_object().get_backend()
             return response.Response(backend.get_droplets_for_import())
         else:
-            serializer = self.get_serializer_class()(data=request.data, context={'request': request})
+            serializer = self.get_serializer_class()(
+                data=request.data, context={'request': request, 'service': self.get_object()})
             if serializer.is_valid():
                 serializer.save()
                 return response.Response(serializer.data, status=status.HTTP_200_OK)

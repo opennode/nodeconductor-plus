@@ -145,10 +145,10 @@ class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixi
                               serializers.HyperlinkedModelSerializer):
 
     backend_id = serializers.CharField(write_only=True)
-    service_project_link = serializers.HyperlinkedRelatedField(
-        view_name='digitalocean-spl-detail',
-        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
-        write_only=True)
+    project = serializers.HyperlinkedRelatedField(
+        queryset=structure_models.Project.objects.all(),
+        view_name='project-detail',
+        lookup_field='uuid')
 
     state = serializers.ReadOnlyField(source='get_state_display')
     created = serializers.DateTimeField(read_only=True)
@@ -158,7 +158,7 @@ class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixi
         view_name = 'digitalocean-droplet-detail'
         fields = (
             'url', 'uuid', 'name', 'state', 'created',
-            'backend_id', 'service_project_link'
+            'backend_id', 'project'
         )
         read_only_fields = ('name',)
         extra_kwargs = {
@@ -166,18 +166,27 @@ class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixi
         }
 
     def get_filtered_field_names(self):
-        return 'service_project_link',
+        return 'project',
 
     def validate(self, attrs):
-        backend = attrs['service_project_link'].get_backend()
+        service = self.context['service']
+        backend = service.get_backend()
+
+        try:
+            attrs['service_project_link'] = models.DigitalOceanServiceProjectLink.objects.get(
+                service=service, project=attrs.pop('project'))
+        except models.DigitalOceanServiceProjectLink.DoesNotExist:
+            raise serializers.ValidationError({'project': "Unknown project or ServiceProjectLink missed."})
 
         if models.Droplet.objects.filter(backend_id=attrs['backend_id']).exists():
-            raise serializers.ValidationError("This droplet is already linked to NodeConductor")
+            raise serializers.ValidationError(
+                {'backend_id': "This droplet is already linked to NodeConductor"})
 
         try:
             droplet = backend.get_droplet(attrs['backend_id'])
         except DigitalOceanBackendError:
-            raise serializers.ValidationError("Can't find droplet with ID %s" % attrs['backend_id'])
+            raise serializers.ValidationError(
+                {'backend_id': "Can't find droplet with ID %s" % attrs['backend_id']})
         else:
             attrs['name'] = droplet.name
             attrs['cores'] = droplet.vcpus
