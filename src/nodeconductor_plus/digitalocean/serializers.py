@@ -148,7 +148,8 @@ class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixi
     project = serializers.HyperlinkedRelatedField(
         queryset=structure_models.Project.objects.all(),
         view_name='project-detail',
-        lookup_field='uuid')
+        lookup_field='uuid',
+        write_only=True)
 
     state = serializers.ReadOnlyField(source='get_state_display')
     created = serializers.DateTimeField(read_only=True)
