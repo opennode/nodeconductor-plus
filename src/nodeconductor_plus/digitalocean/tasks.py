@@ -18,8 +18,9 @@ def provision(droplet_uuid, **kwargs):
 
 
 @shared_task(name='nodeconductor.digitalocean.destroy')
-def destroy(droplet_uuid):
-    droplet = Droplet.objects.get(uuid=droplet_uuid)
+@transition(Droplet, 'begin_deleting')
+def destroy(droplet_uuid, transition_entity=None):
+    droplet = transition_entity
     try:
         backend = droplet.get_backend()
         backend_droplet = backend.manager.get_droplet(droplet.backend_id)
