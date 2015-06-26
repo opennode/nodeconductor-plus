@@ -54,6 +54,8 @@ class DigitalOceanBaseBackend(ServiceBackend):
             ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
 
     def destroy(self, droplet):
+        droplet.schedule_deletion()
+        droplet.save()
         send_task('digitalocean', 'destroy')(droplet.uuid.hex)
 
     def start(self, droplet):
