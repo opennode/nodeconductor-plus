@@ -2,21 +2,16 @@ from __future__ import unicode_literals
 
 import django_filters
 
-from rest_framework import viewsets, permissions, decorators, response, status, filters, mixins
+from rest_framework import viewsets, decorators, response, status
 
-from nodeconductor.core import mixins as core_mixins
-from nodeconductor.structure import filters as structure_filters
-from nodeconductor.structure.views import BaseResourceViewSet
+from nodeconductor.structure import views as structure_views
 
 from . import models, serializers
 
 
-class DigitalOceanServiceViewSet(core_mixins.UserContextMixin, viewsets.ModelViewSet):
+class DigitalOceanServiceViewSet(structure_views.BaseServiceViewSet):
     queryset = models.DigitalOceanService.objects.all()
     serializer_class = serializers.ServiceSerializer
-    lookup_field = 'uuid'
-    permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
-    filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
 
     def get_serializer_class(self):
         if self.action == 'link':
@@ -42,16 +37,9 @@ class DigitalOceanServiceViewSet(core_mixins.UserContextMixin, viewsets.ModelVie
                 return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class DigitalOceanServiceProjectLinkViewSet(mixins.CreateModelMixin,
-                                            mixins.RetrieveModelMixin,
-                                            mixins.DestroyModelMixin,
-                                            mixins.ListModelMixin,
-                                            viewsets.GenericViewSet):
-
+class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
     queryset = models.DigitalOceanServiceProjectLink.objects.all()
     serializer_class = serializers.ServiceProjectLinkSerializer
-    filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
-    permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
 
 class ImageFilter(django_filters.FilterSet):
@@ -87,7 +75,7 @@ class SizeViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'uuid'
 
 
-class DropletViewSet(BaseResourceViewSet):
+class DropletViewSet(structure_views.BaseResourceViewSet):
     queryset = models.Droplet.objects.all()
     serializer_class = serializers.DropletSerializer
 

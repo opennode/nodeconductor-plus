@@ -8,7 +8,7 @@ from django.utils import six
 
 from nodeconductor.core.tasks import send_task
 from nodeconductor.core.models import SshPublicKey
-from nodeconductor.iaas.backend import ServiceBackend, ServiceBackendError
+from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
 from . import models
 

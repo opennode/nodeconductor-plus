@@ -18,6 +18,7 @@ install_requires = [
     # FIXME: update it after structure.Service goes to release
     'nodeconductor>=0.7.0',
     'python-digitalocean>=1.5',
+    'python-gitlab>=0.9',
 ]
 
 
@@ -41,6 +42,7 @@ setup(
         'nodeconductor_extensions': (
             'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.urls',
             'digitalocean = nodeconductor_plus.digitalocean.urls',
+            'gitlab = nodeconductor_plus.gitlab.urls',
             'plans = nodeconductor_plus.plans.urls',
         ),
     },
