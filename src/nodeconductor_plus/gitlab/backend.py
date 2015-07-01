@@ -155,7 +155,9 @@ class GitLabRealBackend(GitLabBaseBackend):
             six.reraise(GitLabBackendError, e)
 
         project.backend_id = backend_project.id
-        project.path = backend_project.path_with_namespace
+        project.web_url = backend_project.web_url
+        project.ssh_url_to_repo = backend_project.ssh_url_to_repo
+        project.http_url_to_repo = backend_project.http_url_to_repo
         project.save()
 
         for user in self._get_project_users(project.service_project_link.project):
