@@ -38,9 +38,6 @@ class GitLabBaseBackend(ServiceBackend):
         if isinstance(resource, Group):
             send_task('gitlab', 'provision_group')(resource.uuid.hex, **kwargs)
         elif isinstance(resource, Project):
-            group = kwargs.pop('group', None)
-            if group:
-                kwargs['group_uuid'] = group.uuid.hex
             send_task('gitlab', 'provision_project')(resource.uuid.hex, **kwargs)
         else:
             raise NotImplementedError
@@ -133,20 +130,14 @@ class GitLabRealBackend(GitLabBaseBackend):
             self.add_group_member(group, user)
 
     def provision_project(self, project, **kwargs):
-        group_uuid = kwargs.pop('group_uuid', None)
-        if group_uuid:
+        if project.group:
             try:
-                group = Group.objects.get(uuid=group_uuid)
-            except Group.DoesNotExist:
-                logger.exception("Cannot find group %s", group_uuid)
-            else:
-                try:
-                    for namespace in self.Namespace.list(self.manager):
-                        if namespace.kind == 'group' and namespace.path == group.path:
-                            kwargs['namespace_id'] = namespace.id
-                except gitlab.GitlabError as e:
-                    logger.exception(
-                        "Cannot fetch namespaces list for Gitlab %s", self.settings.backend_url)
+                for namespace in self.Namespace.list(self.manager):
+                    if namespace.kind == 'group' and namespace.path == project.group.path:
+                        kwargs['namespace_id'] = namespace.id
+            except gitlab.GitlabError as e:
+                logger.exception(
+                    "Cannot fetch namespaces list for Gitlab %s", self.settings.backend_url)
 
         try:
             backend_project = self.manager.Project(kwargs)

@@ -69,6 +69,7 @@ class Migration(migrations.Migration):
                 ('backend_id', models.CharField(max_length=255, blank=True)),
                 ('start_time', models.DateTimeField(null=True, blank=True)),
                 ('state', django_fsm.FSMIntegerField(default=1, help_text='WARNING! Should not be changed manually unless you really know what you are doing.', max_length=1, choices=[(1, 'Provisioning Scheduled'), (2, 'Provisioning'), (3, 'Online'), (4, 'Offline'), (5, 'Starting Scheduled'), (6, 'Starting'), (7, 'Stopping Scheduled'), (8, 'Stopping'), (9, 'Erred'), (10, 'Deletion Scheduled'), (11, 'Deleting'), (13, 'Resizing Scheduled'), (14, 'Resizing'), (15, 'Restarting Scheduled'), (16, 'Restarting')])),
+                ('group', models.ForeignKey(related_name='projects', blank=True, to='gitlab.Group', null=True)),
                 ('web_url', models.CharField(max_length=255, blank=True)),
                 ('ssh_url_to_repo', models.CharField(max_length=255, blank=True)),
                 ('http_url_to_repo', models.CharField(max_length=255, blank=True)),

@@ -34,6 +34,16 @@ class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkS
         }
 
 
+class BasicProjectSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta(object):
+        model = models.Project
+        view_name = 'gitlab-project-detail'
+        fields = ('url', 'uuid', 'name', 'web_url')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+
 class GroupSerializer(structure_serializers.BaseResourceSerializer):
 
     service = serializers.HyperlinkedRelatedField(
@@ -47,13 +57,15 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
         queryset=models.GitLabServiceProjectLink.objects.all(),
         write_only=True)
 
+    projects = BasicProjectSerializer(many=True, read_only=True)
+
     path = serializers.CharField(max_length=100, write_only=True)
 
     class Meta(structure_serializers.BaseResourceSerializer.Meta):
         model = models.Group
         view_name = 'gitlab-group-detail'
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'path', 'web_url'
+            'path', 'web_url', 'projects'
         )
 
     def validate(self, attrs):
@@ -132,9 +144,3 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
                 {'group': "Group belongs to different service project link."})
 
         return attrs
-
-    def create(self, validated_data):
-        for field in ('wiki_enabled', 'issues_enabled', 'snippets_enabled', 'merge_requests_enabled', 'group'):
-            if field in validated_data:
-                del validated_data[field]
-        return super(ProjectSerializer, self).create(validated_data)
