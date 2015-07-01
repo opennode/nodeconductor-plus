@@ -1,4 +1,4 @@
-from nodeconductor_plus.digitalocean import views
+from . import views
 
 
 def register_in(router):
