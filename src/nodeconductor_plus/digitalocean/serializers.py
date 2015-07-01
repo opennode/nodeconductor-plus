@@ -50,6 +50,9 @@ class SizeSerializer(serializers.HyperlinkedModelSerializer):
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = structure_models.ServiceSettings.Types.DigitalOcean
+    SERVICE_ACCOUNT_FIELDS = {
+        'token': 'DigitalOcean personal access token',
+    }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.DigitalOceanService
