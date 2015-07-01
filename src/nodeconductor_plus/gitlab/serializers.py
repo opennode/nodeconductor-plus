@@ -53,7 +53,7 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
         model = models.Group
         view_name = 'gitlab-group-detail'
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'path', 'backend_url'
+            'path', 'web_url'
         )
 
     def validate(self, attrs):
@@ -101,8 +101,11 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
         model = models.Project
         view_name = 'gitlab-project-detail'
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'group', 'backend_url', 'http_url_to_repo', 'ssh_url_to_repo', 'visibility_level',
+            'group', 'web_url', 'http_url_to_repo', 'ssh_url_to_repo', 'visibility_level',
             'wiki_enabled', 'issues_enabled', 'snippets_enabled', 'merge_requests_enabled'
+        )
+        read_only_fields = structure_serializers.BaseResourceSerializer.Meta.read_only_fields + (
+            'web_url', 'http_url_to_repo', 'ssh_url_to_repo',
         )
 
     def get_fields(self):

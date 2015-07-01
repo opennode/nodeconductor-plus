@@ -1,5 +1,3 @@
-import urlparse
-
 from django.db import models
 
 from nodeconductor.structure import models as structure_models
@@ -15,12 +13,12 @@ class GitLabServiceProjectLink(structure_models.ServiceProjectLink):
 
 
 class Group(structure_models.Resource):
-    path = models.CharField(max_length=100)
+    path = models.CharField(max_length=100, blank=True)
     service_project_link = models.ForeignKey(
         GitLabServiceProjectLink, related_name='groups', on_delete=models.PROTECT)
 
     @property
-    def backend_url(self):
+    def web_url(self):
         return "{}groups/{}".format(
             self.service_project_link.service.settings.backend_url,
             self.path) if self.path else None
@@ -42,29 +40,6 @@ class Project(structure_models.Resource):
         GitLabServiceProjectLink, related_name='projects', on_delete=models.PROTECT)
 
     visibility_level = models.SmallIntegerField(choices=Levels.CHOICES)
-    path = models.CharField(max_length=100)
-
-    @property
-    def backend_url(self):
-        if not self.path:
-            return None
-        url = self.service_project_link.service.settings.backend_url
-        if not url.endswith('/'):
-            url += '/'
-        return "{}{}".format(url, self.path)
-
-    @property
-    def http_url_to_repo(self):
-        if not self.path:
-            return None
-        url = self.service_project_link.service.settings.backend_url
-        if not url.endswith('/'):
-            url += '/'
-        return "{}{}.git".format(url, self.path)
-
-    @property
-    def ssh_url_to_repo(self):
-        if not self.path:
-            return None
-        url_parts = urlparse.urlparse(self.service_project_link.service.settings.backend_url)
-        return "git@{}:{}.git".format(url_parts.hostname, self.path)
+    http_url_to_repo = models.CharField(max_length=255, blank=True)
+    ssh_url_to_repo = models.CharField(max_length=255, blank=True)
+    web_url = models.CharField(max_length=255, blank=True)
