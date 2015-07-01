@@ -1,3 +1,4 @@
+import urlparse
 
 from django.db import models
 
@@ -45,6 +46,25 @@ class Project(structure_models.Resource):
 
     @property
     def backend_url(self):
-        return "{}{}".format(
-            self.service_project_link.service.settings.backend_url,
-            self.path) if self.path else None
+        if not self.path:
+            return None
+        url = self.service_project_link.service.settings.backend_url
+        if not url.endswith('/'):
+            url += '/'
+        return "{}{}".format(url, self.path)
+
+    @property
+    def http_url_to_repo(self):
+        if not self.path:
+            return None
+        url = self.service_project_link.service.settings.backend_url
+        if not url.endswith('/'):
+            url += '/'
+        return "{}{}.git".format(url, self.path)
+
+    @property
+    def ssh_url_to_repo(self):
+        if not self.path:
+            return None
+        url_parts = urlparse.urlparse(self.service_project_link.service.settings.backend_url)
+        return "git@{}:{}.git".format(url_parts.hostname, self.path)

@@ -12,6 +12,12 @@ from . import models
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = structure_models.ServiceSettings.Types.GitLab
+    SERVICE_ACCOUNT_FIELDS = {
+        'backend_url': 'GitLab host (e.g. http://git.example.com/)',
+        'username': 'Username or Email',
+        'password': '',
+        'token': 'Private token (will be used instead of username/password if supplied)',
+    }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.GitLabService
@@ -95,7 +101,7 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
         model = models.Project
         view_name = 'gitlab-project-detail'
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'group', 'backend_url', 'visibility_level',
+            'group', 'backend_url', 'http_url_to_repo', 'ssh_url_to_repo', 'visibility_level',
             'wiki_enabled', 'issues_enabled', 'snippets_enabled', 'merge_requests_enabled'
         )
 
