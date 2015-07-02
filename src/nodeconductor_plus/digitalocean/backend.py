@@ -168,6 +168,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             droplet.key_fingerprint = ssh_key.fingerprint
 
         droplet.backend_id = backend_droplet.id
+        droplet.ip_address = backend_droplet.ip_address
         droplet.save()
         return backend_droplet
 

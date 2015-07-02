@@ -50,6 +50,7 @@ class Droplet(structure_models.Resource, iaas_models.VirtualMachineMixin):
     service_project_link = models.ForeignKey(
         DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
+    ip_address = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
     cores = models.PositiveSmallIntegerField(default=0, help_text='Number of cores in a VM')
     ram = models.PositiveIntegerField(default=0, help_text='Memory size in MiB')
     disk = models.PositiveIntegerField(default=0, help_text='Disk size in MiB')
