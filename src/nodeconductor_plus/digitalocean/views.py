@@ -75,9 +75,18 @@ class SizeViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'uuid'
 
 
+class DropletFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_type='icontains')
+
+    class Meta(object):
+        model = models.Droplet
+        fields = ('name',)
+
+
 class DropletViewSet(structure_views.BaseResourceViewSet):
     queryset = models.Droplet.objects.all()
     serializer_class = serializers.DropletSerializer
+    filter_class = DropletFilter
 
     def perform_provision(self, serializer):
         resource = serializer.save()

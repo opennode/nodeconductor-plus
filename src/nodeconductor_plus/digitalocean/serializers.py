@@ -7,6 +7,7 @@ from django.utils import dateparse
 from rest_framework import serializers
 
 from nodeconductor.core import models as core_models
+from nodeconductor.core import serializers as core_serializers
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure import serializers as structure_serializers
 
@@ -107,12 +108,14 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         required=False,
         write_only=True)
 
+    external_ips = serializers.SerializerMethodField()
+
     class Meta(structure_serializers.BaseResourceSerializer.Meta):
         model = models.Droplet
         view_name = 'digitalocean-droplet-detail'
         read_only_fields = ('start_time', 'cores', 'ram', 'disk', 'transfer')
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'cores', 'ram', 'disk', 'transfer',
+            'cores', 'ram', 'disk', 'transfer', 'external_ips',
             'region', 'image', 'size', 'ssh_public_key',
             'user_data',
         )
@@ -122,6 +125,9 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         fields = super(DropletSerializer, self).get_fields()
         fields['ssh_public_key'].queryset = fields['ssh_public_key'].queryset.filter(user=user)
         return fields
+
+    def get_external_ips(self, obj):
+        return [obj.ip_address]
 
     def validate(self, attrs):
         region = attrs['region']
@@ -197,6 +203,7 @@ class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixi
             attrs['ram'] = droplet.memory
             attrs['disk'] = backend.gb2mb(droplet.disk)
             attrs['transfer'] = backend.tb2mb(droplet.size['transfer'])
+            attrs['ip_address'] = droplet.ip_address
             attrs['name'] = droplet.name
             attrs['created'] = dateparse.parse_datetime(droplet.created_at)
             attrs['state'] = models.Droplet.States.ONLINE if droplet.status == 'active' else \
