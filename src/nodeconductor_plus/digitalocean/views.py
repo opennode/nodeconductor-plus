@@ -77,10 +77,13 @@ class SizeViewSet(viewsets.ReadOnlyModelViewSet):
 
 class DropletFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(lookup_type='icontains')
+    service_uuid = django_filters.CharFilter(
+        name='service_project_link__service__uuid',
+    )
 
     class Meta(object):
         model = models.Droplet
-        fields = ('name',)
+        fields = ('name', 'service_uuid')
 
 
 class DropletViewSet(structure_views.BaseResourceViewSet):
