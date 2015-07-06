@@ -127,7 +127,7 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         return fields
 
     def get_external_ips(self, obj):
-        return [obj.ip_address]
+        return [obj.ip_address] if obj.ip_address else []
 
     def validate(self, attrs):
         region = attrs['region']
