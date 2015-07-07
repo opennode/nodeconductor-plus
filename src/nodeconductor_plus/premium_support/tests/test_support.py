@@ -1,4 +1,3 @@
-import logging
 from rest_framework import status, test
 
 from nodeconductor.structure.tests import factories as structure_factories
@@ -90,6 +89,14 @@ class ContractCreationTest(test.APITransactionTestCase):
         response = self.create_contract()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
+    def test_other_user_can_not_see_contracts_for_project_he_is_not_owner_of(self):
+        self.client.force_authenticate(self.owner)
+        self.create_contract()
+
+        self.client.force_authenticate(self.other_user)
+        response = self.client.get(support_factories.ContractFactory.get_list_url())
+        self.assertEqual(0, len(response.data))
+
     def create_contract(self):
         data = {
             'plan': support_factories.PlanFactory.get_url(self.plan),
@@ -101,6 +108,7 @@ class ContractCreationTest(test.APITransactionTestCase):
 class ContractStateTransitionTest(test.APITransactionTestCase):
 
     def setUp(self):
+        self.other_user = structure_factories.UserFactory()
         self.staff = structure_factories.UserFactory(is_staff=True)
         self.owner = structure_factories.UserFactory()
         self.project = structure_factories.ProjectFactory()
@@ -108,7 +116,7 @@ class ContractStateTransitionTest(test.APITransactionTestCase):
 
         self.plan = support_factories.PlanFactory()
 
-    def test_owner_can_cancel_contract_in_requested_or_approved_state(self):
+    def test_user_can_cancel_contract_in_requested_or_approved_state(self):
         for state in (support_models.Contract.States.REQUESTED, support_models.Contract.States.APPROVED):
             contract = support_factories.ContractFactory(
                 state=state,
@@ -121,3 +129,13 @@ class ContractStateTransitionTest(test.APITransactionTestCase):
             response = self.client.post(support_factories.ContractFactory.get_url(contract, action='cancel'))
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_other_user_can_not_modify_contract(self):
+        contract = support_factories.ContractFactory(
+            state=support_models.Contract.States.REQUESTED,
+            plan=self.plan,
+            project=self.project,
+            user=self.owner
+        )
+        self.client.force_authenticate(self.other_user)
+        response = self.client.post(support_factories.ContractFactory.get_url(contract, action='cancel'))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
