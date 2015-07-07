@@ -115,6 +115,12 @@ class ContractStateTransitionTest(test.APITransactionTestCase):
         self.project.customer.add_user(self.owner, structure_models.CustomerRole.OWNER)
 
         self.plan = support_factories.PlanFactory()
+        self.contract = support_factories.ContractFactory(
+            state=support_models.Contract.States.REQUESTED,
+            plan=self.plan,
+            project=self.project,
+            user=self.owner
+        )
 
     def test_user_can_cancel_contract_in_requested_or_approved_state(self):
         for state in (support_models.Contract.States.REQUESTED, support_models.Contract.States.APPROVED):
@@ -130,12 +136,18 @@ class ContractStateTransitionTest(test.APITransactionTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_other_user_can_not_modify_contract(self):
-        contract = support_factories.ContractFactory(
-            state=support_models.Contract.States.REQUESTED,
-            plan=self.plan,
-            project=self.project,
-            user=self.owner
-        )
         self.client.force_authenticate(self.other_user)
-        response = self.client.post(support_factories.ContractFactory.get_url(contract, action='cancel'))
+        response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='cancel'))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_can_not_update_or_delete_contract(self):
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.delete(support_factories.ContractFactory.get_url(self.contract))
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        response = self.client.post(support_factories.ContractFactory.get_url(self.contract), data={
+            'plan': support_factories.PlanFactory.get_url(self.plan),
+            'project': structure_factories.ProjectFactory.get_url(self.project)
+        })
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)

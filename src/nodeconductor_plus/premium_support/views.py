@@ -1,5 +1,5 @@
 from django_fsm import TransitionNotAllowed
-from rest_framework import viewsets, permissions, exceptions, status
+from rest_framework import mixins, viewsets, permissions, exceptions, status
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 
@@ -14,7 +14,10 @@ class PlanViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
 
-class ContractViewSet(viewsets.ModelViewSet):
+class ContractViewSet(mixins.CreateModelMixin,
+                      mixins.RetrieveModelMixin,
+                      mixins.ListModelMixin,
+                      viewsets.GenericViewSet):
     queryset = models.Contract.objects.all()
     serializer_class = serializers.ContractSerializer
     lookup_field = 'uuid'
