@@ -47,7 +47,7 @@ class SupportPlanTest(test.APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
 
-class ContractCreationTest(test.APITransactionTestCase):
+class SupportContractCreationTest(test.APITransactionTestCase):
 
     def setUp(self):
         self.staff = structure_factories.UserFactory(is_staff=True)
@@ -67,7 +67,7 @@ class ContractCreationTest(test.APITransactionTestCase):
     def test_user_can_not_create_contract_for_project_he_is_not_owner_of(self):
         self.client.force_authenticate(self.other_user)
         response = self.create_contract()
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     def test_user_can_not_create_contract_for_same_project_twice(self):
         self.client.force_authenticate(self.owner)
@@ -105,7 +105,7 @@ class ContractCreationTest(test.APITransactionTestCase):
         return self.client.post(support_factories.ContractFactory.get_list_url(), data=data)
 
 
-class ContractStateTransitionTest(test.APITransactionTestCase):
+class SupportContractStateTransitionTest(test.APITransactionTestCase):
 
     def setUp(self):
         self.other_user = structure_factories.UserFactory()
@@ -116,7 +116,6 @@ class ContractStateTransitionTest(test.APITransactionTestCase):
 
         self.plan = support_factories.PlanFactory()
         self.contract = support_factories.ContractFactory(
-            state=support_models.Contract.States.REQUESTED,
             plan=self.plan,
             project=self.project,
             user=self.owner

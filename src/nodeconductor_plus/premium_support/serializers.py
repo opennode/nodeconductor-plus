@@ -35,10 +35,6 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
         return super(ContractSerializer, self).create(validated_data)
 
     def validate_project(self, project):
-        user = self.context['request'].user
-        if not project.customer.has_user(user) and not user.is_staff:
-            raise serializers.ValidationError('Access to the project is denied for this user')
-
         if models.Contract.objects.filter(project=project)\
                  .exclude(state=models.Contract.States.CANCELLED).exists():
             raise serializers.ValidationError('Contract for this project already exists')

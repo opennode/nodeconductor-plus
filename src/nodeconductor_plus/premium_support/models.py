@@ -1,5 +1,5 @@
 from django.db import models
-from django_fsm import TransitionNotAllowed, FSMIntegerField
+from django_fsm import transition, FSMIntegerField
 from django.conf import settings
 
 from nodeconductor.core.models import UuidMixin
@@ -30,9 +30,6 @@ class Contract(UuidMixin, models.Model):
     plan = models.ForeignKey(Plan)
     state = FSMIntegerField(default=States.REQUESTED, choices=STATE_CHOICES)
 
+    @transition(field=state, source=(States.REQUESTED, States.APPROVED), target=States.CANCELLED)
     def cancel(self):
-        if self.state in (self.States.REQUESTED, self.States.APPROVED):
-            self.state = self.States.CANCELLED
-            self.save()
-        else:
-            raise TransitionNotAllowed()
+        pass
