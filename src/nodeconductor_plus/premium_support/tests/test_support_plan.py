@@ -33,6 +33,17 @@ class SupportPlanTest(test.APITransactionTestCase):
         for plan in self.plans:
             self.create_plan(plan)
 
+    def test_user_can_not_create_plan(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(support_factories.PlanFactory.get_list_url(), data=self.plans[0])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_can_not_delete_plan(self):
+        self.client.force_authenticate(self.staff)
+        self.create_plan(self.plans[0])
+        response = self.client.delete(support_factories.PlanFactory.get_list_url(), data=self.plans[0])
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def test_user_can_get_plan_by_uuid(self):
         plan = support_factories.PlanFactory()
         self.client.force_authenticate(self.user)

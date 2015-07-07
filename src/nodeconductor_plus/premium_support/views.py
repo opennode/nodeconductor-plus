@@ -8,11 +8,27 @@ from nodeconductor.structure import models as structure_models
 from nodeconductor_plus.premium_support import models, serializers
 
 
-class PlanViewSet(viewsets.ModelViewSet):
+class PlanViewSet(mixins.CreateModelMixin,
+                  mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin,
+                  mixins.ListModelMixin,
+                  viewsets.GenericViewSet):
     queryset = models.Plan.objects.all()
     serializer_class = serializers.PlanSerializer
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not user.is_staff:
+            raise PermissionDenied('Only staff can create support plan')
+        serializer.save()
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if not user.is_staff:
+            raise PermissionDenied('Only staff can update support plan')
+        serializer.save()
 
 
 class SupportContractViewSet(mixins.CreateModelMixin,
