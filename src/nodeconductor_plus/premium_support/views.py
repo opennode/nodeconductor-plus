@@ -47,3 +47,14 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         except TransitionNotAllowed:
             return Response({'detail': 'Unable to cancel support contract'}, status=status.HTTP_409_CONFLICT)
         return Response({'detail': 'Support contract has been cancelled'}, status=status.HTTP_200_OK)
+
+    @detail_route(methods=['post'])
+    def approve(self, request, uuid):
+        if not request.user.is_staff:
+            raise PermissionDenied('Only staff can approve support contract')
+        contract = self.get_object()
+        try:
+            contract.approve()
+        except TransitionNotAllowed:
+            return Response({'detail': 'Unable to approve support contract'}, status=status.HTTP_409_CONFLICT)
+        return Response({'detail': 'Support contract has been approved'}, status=status.HTTP_200_OK)

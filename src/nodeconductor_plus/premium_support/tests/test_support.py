@@ -109,7 +109,7 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
 
     def setUp(self):
         self.other_user = structure_factories.UserFactory()
-        self.staff = structure_factories.UserFactory(is_staff=True)
+        self.support_admin = structure_factories.UserFactory(is_staff=True)
         self.owner = structure_factories.UserFactory()
         self.project = structure_factories.ProjectFactory()
         self.project.customer.add_user(self.owner, structure_models.CustomerRole.OWNER)
@@ -150,3 +150,21 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
             'project': structure_factories.ProjectFactory.get_url(self.project)
         })
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_support_admin_can_approve_contract(self):
+        self.client.force_authenticate(self.support_admin)
+        response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='approve'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_user_can_not_approve_contract(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='approve'))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_support_admin_can_not_approve_cancelled_contract(self):
+        self.contract.state = support_models.Contract.States.CANCELLED
+        self.contract.save()
+
+        self.client.force_authenticate(self.support_admin)
+        response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='approve'))
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)

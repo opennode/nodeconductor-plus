@@ -9,7 +9,7 @@ from nodeconductor.structure.models import Project
 class Plan(UuidMixin, models.Model):
     name = models.CharField(max_length=120)
     description = models.TextField()
-    base_hours = models.IntegerField()
+    base_hours = models.PositiveIntegerField()
     hour_rate = models.DecimalField(decimal_places=2, max_digits=10)
 
 
@@ -32,4 +32,8 @@ class Contract(UuidMixin, models.Model):
 
     @transition(field=state, source=(States.REQUESTED, States.APPROVED), target=States.CANCELLED)
     def cancel(self):
+        pass
+
+    @transition(field=state, source=States.REQUESTED, target=States.APPROVED)
+    def approve(self):
         pass
