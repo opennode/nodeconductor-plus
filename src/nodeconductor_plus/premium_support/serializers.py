@@ -74,3 +74,9 @@ class WorklogSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSe
             'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-worklog-detail'},
             'support_case': {'lookup_field': 'uuid', 'view_name': 'premium-support-case-detail'},
         }
+
+
+class ReportSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    hours = serializers.IntegerField()
+    price = serializers.DecimalField(decimal_places=2, max_digits=10)

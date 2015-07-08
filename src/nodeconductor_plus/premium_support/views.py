@@ -1,3 +1,6 @@
+import datetime
+import collections
+
 from django_fsm import TransitionNotAllowed
 from rest_framework import mixins, viewsets, permissions, status
 from rest_framework.response import Response
@@ -56,6 +59,22 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         except TransitionNotAllowed:
             return Response({'detail': 'Unable to approve support contract'}, status=status.HTTP_409_CONFLICT)
         return Response({'detail': 'Support contract has been approved'}, status=status.HTTP_200_OK)
+
+    @detail_route(methods=['get'])
+    def report(self, request, uuid):
+        contract = self.get_object()
+        hours_per_month = collections.defaultdict(int)
+        items = models.Worklog.objects.filter(support_case__contract=contract).values('time_spent', 'created')
+        for item in items:
+            month = datetime.date(item['created'].year, item['created'].month, 1)
+            hours_per_month[month] += item['time_spent']
+
+        rows = []
+        for month, hours in hours_per_month.items():
+            rows.append({'date': month, 'hours': hours, 'price': hours * contract.plan.hour_rate})
+
+        serializer = serializers.ReportSerializer(rows, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class SupportCaseViewSet(mixins.CreateModelMixin,

@@ -1,3 +1,5 @@
+import decimal
+
 from rest_framework import status, test
 
 from nodeconductor.structure.tests import factories as structure_factories
@@ -34,3 +36,16 @@ class SupportWorklogTest(test.APITransactionTestCase):
         self.client.force_authenticate(self.user)
         response = self.client.post(self.list_url, data=self.worklog_data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+
+    def test_user_can_get_report_for_contract(self):
+        hours = range(10, 20)
+        for hour in hours:
+            support_factories.WorklogFactory(time_spent=hour, support_case=self.support_case)
+
+        self.client.force_authenticate(self.staff)
+        report_url = support_factories.ContractFactory.get_url(self.contract, action='report')
+        response = self.client.get(report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        self.assertEqual(sum(hours), response.data[0]['hours'])
+        self.assertEqual(sum(hours) * self.plan.hour_rate, decimal.Decimal(response.data[0]['price']))
