@@ -5,6 +5,7 @@ from rest_framework.decorators import detail_route
 from rest_framework.exceptions import PermissionDenied
 
 from nodeconductor.structure import models as structure_models
+from nodeconductor.structure.filters import GenericRoleFilter
 from nodeconductor_plus.premium_support import models, serializers
 
 
@@ -16,19 +17,7 @@ class PlanViewSet(mixins.CreateModelMixin,
     queryset = models.Plan.objects.all()
     serializer_class = serializers.PlanSerializer
     lookup_field = 'uuid'
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def perform_create(self, serializer):
-        user = self.request.user
-        if not user.is_staff:
-            raise PermissionDenied('Only staff can create support plan')
-        serializer.save()
-
-    def perform_update(self, serializer):
-        user = self.request.user
-        if not user.is_staff:
-            raise PermissionDenied('Only staff can update support plan')
-        serializer.save()
+    permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
 
 class SupportContractViewSet(mixins.CreateModelMixin,
@@ -37,16 +26,9 @@ class SupportContractViewSet(mixins.CreateModelMixin,
                              viewsets.GenericViewSet):
     queryset = models.Contract.objects.all()
     serializer_class = serializers.ContractSerializer
+    filter_backends = (GenericRoleFilter,)
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
-
-    def get_queryset(self):
-        queryset = super(SupportContractViewSet, self).get_queryset()
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(
-                project__customer__roles__permission_group__user=self.request.user,
-                project__customer__roles__role_type=structure_models.CustomerRole.OWNER)
-        return queryset
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -79,16 +61,9 @@ class SupportContractViewSet(mixins.CreateModelMixin,
 class SupportCaseViewSet(viewsets.ModelViewSet):
     queryset = models.SupportCase.objects.all()
     serializer_class = serializers.SupportCaseSerializer
+    filter_backends = (GenericRoleFilter,)
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
-
-    def get_queryset(self):
-        queryset = super(SupportCaseViewSet, self).get_queryset()
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(
-                contract__project__customer__roles__permission_group__user=self.request.user,
-                contract__project__customer__roles__role_type=structure_models.CustomerRole.OWNER)
-        return queryset
 
     def perform_create(self, serializer):
         user = self.request.user

@@ -7,14 +7,18 @@ from nodeconductor.core.models import UuidMixin, NameMixin, DescribableMixin
 from nodeconductor.structure.models import Project
 
 
-class Plan(UuidMixin, models.Model):
+class Plan(UuidMixin):
     name = models.CharField(max_length=120)
     description = models.TextField()
     base_hours = models.PositiveIntegerField()
     hour_rate = models.DecimalField(decimal_places=2, max_digits=10)
 
 
-class Contract(UuidMixin, models.Model):
+class Contract(UuidMixin):
+
+    class Permissions(object):
+        customer_path = 'project__customer'
+
     class States(object):
         REQUESTED = 1
         APPROVED = 2
@@ -40,10 +44,9 @@ class Contract(UuidMixin, models.Model):
         pass
 
 
-class SupportCase(UuidMixin,
-                  NameMixin,
-                  DescribableMixin,
-                  TimeStampedModel,
-                  models.Model):
+class SupportCase(UuidMixin, NameMixin, DescribableMixin, TimeStampedModel):
+
+    class Permissions(object):
+        customer_path = 'contract__project__customer'
 
     contract = models.ForeignKey(Contract)

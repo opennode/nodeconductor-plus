@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from nodeconductor.core.serializers import AugmentedSerializerMixin
 from nodeconductor.structure import models as structure_models
 from nodeconductor_plus.premium_support import models
 
@@ -42,12 +43,13 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
         return project
 
 
-class SupportCaseSerializer(serializers.HyperlinkedModelSerializer):
+class SupportCaseSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.SupportCase
 
         fields = ('url', 'uuid', 'contract', 'name', 'description', 'created', 'modified')
         read_only_fields = ('created', 'modified')
+        protected_fields = ('contract', )
 
         extra_kwargs = {
             'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-case-detail'},
