@@ -74,3 +74,27 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         except TransitionNotAllowed:
             return Response({'detail': 'Unable to approve support contract'}, status=status.HTTP_409_CONFLICT)
         return Response({'detail': 'Support contract has been approved'}, status=status.HTTP_200_OK)
+
+
+class SupportCaseViewSet(viewsets.ModelViewSet):
+    queryset = models.SupportCase.objects.all()
+    serializer_class = serializers.SupportCaseSerializer
+    lookup_field = 'uuid'
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        queryset = super(SupportCaseViewSet, self).get_queryset()
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(
+                contract__project__customer__roles__permission_group__user=self.request.user,
+                contract__project__customer__roles__role_type=structure_models.CustomerRole.OWNER)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        contract = serializer.validated_data['contract']
+
+        if not contract.project.customer.has_user(user) and not user.is_staff:
+            raise PermissionDenied('Access to the project is denied for current user')
+
+        serializer.save()

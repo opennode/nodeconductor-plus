@@ -37,3 +37,20 @@ class ContractFactory(factory.DjangoModelFactory):
     @classmethod
     def get_list_url(cls):
         return 'http://testserver' + reverse('premium-support-contract-list')
+
+
+class SupportCaseFactory(factory.DjangoModelFactory):
+    class Meta(object):
+        model = models.SupportCase
+
+    name = factory.Sequence(lambda n: 'case%s' % n)
+    description = factory.fuzzy.FuzzyText()
+
+    @classmethod
+    def get_url(self, support_case, action=None):
+        url = 'http://testserver' + reverse('premium-support-case-detail', kwargs={'uuid': support_case.uuid})
+        return action and url + action + '/' or url
+
+    @classmethod
+    def get_list_url(cls):
+        return 'http://testserver' + reverse('premium-support-case-list')

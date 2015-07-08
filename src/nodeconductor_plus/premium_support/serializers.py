@@ -40,3 +40,21 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError('Contract for this project already exists')
 
         return project
+
+
+class SupportCaseSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.SupportCase
+
+        fields = ('url', 'uuid', 'contract', 'name', 'description', 'created', 'modified')
+        read_only_fields = ('created', 'modified')
+
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-case-detail'},
+            'contract': {'lookup_field': 'uuid', 'view_name': 'premium-support-contract-detail'},
+        }
+
+    def validate_contract(self, contract):
+        if contract.state != models.Contract.States.APPROVED:
+            raise serializers.ValidationError('Contract is not approved')
+        return contract

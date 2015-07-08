@@ -1,8 +1,9 @@
 from django.db import models
 from django_fsm import transition, FSMIntegerField
 from django.conf import settings
+from model_utils.models import TimeStampedModel
 
-from nodeconductor.core.models import UuidMixin
+from nodeconductor.core.models import UuidMixin, NameMixin, DescribableMixin
 from nodeconductor.structure.models import Project
 
 
@@ -37,3 +38,12 @@ class Contract(UuidMixin, models.Model):
     @transition(field=state, source=States.REQUESTED, target=States.APPROVED)
     def approve(self):
         pass
+
+
+class SupportCase(UuidMixin,
+                  NameMixin,
+                  DescribableMixin,
+                  TimeStampedModel,
+                  models.Model):
+
+    contract = models.ForeignKey(Contract)
