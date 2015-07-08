@@ -23,8 +23,10 @@ class SupportCaseTest(test.APITransactionTestCase):
             user=self.owner
         )
 
+        self.contract_url = support_factories.ContractFactory.get_url(self.contract)
+
         self.support_case = {
-            'contract': support_factories.ContractFactory.get_url(self.contract),
+            'contract': self.contract_url,
             'name': 'Support case',
             'description': ''
         }
@@ -51,3 +53,27 @@ class SupportCaseTest(test.APITransactionTestCase):
         support_case = support_factories.SupportCaseFactory(contract=self.contract)
         response = self.client.get(support_factories.SupportCaseFactory.get_url(support_case))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_can_not_update_contract_of_support_case(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(self.url, data=self.support_case)
+
+        other_contract = support_factories.ContractFactory(
+            state=support_models.Contract.States.CANCELLED,
+            plan=self.plan,
+            project=self.project,
+            user=self.owner
+        )
+        new_data = {'contract': support_factories.ContractFactory.get_url(other_contract)}
+        response = self.client.patch(response.data['url'], data=new_data)
+        self.assertEqual(response.data['contract'], self.contract_url)
+
+    def test_user_can_update_name_and_description_of_support_case(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(self.url, data=self.support_case)
+        url = response.data['url']
+
+        new_data = {'name': 'New name', 'description': 'New description'}
+        response = self.client.patch(url, data=new_data)
+        self.assertEqual(response.data['name'], new_data['name'])
+        self.assertEqual(response.data['description'], new_data['description'])
