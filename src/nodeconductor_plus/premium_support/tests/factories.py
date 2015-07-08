@@ -11,7 +11,7 @@ class PlanFactory(factory.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'plan%s' % n)
     description = factory.fuzzy.FuzzyText()
-    base_hours = factory.fuzzy.FuzzyInteger(100, 500)
+    base_rate = factory.fuzzy.FuzzyDecimal(100, 500)
     hour_rate = factory.fuzzy.FuzzyDecimal(0, 50)
 
     @classmethod

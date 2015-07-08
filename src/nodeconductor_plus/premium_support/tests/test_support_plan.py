@@ -12,19 +12,19 @@ class SupportPlanTest(test.APITransactionTestCase):
             {
                 'name': 'Bronze support',
                 'description': 'Gives you access to online documentation, community forums, and billing support.',
-                'base_hours': 100,
+                'base_rate': 100,
                 'hour_rate': 10
             },
             {
                 'name': 'Silver support',
                 'description': 'Gives you direct access to our support team.',
-                'base_hours': 200,
+                'base_rate': 200,
                 'hour_rate': 20
             },
             {
                 'name': 'Gold support',
                 'description': '24x7 phone support, rapid response times and consultation on application development.',
-                'base_hours': 300,
+                'base_rate': 300,
                 'hour_rate': 30
             }
         ]

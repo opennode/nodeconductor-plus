@@ -66,12 +66,14 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         hours_per_month = collections.defaultdict(int)
         items = models.Worklog.objects.filter(support_case__contract=contract).values('time_spent', 'created')
         for item in items:
+            # truncate date to first day of month
             month = datetime.date(item['created'].year, item['created'].month, 1)
             hours_per_month[month] += item['time_spent']
 
         rows = []
         for month, hours in hours_per_month.items():
-            rows.append({'date': month, 'hours': hours, 'price': hours * contract.plan.hour_rate})
+            total = contract.plan.base_rate + hours * contract.plan.hour_rate
+            rows.append({'date': month, 'hours': hours, 'price': total})
 
         serializer = serializers.ReportSerializer(rows, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

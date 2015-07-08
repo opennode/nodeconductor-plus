@@ -9,7 +9,7 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = models.Plan
-        fields = ('url', 'uuid', 'name', 'description', 'base_hours', 'hour_rate')
+        fields = ('url', 'uuid', 'name', 'description', 'base_rate', 'hour_rate')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }

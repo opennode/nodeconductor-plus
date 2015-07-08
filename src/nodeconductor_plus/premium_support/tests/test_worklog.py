@@ -45,7 +45,10 @@ class SupportWorklogTest(test.APITransactionTestCase):
         self.client.force_authenticate(self.staff)
         report_url = support_factories.ContractFactory.get_url(self.contract, action='report')
         response = self.client.get(report_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(sum(hours), response.data[0]['hours'])
-        self.assertEqual(sum(hours) * self.plan.hour_rate, decimal.Decimal(response.data[0]['price']))
+
+        expected_total = self.plan.base_rate + sum(hours) * self.plan.hour_rate
+        actual_total = decimal.Decimal(response.data[0]['price'])
+        self.assertEqual(expected_total, actual_total)

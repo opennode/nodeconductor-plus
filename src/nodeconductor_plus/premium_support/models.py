@@ -8,10 +8,8 @@ from nodeconductor.core.models import UuidMixin, NameMixin, DescribableMixin
 from nodeconductor.structure.models import Project
 
 
-class Plan(UuidMixin):
-    name = models.CharField(max_length=120)
-    description = models.TextField()
-    base_hours = models.PositiveIntegerField()
+class Plan(UuidMixin, NameMixin, DescribableMixin):
+    base_rate = models.DecimalField(decimal_places=2, max_digits=10)
     hour_rate = models.DecimalField(decimal_places=2, max_digits=10)
 
 
