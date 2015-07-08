@@ -3,6 +3,7 @@ from rest_framework import status, test
 from nodeconductor.structure.tests import factories as structure_factories
 from nodeconductor_plus.premium_support.tests import factories as support_factories
 
+
 class SupportPlanTest(test.APITransactionTestCase):
     def setUp(self):
         self.staff = structure_factories.UserFactory(is_staff=True)

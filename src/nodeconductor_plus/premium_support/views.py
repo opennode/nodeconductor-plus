@@ -58,7 +58,11 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         return Response({'detail': 'Support contract has been approved'}, status=status.HTTP_200_OK)
 
 
-class SupportCaseViewSet(viewsets.ModelViewSet):
+class SupportCaseViewSet(mixins.CreateModelMixin,
+                         mixins.RetrieveModelMixin,
+                         mixins.UpdateModelMixin,
+                         mixins.ListModelMixin,
+                         viewsets.GenericViewSet):
     queryset = models.SupportCase.objects.all()
     serializer_class = serializers.SupportCaseSerializer
     filter_backends = (GenericRoleFilter,)
@@ -70,6 +74,27 @@ class SupportCaseViewSet(viewsets.ModelViewSet):
         contract = serializer.validated_data['contract']
 
         if not contract.project.customer.has_user(user) and not user.is_staff:
+            raise PermissionDenied('Access to the project is denied for current user')
+
+        serializer.save()
+
+
+class SupportWorklogViewSet(mixins.CreateModelMixin,
+                            mixins.RetrieveModelMixin,
+                            mixins.UpdateModelMixin,
+                            mixins.ListModelMixin,
+                            viewsets.GenericViewSet):
+    queryset = models.Worklog.objects.all()
+    serializer_class = serializers.WorklogSerializer
+    filter_backends = (GenericRoleFilter,)
+    lookup_field = 'uuid'
+    permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        support_case = serializer.validated_data['support_case']
+
+        if not support_case.contract.project.customer.has_user(user) and not user.is_staff:
             raise PermissionDenied('Access to the project is denied for current user')
 
         serializer.save()

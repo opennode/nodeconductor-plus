@@ -2,6 +2,7 @@ from django.db import models
 from django_fsm import transition, FSMIntegerField
 from django.conf import settings
 from model_utils.models import TimeStampedModel
+from model_utils.fields import AutoCreatedField
 
 from nodeconductor.core.models import UuidMixin, NameMixin, DescribableMixin
 from nodeconductor.structure.models import Project
@@ -50,3 +51,13 @@ class SupportCase(UuidMixin, NameMixin, DescribableMixin, TimeStampedModel):
         customer_path = 'contract__project__customer'
 
     contract = models.ForeignKey(Contract)
+
+
+class Worklog(UuidMixin, DescribableMixin):
+
+    class Permissions(object):
+        customer_path = 'support_case_contract__project__customer'
+
+    created = AutoCreatedField()
+    time_spent = models.PositiveIntegerField()
+    support_case = models.ForeignKey(SupportCase)

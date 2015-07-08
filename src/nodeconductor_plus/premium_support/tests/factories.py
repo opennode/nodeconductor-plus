@@ -47,10 +47,25 @@ class SupportCaseFactory(factory.DjangoModelFactory):
     description = factory.fuzzy.FuzzyText()
 
     @classmethod
-    def get_url(self, support_case, action=None):
-        url = 'http://testserver' + reverse('premium-support-case-detail', kwargs={'uuid': support_case.uuid})
-        return action and url + action + '/' or url
+    def get_url(self, support_case):
+        return 'http://testserver' + reverse('premium-support-case-detail', kwargs={'uuid': support_case.uuid})
 
     @classmethod
     def get_list_url(cls):
         return 'http://testserver' + reverse('premium-support-case-list')
+
+
+class WorklogFactory(factory.DjangoModelFactory):
+    class Meta(object):
+        model = models.Worklog
+
+    time_spent = factory.fuzzy.FuzzyInteger(1, 20)
+    description = factory.fuzzy.FuzzyText()
+
+    @classmethod
+    def get_url(self, worklog):
+        return 'http://testserver' + reverse('premium-support-worklog-detail', kwargs={'uuid': worklog.uuid})
+
+    @classmethod
+    def get_list_url(cls):
+        return 'http://testserver' + reverse('premium-support-worklog-list')

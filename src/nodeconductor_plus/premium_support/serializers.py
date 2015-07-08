@@ -60,3 +60,17 @@ class SupportCaseSerializer(AugmentedSerializerMixin, serializers.HyperlinkedMod
         if contract.state != models.Contract.States.APPROVED:
             raise serializers.ValidationError('Contract is not approved')
         return contract
+
+
+class WorklogSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.Worklog
+
+        fields = ('url', 'uuid', 'support_case', 'time_spent', 'description', 'created')
+        read_only_fields = ('created', )
+        protected_fields = ('support_case', )
+
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-worklog-detail'},
+            'support_case': {'lookup_field': 'uuid', 'view_name': 'premium-support-case-detail'},
+        }
