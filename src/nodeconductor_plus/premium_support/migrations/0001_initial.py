@@ -14,6 +14,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('structure', '0013_servicesettings_customer'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('contenttypes', '0001_initial'),
     ]
 
     operations = [
@@ -53,6 +54,8 @@ class Migration(migrations.Migration):
                 ('description', models.CharField(max_length=500, verbose_name='description', blank=True)),
                 ('name', models.CharField(max_length=150, verbose_name='name')),
                 ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('object_id', models.PositiveIntegerField(null=True, blank=True)),
+                ('content_type', models.ForeignKey(blank=True, to='contenttypes.ContentType', null=True)),
                 ('contract', models.ForeignKey(to='premium_support.Contract')),
             ],
             options={
