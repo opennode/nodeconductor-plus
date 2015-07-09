@@ -4,6 +4,7 @@ from nodeconductor.structure.tests import factories as structure_factories
 from nodeconductor.structure import models as structure_models
 from nodeconductor_plus.premium_support import models as support_models
 from nodeconductor_plus.premium_support.tests import factories as support_factories
+from nodeconductor.iaas.tests.factories import InstanceFactory
 
 
 class SupportCaseTest(test.APITransactionTestCase):
@@ -27,8 +28,7 @@ class SupportCaseTest(test.APITransactionTestCase):
 
         self.support_case = {
             'contract': self.contract_url,
-            'name': 'Support case',
-            'description': ''
+            'name': 'Support case'
         }
 
         self.url = support_factories.SupportCaseFactory.get_list_url()
@@ -77,3 +77,9 @@ class SupportCaseTest(test.APITransactionTestCase):
         response = self.client.patch(url, data=new_data)
         self.assertEqual(response.data['name'], new_data['name'])
         self.assertEqual(response.data['description'], new_data['description'])
+
+    def test_user_can_specify_opional_resource_for_support_case(self):
+        self.support_case['resource'] = InstanceFactory.get_url()
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(self.url, data=self.support_case)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)

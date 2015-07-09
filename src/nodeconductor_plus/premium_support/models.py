@@ -3,9 +3,15 @@ from django_fsm import transition, FSMIntegerField
 from django.conf import settings
 from model_utils.models import TimeStampedModel
 from model_utils.fields import AutoCreatedField
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 from nodeconductor.core.models import UuidMixin, NameMixin, DescribableMixin
-from nodeconductor.structure.models import Project
+from nodeconductor.structure.models import Project, Resource
+
+
+def get_resource_models():
+    return [m for m in models.get_models() if issubclass(m, Resource)]
 
 
 class Plan(UuidMixin, NameMixin, DescribableMixin):
@@ -49,6 +55,11 @@ class SupportCase(UuidMixin, NameMixin, DescribableMixin, TimeStampedModel):
         customer_path = 'contract__project__customer'
 
     contract = models.ForeignKey(Contract)
+
+    # optional reference to the resource
+    content_type = models.ForeignKey(ContentType, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    resource = GenericForeignKey('content_type', 'object_id')
 
 
 class Worklog(UuidMixin, DescribableMixin):
