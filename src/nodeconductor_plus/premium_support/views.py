@@ -1,8 +1,10 @@
 import datetime
 import collections
 
+import django_filters
 from django_fsm import TransitionNotAllowed
 from rest_framework import mixins, viewsets, permissions, status
+from rest_framework.filters import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.exceptions import PermissionDenied
@@ -23,13 +25,22 @@ class PlanViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
 
+class SupportContractFilter(django_filters.FilterSet):
+    project_uuid = django_filters.CharFilter(name='project__uuid')
+    state = django_filters.CharFilter()
+
+    class Meta(object):
+        model = models.Contract
+        fields = ('project_uuid', 'state')
+
+
 class SupportContractViewSet(mixins.CreateModelMixin,
                              mixins.RetrieveModelMixin,
                              mixins.ListModelMixin,
                              viewsets.GenericViewSet):
     queryset = models.Contract.objects.all()
     serializer_class = serializers.ContractSerializer
-    filter_backends = (GenericRoleFilter,)
+    filter_backends = (GenericRoleFilter, DjangoFilterBackend)
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
 
@@ -62,6 +73,17 @@ class SupportContractViewSet(mixins.CreateModelMixin,
 
     @detail_route(methods=['get'])
     def report(self, request, uuid):
+        """
+        Calculate support consumption and fees per month for the contract according to support plan
+        Example output:
+        [
+            {
+                "date": "2015-01-01",
+                "hours": 100,
+                "price": 300.0
+            }
+        ]
+        """
         contract = self.get_object()
         hours_per_month = collections.defaultdict(int)
         items = models.Worklog.objects.filter(support_case__contract=contract).values('time_spent', 'created')
@@ -72,6 +94,7 @@ class SupportContractViewSet(mixins.CreateModelMixin,
 
         rows = []
         for month, hours in hours_per_month.items():
+            # calculate total price
             total = contract.plan.base_rate + hours * contract.plan.hour_rate
             rows.append({'date': month, 'hours': hours, 'price': total})
 

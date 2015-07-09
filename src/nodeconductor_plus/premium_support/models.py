@@ -54,7 +54,7 @@ class SupportCase(UuidMixin, NameMixin, DescribableMixin, TimeStampedModel):
 class Worklog(UuidMixin, DescribableMixin):
 
     class Permissions(object):
-        customer_path = 'support_case_contract__project__customer'
+        customer_path = 'support_case__contract__project__customer'
 
     created = AutoCreatedField()
     time_spent = models.PositiveIntegerField()
