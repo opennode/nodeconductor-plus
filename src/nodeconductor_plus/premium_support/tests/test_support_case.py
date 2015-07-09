@@ -83,3 +83,22 @@ class SupportCaseTest(test.APITransactionTestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(self.url, data=self.support_case)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+    def test_user_can_filter_support_case_by_contract(self):
+        """
+        Create one case for each of contracts.
+        After filtering by contract only one case is returned.
+        """
+        support_case = support_factories.SupportCaseFactory(contract=self.contract)
+
+        other_contract = support_factories.ContractFactory(
+            state=support_models.Contract.States.CANCELLED,
+            plan=self.plan,
+            project=self.project,
+            user=self.owner
+        )
+        other_case = support_factories.SupportCaseFactory(contract=other_contract)
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(self.url, data={'contract_uuid': other_contract.uuid.hex})
+        self.assertEqual(1, len(response.data))

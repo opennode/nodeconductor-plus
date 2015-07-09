@@ -17,11 +17,13 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
 
 class ContractSerializer(serializers.HyperlinkedModelSerializer):
     state = serializers.ReadOnlyField(source='get_state_display')
+    project_name = serializers.ReadOnlyField(source='project.name')
+    plan_name = serializers.ReadOnlyField(source='plan.name')
 
     class Meta:
         model = models.Contract
 
-        fields = ('url', 'uuid', 'user', 'state', 'project', 'plan')
+        fields = ('url', 'uuid', 'user', 'state', 'project', 'project_name', 'plan', 'plan_name')
         read_only_fields = ('state', 'user')
 
         extra_kwargs = {

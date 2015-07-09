@@ -56,6 +56,32 @@ class SupportContractCreationTest(test.APITransactionTestCase):
         response = self.client.get(support_factories.ContractFactory.get_list_url())
         self.assertEqual(0, len(response.data))
 
+    def test_user_can_filter_contract_by_project(self):
+        """
+        Create two projects with contracts.
+        After filtering contract by project only one of them is returned.
+        """
+        support_factories.ContractFactory(
+            plan=self.plan,
+            project=self.project,
+            user=self.owner
+        )
+
+        other_project = structure_factories.ProjectFactory()
+        other_project.customer.add_user(self.owner, structure_models.CustomerRole.OWNER)
+
+        support_factories.ContractFactory(
+            plan=self.plan,
+            project=other_project,
+            user=self.owner
+        )
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(support_factories.ContractFactory.get_list_url(),
+                data={'project_uuid': other_project.uuid.hex})
+        self.assertEqual(1, len(response.data))
+
+
     def create_contract(self):
         data = {
             'plan': support_factories.PlanFactory.get_url(self.plan),

@@ -41,6 +41,7 @@ class SupportContractViewSet(mixins.CreateModelMixin,
     queryset = models.Contract.objects.all()
     serializer_class = serializers.ContractSerializer
     filter_backends = (GenericRoleFilter, DjangoFilterBackend)
+    filter_class = SupportContractFilter
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
 
@@ -102,6 +103,14 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class SupportCaseFilter(django_filters.FilterSet):
+    contract_uuid = django_filters.CharFilter(name='contract__uuid')
+
+    class Meta(object):
+        model = models.SupportCase
+        fields = ('contract_uuid',)
+
+
 class SupportCaseViewSet(mixins.CreateModelMixin,
                          mixins.RetrieveModelMixin,
                          mixins.UpdateModelMixin,
@@ -109,7 +118,8 @@ class SupportCaseViewSet(mixins.CreateModelMixin,
                          viewsets.GenericViewSet):
     queryset = models.SupportCase.objects.all()
     serializer_class = serializers.SupportCaseSerializer
-    filter_backends = (GenericRoleFilter,)
+    filter_backends = (GenericRoleFilter, DjangoFilterBackend)
+    filter_class = SupportCaseFilter
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
 
