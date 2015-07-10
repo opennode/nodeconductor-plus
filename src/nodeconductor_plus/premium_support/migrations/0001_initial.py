@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import model_utils.fields
 import django.utils.timezone
-from django.conf import settings
 import uuidfield.fields
 import django_fsm
 
@@ -13,7 +12,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('structure', '0013_servicesettings_customer'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('contenttypes', '0001_initial'),
     ]
 
@@ -88,12 +86,6 @@ class Migration(migrations.Migration):
             model_name='contract',
             name='project',
             field=models.ForeignKey(to='structure.Project'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='contract',
-            name='user',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL),
             preserve_default=True,
         ),
     ]

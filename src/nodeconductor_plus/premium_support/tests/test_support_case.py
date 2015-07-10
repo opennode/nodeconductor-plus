@@ -20,8 +20,7 @@ class SupportCaseTest(test.APITransactionTestCase):
         self.contract = support_factories.ContractFactory(
             state=support_models.Contract.States.APPROVED,
             plan=self.plan,
-            project=self.project,
-            user=self.owner
+            project=self.project
         )
 
         self.contract_url = support_factories.ContractFactory.get_url(self.contract)
@@ -61,8 +60,7 @@ class SupportCaseTest(test.APITransactionTestCase):
         other_contract = support_factories.ContractFactory(
             state=support_models.Contract.States.CANCELLED,
             plan=self.plan,
-            project=self.project,
-            user=self.owner
+            project=self.project
         )
         new_data = {'contract': support_factories.ContractFactory.get_url(other_contract)}
         response = self.client.patch(response.data['url'], data=new_data)
@@ -94,8 +92,7 @@ class SupportCaseTest(test.APITransactionTestCase):
         other_contract = support_factories.ContractFactory(
             state=support_models.Contract.States.CANCELLED,
             plan=self.plan,
-            project=self.project,
-            user=self.owner
+            project=self.project
         )
         other_case = support_factories.SupportCaseFactory(contract=other_contract)
 

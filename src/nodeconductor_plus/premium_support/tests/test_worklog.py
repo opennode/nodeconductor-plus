@@ -17,8 +17,7 @@ class SupportWorklogTest(test.APITransactionTestCase):
         self.contract = support_factories.ContractFactory(
             state=support_models.Contract.States.APPROVED,
             plan=self.plan,
-            project=self.project,
-            user=self.user
+            project=self.project
         )
         self.support_case = support_factories.SupportCaseFactory(contract=self.contract)
         self.list_url = support_factories.WorklogFactory.get_list_url()

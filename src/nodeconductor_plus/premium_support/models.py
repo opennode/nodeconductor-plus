@@ -1,6 +1,5 @@
 from django.db import models
 from django_fsm import transition, FSMIntegerField
-from django.conf import settings
 from model_utils.models import TimeStampedModel
 from model_utils.fields import AutoCreatedField
 from django.contrib.contenttypes.models import ContentType
@@ -35,7 +34,6 @@ class Contract(UuidMixin):
         (States.CANCELLED, 'Cancelled'),
     )
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     project = models.ForeignKey(Project)
     plan = models.ForeignKey(Plan)
     state = FSMIntegerField(default=States.REQUESTED, choices=STATE_CHOICES)

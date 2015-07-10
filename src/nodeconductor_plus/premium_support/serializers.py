@@ -23,19 +23,14 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Contract
 
-        fields = ('url', 'uuid', 'user', 'state', 'project', 'project_name', 'plan', 'plan_name')
-        read_only_fields = ('state', 'user')
+        fields = ('url', 'uuid', 'state', 'project', 'project_name', 'plan', 'plan_name')
+        read_only_fields = ('state',)
 
         extra_kwargs = {
             'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-contract-detail'},
             'plan': {'lookup_field': 'uuid', 'view_name': 'premium-support-plan-detail'},
-            'user': {'lookup_field': 'uuid'},
             'project': {'lookup_field': 'uuid'},
         }
-
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super(ContractSerializer, self).create(validated_data)
 
     def validate_project(self, project):
         if models.Contract.objects.filter(project=project)\

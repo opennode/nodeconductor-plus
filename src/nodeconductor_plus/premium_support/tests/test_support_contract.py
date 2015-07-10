@@ -41,8 +41,7 @@ class SupportContractCreationTest(test.APITransactionTestCase):
         support_factories.ContractFactory(
             state=support_models.Contract.States.CANCELLED,
             plan=self.plan,
-            project=self.project,
-            user=self.owner
+            project=self.project
         )
 
         self.client.force_authenticate(self.owner)
@@ -65,8 +64,7 @@ class SupportContractCreationTest(test.APITransactionTestCase):
         support_factories.ContractFactory(
             state=support_models.Contract.States.APPROVED,
             plan=self.plan,
-            project=self.project,
-            user=self.owner
+            project=self.project
         )
 
         other_project = structure_factories.ProjectFactory()
@@ -74,8 +72,7 @@ class SupportContractCreationTest(test.APITransactionTestCase):
 
         support_factories.ContractFactory(
             plan=self.plan,
-            project=other_project,
-            user=self.owner
+            project=other_project
         )
 
         self.client.force_authenticate(self.owner)
@@ -107,8 +104,7 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
         self.plan = support_factories.PlanFactory()
         self.contract = support_factories.ContractFactory(
             plan=self.plan,
-            project=self.project,
-            user=self.owner
+            project=self.project
         )
 
     def test_user_can_cancel_contract_in_requested_or_approved_state(self):
@@ -116,8 +112,7 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
             contract = support_factories.ContractFactory(
                 state=state,
                 plan=self.plan,
-                project=self.project,
-                user=self.owner
+                project=self.project
             )
 
             self.client.force_authenticate(self.owner)
