@@ -3,15 +3,14 @@ import re
 from rest_framework import serializers
 
 from nodeconductor.core.fields import MappedChoiceField
-from nodeconductor.structure import models as structure_models
-from nodeconductor.structure import serializers as structure_serializers
+from nodeconductor.structure import SupportedServices, serializers as structure_serializers
 
 from . import models
 
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = structure_models.ServiceSettings.Types.GitLab
+    SERVICE_TYPE = SupportedServices.Types.GitLab
     SERVICE_ACCOUNT_FIELDS = {
         'backend_url': 'GitLab host (e.g. http://git.example.com/)',
         'username': 'Username or Email',

@@ -7,7 +7,7 @@ from django.utils import dateparse
 from rest_framework import serializers
 
 from nodeconductor.core import models as core_models
-from nodeconductor.core import serializers as core_serializers
+from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure import serializers as structure_serializers
 
@@ -50,7 +50,7 @@ class SizeSerializer(serializers.HyperlinkedModelSerializer):
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = structure_models.ServiceSettings.Types.DigitalOcean
+    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
     SERVICE_ACCOUNT_FIELDS = {
         'token': 'DigitalOcean personal access token',
     }
