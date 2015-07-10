@@ -51,3 +51,9 @@ class SupportWorklogTest(test.APITransactionTestCase):
         expected_total = self.plan.base_rate + sum(hours) * self.plan.hour_rate
         actual_total = decimal.Decimal(response.data[0]['price'])
         self.assertEqual(expected_total, actual_total)
+
+    def test_other_user_can_not_get_report_for_contract(self):
+        self.client.force_authenticate(self.user)
+        report_url = support_factories.ContractFactory.get_url(self.contract, action='report')
+        response = self.client.get(report_url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)

@@ -1,4 +1,3 @@
-import logging
 from rest_framework import status, test
 
 from nodeconductor.structure.tests import factories as structure_factories

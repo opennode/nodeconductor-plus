@@ -39,6 +39,9 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
 
         return project
 
+    def get_customer(self):
+        return self.validated_data['project'].customer
+
 
 class SupportCaseSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSerializer):
     resource = GenericRelatedField(related_models=models.get_resource_models(), required=False)
@@ -58,6 +61,9 @@ class SupportCaseSerializer(AugmentedSerializerMixin, serializers.HyperlinkedMod
         if contract.state != models.Contract.States.APPROVED:
             raise serializers.ValidationError('Contract is not approved')
         return contract
+
+    def get_customer(self):
+        return self.validated_data['contract'].project.customer
 
 
 class WorklogSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSerializer):

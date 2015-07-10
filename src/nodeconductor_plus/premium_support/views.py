@@ -15,6 +15,13 @@ from nodeconductor.structure.filters import GenericRoleFilter
 from nodeconductor_plus.premium_support import models, serializers
 
 
+class OwnerOrStaffCanCreateMixin(object):
+    def perform_create(self, serializer):
+        if not self.request.user.is_staff and not serializer.get_customer().has_user(self.request.user):
+            raise PermissionDenied()
+        super(OwnerOrStaffCanCreateMixin, self).perform_create(serializer)
+
+
 class PlanViewSet(mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
                   mixins.UpdateModelMixin,
@@ -38,12 +45,8 @@ class SupportContractFilter(django_filters.FilterSet):
         fields = ('project_uuid', 'state')
 
 
-def check_permission(user, customer):
-    if not customer.has_user(user) and not user.is_staff:
-        raise PermissionDenied('Access to the project is denied for current user')
-
-
-class SupportContractViewSet(mixins.CreateModelMixin,
+class SupportContractViewSet(OwnerOrStaffCanCreateMixin,
+                             mixins.CreateModelMixin,
                              mixins.RetrieveModelMixin,
                              mixins.ListModelMixin,
                              viewsets.GenericViewSet):
@@ -52,11 +55,7 @@ class SupportContractViewSet(mixins.CreateModelMixin,
     filter_backends = (GenericRoleFilter, DjangoFilterBackend)
     filter_class = SupportContractFilter
     lookup_field = 'uuid'
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def perform_create(self, serializer):
-        check_permission(self.request.user, serializer.validated_data['project'].customer)
-        serializer.save()
+    permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
     @detail_route(methods=['post'])
     def cancel(self, request, uuid):
@@ -137,7 +136,8 @@ class SupportCaseFilter(django_filters.FilterSet):
         fields = ('contract_uuid',)
 
 
-class SupportCaseViewSet(mixins.CreateModelMixin,
+class SupportCaseViewSet(OwnerOrStaffCanCreateMixin,
+                         mixins.CreateModelMixin,
                          mixins.RetrieveModelMixin,
                          mixins.UpdateModelMixin,
                          mixins.ListModelMixin,
@@ -147,11 +147,7 @@ class SupportCaseViewSet(mixins.CreateModelMixin,
     filter_backends = (GenericRoleFilter, DjangoFilterBackend)
     filter_class = SupportCaseFilter
     lookup_field = 'uuid'
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def perform_create(self, serializer):
-        check_permission(self.request.user, serializer.validated_data['contract'].project.customer)
-        serializer.save()
+    permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
 
 class SupportWorklogViewSet(mixins.CreateModelMixin,
@@ -164,8 +160,3 @@ class SupportWorklogViewSet(mixins.CreateModelMixin,
     filter_backends = (GenericRoleFilter,)
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
-
-    def perform_create(self, serializer):
-        check_permission(self.request.user,
-            serializer.validated_data['support_case'].contract.project.customer)
-        serializer.save()
