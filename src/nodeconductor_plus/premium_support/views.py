@@ -57,6 +57,7 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         contract = self.get_object()
         try:
             contract.cancel()
+            contract.save()
         except TransitionNotAllowed:
             return Response({'detail': 'Unable to cancel support contract'}, status=status.HTTP_409_CONFLICT)
         return Response({'detail': 'Support contract has been cancelled'}, status=status.HTTP_200_OK)
@@ -68,6 +69,7 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         contract = self.get_object()
         try:
             contract.approve()
+            contract.save()
         except TransitionNotAllowed:
             return Response({'detail': 'Unable to approve support contract'}, status=status.HTTP_409_CONFLICT)
         return Response({'detail': 'Support contract has been approved'}, status=status.HTTP_200_OK)

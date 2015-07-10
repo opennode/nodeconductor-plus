@@ -1,3 +1,4 @@
+import logging
 from rest_framework import status, test
 
 from nodeconductor.structure.tests import factories as structure_factories
@@ -119,6 +120,9 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
             response = self.client.post(support_factories.ContractFactory.get_url(contract, action='cancel'))
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+            response = self.client.get(support_factories.ContractFactory.get_url(contract))
+            self.assertEqual('Cancelled', response.data['state'], response.data)
+
     def test_other_user_can_not_modify_contract(self):
         self.client.force_authenticate(self.other_user)
         response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='cancel'))
@@ -140,6 +144,9 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
         self.client.force_authenticate(self.support_admin)
         response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='approve'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(support_factories.ContractFactory.get_url(self.contract))
+        self.assertEqual('Approved', response.data['state'], response.data)
 
     def test_user_can_not_approve_contract(self):
         self.client.force_authenticate(self.owner)
