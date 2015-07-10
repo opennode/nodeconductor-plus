@@ -44,6 +44,7 @@ setup(
             'digitalocean = nodeconductor_plus.digitalocean.urls',
             'gitlab = nodeconductor_plus.gitlab.urls',
             'plans = nodeconductor_plus.plans.urls',
+            'premium_support = nodeconductor_plus.premium_support.urls',
         ),
     },
     tests_require=tests_requires,
