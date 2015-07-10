@@ -38,6 +38,11 @@ class SupportContractFilter(django_filters.FilterSet):
         fields = ('project_uuid', 'state')
 
 
+def check_permission(user, customer):
+    if not customer.has_user(user) and not user.is_staff:
+        raise PermissionDenied('Access to the project is denied for current user')
+
+
 class SupportContractViewSet(mixins.CreateModelMixin,
                              mixins.RetrieveModelMixin,
                              mixins.ListModelMixin,
@@ -50,10 +55,7 @@ class SupportContractViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.IsAuthenticated,)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        project = serializer.validated_data['project']
-        if not project.customer.has_user(user) and not user.is_staff:
-            raise PermissionDenied('Access to the project is denied for current user')
+        check_permission(self.request.user, serializer.validated_data['project'].customer)
         serializer.save()
 
     @detail_route(methods=['post'])
@@ -148,12 +150,7 @@ class SupportCaseViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.IsAuthenticated,)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        contract = serializer.validated_data['contract']
-
-        if not contract.project.customer.has_user(user) and not user.is_staff:
-            raise PermissionDenied('Access to the project is denied for current user')
-
+        check_permission(self.request.user, serializer.validated_data['contract'].project.customer)
         serializer.save()
 
 
@@ -169,10 +166,6 @@ class SupportWorklogViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        support_case = serializer.validated_data['support_case']
-
-        if not support_case.contract.project.customer.has_user(user) and not user.is_staff:
-            raise PermissionDenied('Access to the project is denied for current user')
-
+        check_permission(self.request.user,
+            serializer.validated_data['support_case'].contract.project.customer)
         serializer.save()
