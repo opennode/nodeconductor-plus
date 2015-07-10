@@ -10,6 +10,7 @@ from rest_framework.decorators import detail_route
 from rest_framework.exceptions import PermissionDenied
 
 from nodeconductor.core.filters import MappedChoiceFilter
+from nodeconductor.core.serializers import TimestampIntervalSerializer
 from nodeconductor.structure.filters import GenericRoleFilter
 from nodeconductor_plus.premium_support import models, serializers
 
@@ -91,12 +92,14 @@ class SupportContractViewSet(mixins.CreateModelMixin,
         ]
         """
         contract = self.get_object()
+        queryset = models.Worklog.objects.filter(support_case__contract=contract)
+        queryset = self.filter_by_time_interval(queryset, request)
+
         hours_per_month = collections.defaultdict(int)
-        items = models.Worklog.objects.filter(support_case__contract=contract).values('time_spent', 'created')
-        for item in items:
+        for row in queryset.values('time_spent', 'created'):
             # truncate date to first day of month
-            month = datetime.date(item['created'].year, item['created'].month, 1)
-            hours_per_month[month] += item['time_spent']
+            month = datetime.date(row['created'].year, row['created'].month, 1)
+            hours_per_month[month] += row['time_spent']
 
         rows = []
         for month, hours in hours_per_month.items():
@@ -106,6 +109,22 @@ class SupportContractViewSet(mixins.CreateModelMixin,
 
         serializer = serializers.ReportSerializer(rows, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def filter_by_time_interval(self, queryset, request):
+        mapped = {
+            'start': request.query_params.get('from'),
+            'end': request.query_params.get('to'),
+        }
+        mapped = {k: v for k, v in mapped.items() if v}
+        timestamp_interval_serializer = TimestampIntervalSerializer(data=mapped)
+        timestamp_interval_serializer.is_valid(raise_exception=True)
+
+        filter_data = timestamp_interval_serializer.get_filter_data()
+        if 'start' in filter_data:
+            queryset = queryset.filter(created__gte=filter_data['start'])
+        if 'end' in filter_data:
+            queryset = queryset.filter(created__lte=filter_data['end'])
+        return queryset
 
 
 class SupportCaseFilter(django_filters.FilterSet):
