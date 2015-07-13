@@ -7,14 +7,13 @@ from nodeconductor.structure import models as structure_models
 from nodeconductor.iaas import models as iaas_models
 
 
-class DigitalOceanService(structure_models.Service):
+class Service(structure_models.Service):
     projects = models.ManyToManyField(
-        structure_models.Project, related_name='digitalocean_services',
-        through='DigitalOceanServiceProjectLink')
+        structure_models.Project, related_name='+', through='ServiceProjectLink')
 
 
-class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
-    service = models.ForeignKey(DigitalOceanService)
+class ServiceProjectLink(structure_models.ServiceProjectLink):
+    service = models.ForeignKey(Service)
 
 
 class Region(structure_models.ServiceProperty):
@@ -48,7 +47,7 @@ class Size(structure_models.ServiceProperty):
 
 class Droplet(structure_models.Resource, iaas_models.VirtualMachineMixin):
     service_project_link = models.ForeignKey(
-        DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
+        ServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
     ip_address = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
     cores = models.PositiveSmallIntegerField(default=0, help_text='Number of cores in a VM')

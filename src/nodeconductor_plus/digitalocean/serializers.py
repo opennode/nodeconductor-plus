@@ -56,14 +56,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.DigitalOceanService
+        model = models.Service
         view_name = 'digitalocean-detail'
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
-        model = models.DigitalOceanServiceProjectLink
+        model = models.ServiceProjectLink
         view_name = 'digitalocean-spl-detail'
         extra_kwargs = {
             'service': {'lookup_field': 'uuid', 'view_name': 'digitalocean-detail'},
@@ -80,7 +80,7 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
-        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
+        queryset=models.ServiceProjectLink.objects.all(),
         write_only=True)
 
     region = serializers.HyperlinkedRelatedField(
@@ -183,9 +183,9 @@ class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixi
         backend = service.get_backend()
 
         try:
-            attrs['service_project_link'] = models.DigitalOceanServiceProjectLink.objects.get(
+            attrs['service_project_link'] = models.ServiceProjectLink.objects.get(
                 service=service, project=attrs.pop('project'))
-        except models.DigitalOceanServiceProjectLink.DoesNotExist:
+        except models.ServiceProjectLink.DoesNotExist:
             raise serializers.ValidationError({'project': "Unknown project or ServiceProjectLink missed."})
 
         if models.Droplet.objects.filter(backend_id=attrs['backend_id']).exists():
