@@ -3,15 +3,14 @@ import re
 from rest_framework import serializers
 
 from nodeconductor.core.fields import MappedChoiceField
-from nodeconductor.structure import models as structure_models
-from nodeconductor.structure import serializers as structure_serializers
+from nodeconductor.structure import SupportedServices, serializers as structure_serializers
 
 from . import models
 
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = structure_models.ServiceSettings.Types.GitLab
+    SERVICE_TYPE = SupportedServices.Types.GitLab
     SERVICE_ACCOUNT_FIELDS = {
         'backend_url': 'GitLab host (e.g. http://git.example.com/)',
         'username': 'Username or Email',
@@ -20,14 +19,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.GitLabService
+        model = models.Service
         view_name = 'gitlab-detail'
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
-        model = models.GitLabServiceProjectLink
+        model = models.ServiceProjectLink
         view_name = 'gitlab-spl-detail'
         extra_kwargs = {
             'service': {'lookup_field': 'uuid', 'view_name': 'gitlab-detail'},
@@ -54,7 +53,7 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='gitlab-spl-detail',
-        queryset=models.GitLabServiceProjectLink.objects.all(),
+        queryset=models.ServiceProjectLink.objects.all(),
         write_only=True)
 
     projects = BasicProjectSerializer(many=True, read_only=True)
@@ -94,7 +93,7 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='gitlab-spl-detail',
-        queryset=models.GitLabServiceProjectLink.objects.all(),
+        queryset=models.ServiceProjectLink.objects.all(),
         write_only=True)
 
     group = serializers.HyperlinkedRelatedField(

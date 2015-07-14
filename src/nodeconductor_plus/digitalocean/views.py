@@ -10,7 +10,7 @@ from . import models, serializers
 
 
 class DigitalOceanServiceViewSet(structure_views.BaseServiceViewSet):
-    queryset = models.DigitalOceanService.objects.all()
+    queryset = models.Service.objects.all()
     serializer_class = serializers.ServiceSerializer
 
     def get_serializer_class(self):
@@ -38,7 +38,7 @@ class DigitalOceanServiceViewSet(structure_views.BaseServiceViewSet):
 
 
 class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
-    queryset = models.DigitalOceanServiceProjectLink.objects.all()
+    queryset = models.ServiceProjectLink.objects.all()
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
