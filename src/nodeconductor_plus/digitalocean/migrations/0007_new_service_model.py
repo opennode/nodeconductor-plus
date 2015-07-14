@@ -51,6 +51,14 @@ class Migration(migrations.Migration):
             "INSERT INTO digitalocean_serviceprojectlink (id, state, project_id, service_id) "
             "SELECT id, state, project_id, service_id FROM digitalocean_digitaloceanserviceprojectlink;"
         ),
+        migrations.RemoveField(
+            model_name='digitaloceanserviceprojectlink',
+            name='project',
+        ),
+        migrations.RemoveField(
+            model_name='digitaloceanserviceprojectlink',
+            name='service',
+        ),
         migrations.AddField(
             model_name='digitaloceanservice',
             name='tmp',
@@ -63,14 +71,6 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='digitaloceanservice',
             name='service_ptr',
-        ),
-        migrations.RemoveField(
-            model_name='digitaloceanserviceprojectlink',
-            name='project',
-        ),
-        migrations.RemoveField(
-            model_name='digitaloceanserviceprojectlink',
-            name='service',
         ),
         migrations.DeleteModel(
             name='DigitalOceanService',

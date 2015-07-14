@@ -51,6 +51,14 @@ class Migration(migrations.Migration):
             "INSERT INTO gitlab_serviceprojectlink (id, state, project_id, service_id) "
             "SELECT id, state, project_id, service_id FROM gitlab_gitlabserviceprojectlink;"
         ),
+        migrations.RemoveField(
+            model_name='gitlabserviceprojectlink',
+            name='project',
+        ),
+        migrations.RemoveField(
+            model_name='gitlabserviceprojectlink',
+            name='service',
+        ),
         migrations.AddField(
             model_name='gitlabservice',
             name='tmp',
@@ -63,14 +71,6 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='gitlabservice',
             name='service_ptr',
-        ),
-        migrations.RemoveField(
-            model_name='gitlabserviceprojectlink',
-            name='project',
-        ),
-        migrations.RemoveField(
-            model_name='gitlabserviceprojectlink',
-            name='service',
         ),
         migrations.DeleteModel(
             name='GitLabService',
