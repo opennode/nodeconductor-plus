@@ -1,21 +1,10 @@
-
 from django.contrib import admin
 
-from nodeconductor.structure.admin import HiddenServiceAdmin
-
-from .models import Service, Group, Project
-
-
-class GroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'backend_id', 'state')
-    list_filter = ('state',)
+from nodeconductor.structure import admin as structure_admin
+from .models import Service, ServiceProjectLink, Group, Project
 
 
-class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('name', 'backend_id', 'state')
-    list_filter = ('state',)
-
-
-admin.site.register(Service, HiddenServiceAdmin)
-admin.site.register(Group, GroupAdmin)
-admin.site.register(Project, ProjectAdmin)
+admin.site.register(Group, structure_admin.ResourceAdmin)
+admin.site.register(Project, structure_admin.ResourceAdmin)
+admin.site.register(Service, structure_admin.ServiceAdmin)
+admin.site.register(ServiceProjectLink, structure_admin.ServiceProjectLinkAdmin)
