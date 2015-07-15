@@ -7,6 +7,11 @@ License: Copyright 2015 OpenNode LLC.  All rights reserved.
 Url: http://nodeconductor.com
 Source0: %{name}-%{version}.tar.gz
 
+Requires: nodeconductor >= 0.7.0
+Requires: python-digitalocean >= 1.5
+Requires: python-django-cors-headers
+Requires: python-gitlab >= 0.9
+
 BuildArch: noarch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
