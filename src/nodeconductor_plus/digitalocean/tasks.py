@@ -7,7 +7,7 @@ from nodeconductor.core.tasks import transition, retry_if_false
 from .models import Droplet
 
 
-@shared_task(name='nodeconductor.digitalocean.provision', is_heavy_task=True)
+@shared_task(name='nodeconductor.digitalocean.provision')
 def provision(droplet_uuid, **kwargs):
     chain(
         provision_droplet.s(droplet_uuid, **kwargs),
@@ -71,7 +71,7 @@ def wait_for_action_complete(action_id, droplet_uuid):
     return action.status == 'completed'
 
 
-@shared_task
+@shared_task(is_heavy_task=True)
 @transition(Droplet, 'begin_provisioning')
 def provision_droplet(droplet_uuid, transition_entity=None, **kwargs):
     droplet = transition_entity
