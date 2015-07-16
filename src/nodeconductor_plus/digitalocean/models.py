@@ -4,7 +4,6 @@ from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
 from nodeconductor.structure import models as structure_models
-from nodeconductor.iaas import models as iaas_models
 
 
 class Service(structure_models.Service):
@@ -45,7 +44,7 @@ class Size(structure_models.ServiceProperty):
     transfer = models.PositiveIntegerField(help_text='Amount of transfer bandwidth in MiB')
 
 
-class Droplet(structure_models.Resource, iaas_models.VirtualMachineMixin):
+class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
     service_project_link = models.ForeignKey(
         ServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
