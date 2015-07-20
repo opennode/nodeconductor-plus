@@ -49,7 +49,4 @@ class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
         ServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
     ip_address = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
-    cores = models.PositiveSmallIntegerField(default=0, help_text='Number of cores in a VM')
-    ram = models.PositiveIntegerField(default=0, help_text='Memory size in MiB')
-    disk = models.PositiveIntegerField(default=0, help_text='Disk size in MiB')
     transfer = models.PositiveIntegerField(default=0, help_text='Amount of transfer bandwidth in MiB')
