@@ -27,7 +27,7 @@ def generate_password(length=10):
 
 
 def generate_username(name):
-    return name + ' ' + uuid.uuid4().hex
+    return uuid.uuid4().hex[:30]
 
 
 class GoogleView(views.APIView):
