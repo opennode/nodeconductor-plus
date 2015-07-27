@@ -3,19 +3,19 @@ from django.db import models
 from nodeconductor.structure import models as structure_models
 
 
-class Service(structure_models.Service):
+class GitLabService(structure_models.Service):
     projects = models.ManyToManyField(
-        structure_models.Project, related_name='+', through='ServiceProjectLink')
+        structure_models.Project, related_name='gitlab_services', through='GitLabServiceProjectLink')
 
 
-class ServiceProjectLink(structure_models.ServiceProjectLink):
-    service = models.ForeignKey(Service)
+class GitLabServiceProjectLink(structure_models.ServiceProjectLink):
+    service = models.ForeignKey(GitLabService)
 
 
 class Group(structure_models.Resource):
     path = models.CharField(max_length=100, blank=True)
     service_project_link = models.ForeignKey(
-        ServiceProjectLink, related_name='groups', on_delete=models.PROTECT)
+        GitLabServiceProjectLink, related_name='groups', on_delete=models.PROTECT)
 
     @property
     def web_url(self):
@@ -37,7 +37,7 @@ class Project(structure_models.Resource):
         )
 
     service_project_link = models.ForeignKey(
-        ServiceProjectLink, related_name='projects', on_delete=models.PROTECT)
+        GitLabServiceProjectLink, related_name='projects', on_delete=models.PROTECT)
 
     group = models.ForeignKey(Group, related_name='projects', blank=True, null=True)
     visibility_level = models.SmallIntegerField(choices=Levels.CHOICES)

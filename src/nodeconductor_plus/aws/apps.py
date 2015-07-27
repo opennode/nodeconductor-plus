@@ -8,7 +8,7 @@ class AWSConfig(AppConfig):
     verbose_name = "NodeConductor AWS EC2"
 
     def ready(self):
-        Service = self.get_model('Service')
+        AWSService = self.get_model('AWSService')
 
         from .backend import AWSBackend
-        SupportedServices.register_backend(Service, AWSBackend)
+        SupportedServices.register_backend(AWSService, AWSBackend)

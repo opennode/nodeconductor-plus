@@ -33,14 +33,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.Service
+        model = models.AWSService
         view_name = 'aws-detail'
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
-        model = models.ServiceProjectLink
+        model = models.AWSServiceProjectLink
         view_name = 'aws-spl-detail'
         extra_kwargs = {
             'service': {'lookup_field': 'uuid', 'view_name': 'aws-detail'},
@@ -57,7 +57,7 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='aws-spl-detail',
-        queryset=models.ServiceProjectLink.objects.all(),
+        queryset=models.AWSServiceProjectLink.objects.all(),
         write_only=True)
 
     image = serializers.HyperlinkedRelatedField(

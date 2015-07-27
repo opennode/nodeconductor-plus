@@ -8,7 +8,7 @@ class GitLabConfig(AppConfig):
     verbose_name = "NodeConductor GitLab"
 
     def ready(self):
-        Service = self.get_model('Service')
+        GitLabService = self.get_model('GitLabService')
 
         from .backend import GitLabBackend
-        SupportedServices.register_backend(Service, GitLabBackend)
+        SupportedServices.register_backend(GitLabService, GitLabBackend)

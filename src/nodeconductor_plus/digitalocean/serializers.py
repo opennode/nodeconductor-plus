@@ -54,14 +54,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.Service
+        model = models.DigitalOceanService
         view_name = 'digitalocean-detail'
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
-        model = models.ServiceProjectLink
+        model = models.DigitalOceanServiceProjectLink
         view_name = 'digitalocean-spl-detail'
         extra_kwargs = {
             'service': {'lookup_field': 'uuid', 'view_name': 'digitalocean-detail'},
@@ -78,7 +78,7 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
-        queryset=models.ServiceProjectLink.objects.all(),
+        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
         write_only=True)
 
     region = serializers.HyperlinkedRelatedField(
