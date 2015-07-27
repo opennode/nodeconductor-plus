@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 import django_filters
 
-from rest_framework import viewsets, decorators, response, status
+from rest_framework import viewsets
 
 from nodeconductor.structure import views as structure_views
 
@@ -12,29 +12,7 @@ from . import models, serializers
 class DigitalOceanServiceViewSet(structure_views.BaseServiceViewSet):
     queryset = models.Service.objects.all()
     serializer_class = serializers.ServiceSerializer
-
-    def get_serializer_class(self):
-        if self.action == 'link':
-            return serializers.DropletImportSerializer
-        return super(DigitalOceanServiceViewSet, self).get_serializer_class()
-
-    def check_object_permissions(self, request, obj):
-        if self.action == 'link' and self.request.method == 'POST':
-            return
-
-    @decorators.detail_route(methods=['get', 'post'])
-    def link(self, request, uuid=None):
-        if self.request.method == 'GET':
-            backend = self.get_object().get_backend()
-            return response.Response(backend.get_droplets_for_import())
-        else:
-            serializer = self.get_serializer_class()(
-                data=request.data, context={'request': request, 'service': self.get_object()})
-            if serializer.is_valid():
-                serializer.save()
-                return response.Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    import_serializer_class = serializers.DropletImportSerializer
 
 
 class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):

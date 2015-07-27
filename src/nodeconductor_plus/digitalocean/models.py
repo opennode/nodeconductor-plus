@@ -50,3 +50,20 @@ class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
 
     ip_address = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
     transfer = models.PositiveIntegerField(default=0, help_text='Amount of transfer bandwidth in MiB')
+
+    # TODO: Move IP address definition to VirtualMachineMixin
+    @property
+    def external_ips(self):
+        return self.ip_address
+
+    @external_ips.setter
+    def external_ips(self, value):
+        self.ip_address = value
+
+    @property
+    def internal_ips(self):
+        return None
+
+    @internal_ips.setter
+    def internal_ips(self, value):
+        pass

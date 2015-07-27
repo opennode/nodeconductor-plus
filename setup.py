@@ -15,8 +15,8 @@ tests_requires = [
 ]
 
 install_requires = [
-    # FIXME: update it after structure.Service goes to release
-    'nodeconductor>=0.7.0',
+    'apache-libcloud>=0.17.0',
+    'nodeconductor>=0.68.0',
     'python-digitalocean>=1.5',
     'python-gitlab>=0.9',
 ]
@@ -40,6 +40,7 @@ setup(
     },
     entry_points={
         'nodeconductor_extensions': (
+            'aws = nodeconductor_plus.aws.urls',
             'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.urls',
             'digitalocean = nodeconductor_plus.digitalocean.urls',
             'gitlab = nodeconductor_plus.gitlab.urls',
