@@ -2,12 +2,12 @@
 
 # applications enabled by default
 NODECONDUCTOR_PLUS_APPS = (
-        'nodeconductor_plus.nodeconductor_auth',
-        'nodeconductor_plus.plans',
-        'nodeconductor_plus.digitalocean',
-        'nodeconductor_plus.gitlab',
-        'nodeconductor_plus.aws',
-        'nodeconductor_plus.premium_support',
+    'nodeconductor_plus.nodeconductor_auth',
+    'nodeconductor_plus.plans',
+    'nodeconductor_plus.digitalocean',
+    'nodeconductor_plus.gitlab',
+    'nodeconductor_plus.aws',
+    'nodeconductor_plus.premium_support',
 )
 
 # NodeConductor Plus specific settings
