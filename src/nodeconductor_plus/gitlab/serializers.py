@@ -19,14 +19,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.Service
+        model = models.GitLabService
         view_name = 'gitlab-detail'
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
-        model = models.ServiceProjectLink
+        model = models.GitLabServiceProjectLink
         view_name = 'gitlab-spl-detail'
         extra_kwargs = {
             'service': {'lookup_field': 'uuid', 'view_name': 'gitlab-detail'},
@@ -53,7 +53,7 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='gitlab-spl-detail',
-        queryset=models.ServiceProjectLink.objects.all(),
+        queryset=models.GitLabServiceProjectLink.objects.all(),
         write_only=True)
 
     projects = BasicProjectSerializer(many=True, read_only=True)
@@ -93,7 +93,7 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='gitlab-spl-detail',
-        queryset=models.ServiceProjectLink.objects.all(),
+        queryset=models.GitLabServiceProjectLink.objects.all(),
         write_only=True)
 
     group = serializers.HyperlinkedRelatedField(

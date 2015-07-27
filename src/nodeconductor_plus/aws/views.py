@@ -6,13 +6,13 @@ from . import models, serializers
 
 
 class AmazonServiceViewSet(structure_views.BaseServiceViewSet):
-    queryset = models.Service.objects.all()
+    queryset = models.AWSService.objects.all()
     serializer_class = serializers.ServiceSerializer
     import_serializer_class = serializers.InstanceImportSerializer
 
 
 class AmazonServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
-    queryset = models.ServiceProjectLink.objects.all()
+    queryset = models.AWSServiceProjectLink.objects.all()
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 

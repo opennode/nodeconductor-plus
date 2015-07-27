@@ -5,12 +5,12 @@ from . import models, serializers
 
 
 class GitLabServiceViewSet(structure_views.BaseServiceViewSet):
-    queryset = models.Service.objects.all()
+    queryset = models.GitLabService.objects.all()
     serializer_class = serializers.ServiceSerializer
 
 
 class GitLabServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
-    queryset = models.ServiceProjectLink.objects.all()
+    queryset = models.GitLabServiceProjectLink.objects.all()
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 

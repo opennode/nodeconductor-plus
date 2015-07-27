@@ -6,13 +6,13 @@ from django.utils.encoding import python_2_unicode_compatible
 from nodeconductor.structure import models as structure_models
 
 
-class Service(structure_models.Service):
+class DigitalOceanService(structure_models.Service):
     projects = models.ManyToManyField(
-        structure_models.Project, related_name='+', through='ServiceProjectLink')
+        structure_models.Project, related_name='digitalocean_services', through='DigitalOceanServiceProjectLink')
 
 
-class ServiceProjectLink(structure_models.ServiceProjectLink):
-    service = models.ForeignKey(Service)
+class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
+    service = models.ForeignKey(DigitalOceanService)
 
 
 class Region(structure_models.ServiceProperty):
@@ -46,7 +46,7 @@ class Size(structure_models.ServiceProperty):
 
 class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
     service_project_link = models.ForeignKey(
-        ServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
+        DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
     ip_address = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
     transfer = models.PositiveIntegerField(default=0, help_text='Amount of transfer bandwidth in MiB')

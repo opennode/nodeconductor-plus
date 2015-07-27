@@ -10,13 +10,13 @@ from . import models, serializers
 
 
 class DigitalOceanServiceViewSet(structure_views.BaseServiceViewSet):
-    queryset = models.Service.objects.all()
+    queryset = models.DigitalOceanService.objects.all()
     serializer_class = serializers.ServiceSerializer
     import_serializer_class = serializers.DropletImportSerializer
 
 
 class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
-    queryset = models.ServiceProjectLink.objects.all()
+    queryset = models.DigitalOceanServiceProjectLink.objects.all()
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
