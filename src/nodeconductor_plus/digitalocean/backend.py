@@ -178,7 +178,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         except digitalocean.DataReadError as e:
             six.reraise(DigitalOceanBackendError, e)
 
-    def get_droplets_for_import(self):
+    def get_resources_for_import(self):
         cur_droplets = models.Droplet.objects.all().values_list('backend_id', flat=True)
         statuses = ('active', 'off')
         return [{
@@ -218,7 +218,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         return backend_ssh_key
 
     def _get_current_properties(self, model):
-        return {p.backend_id: p for p in model.objects.filter(settings=self.settings)}
+        return {p.backend_id: p for p in model.objects.all()}
 
     def _update_entity_regions(self, entity, backend_entity):
         all_regions = set(entity.regions.all())
