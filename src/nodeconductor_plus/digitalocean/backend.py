@@ -181,6 +181,10 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     def get_resources_for_import(self):
         cur_droplets = models.Droplet.objects.all().values_list('backend_id', flat=True)
         statuses = ('active', 'off')
+        try:
+            droplets = self.manager.get_all_droplets()
+        except digitalocean.Error as e:
+            six.reraise(DigitalOceanBackendError, e)
         return [{
             'id': droplet.id,
             'name': droplet.name,
@@ -189,7 +193,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             'cores': droplet.vcpus,
             'ram': droplet.memory,
             'disk': self.gb2mb(droplet.disk),
-        } for droplet in self.manager.get_all_droplets()
+        } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
 
     def get_or_create_ssh_key(self, ssh_key):

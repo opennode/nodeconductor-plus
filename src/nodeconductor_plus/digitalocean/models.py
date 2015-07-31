@@ -7,6 +7,7 @@ from nodeconductor.structure import models as structure_models
 
 
 class DigitalOceanService(structure_models.Service):
+    DEFAULT_URL_NAME = 'digitalocean'
     projects = models.ManyToManyField(
         structure_models.Project, related_name='digitalocean_services', through='DigitalOceanServiceProjectLink')
 
