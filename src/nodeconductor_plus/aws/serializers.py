@@ -3,7 +3,6 @@ from rest_framework import serializers
 from django.utils import dateparse
 
 from nodeconductor.structure import SupportedServices
-from nodeconductor.structure import models as structure_models
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models

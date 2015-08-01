@@ -16,6 +16,7 @@ tests_requires = [
 
 install_requires = [
     'apache-libcloud>=0.17.0',
+    'azure>=0.11.1',
     'nodeconductor>=0.68.0',
     'python-digitalocean>=1.5',
     'python-gitlab>=0.9',
@@ -41,6 +42,7 @@ setup(
     entry_points={
         'nodeconductor_extensions': (
             'aws = nodeconductor_plus.aws.urls',
+            'azure = nodeconductor_plus.azure.urls',
             'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.urls',
             'digitalocean = nodeconductor_plus.digitalocean.urls',
             'gitlab = nodeconductor_plus.gitlab.urls',
