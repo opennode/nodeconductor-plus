@@ -7,13 +7,11 @@ from nodeconductor.structure import models as structure_models
 
 
 class DigitalOceanService(structure_models.Service):
-    DEFAULT_URL_NAME = 'digitalocean'
     projects = models.ManyToManyField(
         structure_models.Project, related_name='digitalocean_services', through='DigitalOceanServiceProjectLink')
 
 
 class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
-    DEFAULT_URL_NAME = 'digitalocean-spl'
     service = models.ForeignKey(DigitalOceanService)
 
 
@@ -47,7 +45,6 @@ class Size(structure_models.ServiceProperty):
 
 
 class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
-    DEFAULT_URL_NAME = 'digitalocean-droplet'
     service_project_link = models.ForeignKey(
         DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
