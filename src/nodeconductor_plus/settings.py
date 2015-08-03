@@ -1,11 +1,14 @@
 # NodeConductor Plus application base settings that will be imported into Django settings
 
+from datetime import timedelta
+
 # applications enabled by default
 NODECONDUCTOR_PLUS_APPS = (
     'nodeconductor_plus.aws',
     'nodeconductor_plus.azure',
     'nodeconductor_plus.digitalocean',
     'nodeconductor_plus.gitlab',
+    'nodeconductor_plus.insights',
     'nodeconductor_plus.nodeconductor_auth',
     'nodeconductor_plus.plans',
     'nodeconductor_plus.premium_support',
@@ -17,3 +20,10 @@ NODECONDUCTOR_PLUS = {
     'FACEBOOK_SECRET': 'CHANGE_ME_TO_FACEBOOK_SECRET',
 }
 
+NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
+    'check-unmanaged-resources': {
+        'task': 'nodeconductor.insights.check_unmanaged_resources',
+        'schedule': timedelta(minutes=60),
+        'args': ()
+    }
+}
