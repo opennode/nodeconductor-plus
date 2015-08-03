@@ -13,5 +13,6 @@ class InsightsConfig(AppConfig):
         for model in Service.get_all_models():
             signals.post_save.connect(
                 handlers.check_unmanaged_resources,
-                sender=model
+                sender=model,
+                dispatch_uid='nodeconductor_plus.insights.handlers.check_unmanaged_resources'
             )
