@@ -32,5 +32,5 @@ def check_service_resources(model_string):
                                                      alert_context={'service': service})
             else:
                 alert_logger.resource_import.close(scope=service, alert_type='service_has_unmanaged_resources')
-    except ServiceBackendError:
+    except ServiceBackendError, ServiceBackendNotImplemented:
         logger.warning('Unable to get resources for import')
