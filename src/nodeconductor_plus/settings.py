@@ -22,7 +22,7 @@ NODECONDUCTOR_PLUS = {
 
 NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
     'check-unmanaged-resources': {
-        'task': 'nodeconductor_plus.insights.check_unmanaged_resources',
+        'task': 'nodeconductor.insights.check_unmanaged_resources',
         'schedule': timedelta(minutes=60),
         'args': ()
     }
