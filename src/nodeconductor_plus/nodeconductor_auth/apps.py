@@ -19,15 +19,17 @@ class NodeConductorAuthConfig(AppConfig):
             dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_auth_profile',
         )
 
-        signals.post_save.connect(
-            handlers.create_user_first_customer_and_project,
-            sender=settings.AUTH_USER_MODEL,
-            dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_user_first_customer_and_project',
-        )
+        nc_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
+        if nc_settings.get('CREATE_CUSTOMER_ON_USER_CREATION', False):
+            signals.post_save.connect(
+                handlers.create_user_first_customer_and_project,
+                sender=settings.AUTH_USER_MODEL,
+                dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_user_first_customer_and_project',
+            )
 
-        signals.post_save.connect(
-            handlers.update_user_first_customer_name_on_user_name_change,
-            sender=settings.AUTH_USER_MODEL,
-            dispatch_uid=('nodeconductor_plus.nodeconductor_auth.handlers.'
-                          'update_user_first_customer_name_on_user_name_change'),
-        )
+            signals.post_save.connect(
+                handlers.update_user_first_customer_name_on_user_name_change,
+                sender=settings.AUTH_USER_MODEL,
+                dispatch_uid=('nodeconductor_plus.nodeconductor_auth.handlers.'
+                              'update_user_first_customer_name_on_user_name_change'),
+            )
