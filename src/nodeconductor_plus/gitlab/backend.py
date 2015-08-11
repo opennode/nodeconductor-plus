@@ -33,6 +33,10 @@ class GitLabBaseBackend(ServiceBackend):
     def __init__(self, settings):
         self.settings = settings
 
+    def ping(self):
+        # Session validation occurs on class creation so assume it's active
+        return True
+
     def provision(self, resource, **kwargs):
         kwargs.update({'name': resource.name, 'description': resource.description})
         if isinstance(resource, Group):
