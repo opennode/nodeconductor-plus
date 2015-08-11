@@ -120,6 +120,22 @@ class GitLabRealBackend(GitLabBaseBackend):
         except gitlab.GitlabAuthenticationError as e:
             six.reraise(GitLabBackendError, e)
 
+    def ping_resource(self, resource):
+        if isinstance(resource, Group):
+            try:
+                self.manager.Group(resource.backend_id)
+            except gitlab.GitlabGetError:
+                return False
+        elif isinstance(resource, Project):
+            try:
+                self.manager.Project(resource.backend_id)
+            except gitlab.GitlabGetError:
+                return False
+        else:
+            raise NotImplementedError
+
+        return True
+
     def provision_group(self, group, **kwargs):
         try:
             backend_group = self.manager.Group(kwargs)
