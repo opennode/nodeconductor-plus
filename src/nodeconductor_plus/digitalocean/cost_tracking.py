@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 class DigitalOceanCostTracking(CostTrackingStrategy):
 
     @classmethod
-    def get_costs_estimates(cls):
-        for droplet in Droplet.objects.exclude(state=Droplet.States.ERRED):
+    def get_costs_estimates(cls, customer=None):
+        queryset = Droplet.objects.exclude(state=Droplet.States.ERRED)
+        for droplet in cls.filter_queryset_for_customer(queryset, customer):
             try:
                 backend = droplet.get_backend()
                 monthly_cost = backend.get_cost_estimate(droplet.backend_id)
