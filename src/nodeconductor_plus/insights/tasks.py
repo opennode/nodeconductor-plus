@@ -56,6 +56,7 @@ def check_service_availability(service_str):
     try:
         available = backend.ping()
     except ServiceBackendNotImplemented:
+        logger.error("Method ping() is not implemented for %s" % backend.__class__.__name__)
         available = True
     except ServiceBackendError:
         available = False
@@ -80,6 +81,7 @@ def check_service_resources_availability(service_str):
             try:
                 available = backend.ping_resource(resource)
             except ServiceBackendNotImplemented:
+                logger.error("Method ping_resource() is not implemented for %s" % backend.__class__.__name__)
                 available = True
             except ServiceBackendError:
                 available = False
