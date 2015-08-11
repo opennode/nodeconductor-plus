@@ -11,6 +11,7 @@ class PlanQuotaInline(admin.TabularInline):
 
 
 class PlanAdmin(admin.ModelAdmin):
+    fields = ['name', 'price']
     list_display = ['name', 'price']
     search_fields = ['name']
     inlines = [PlanQuotaInline]

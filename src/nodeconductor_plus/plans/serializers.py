@@ -36,8 +36,10 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = models.Order
-        fields = ('url', 'uuid', 'customer', 'plan', 'customer_name', 'plan_name', 'plan_price', 'state', 'user')
-        read_only_fields = ('customer_name', 'plan_name', 'plan_price', 'state', 'user')
+        fields = ('url', 'uuid', 'customer', 'customer_name', 'plan',  'plan_name', 'plan_price',
+                  'state', 'user', 'username', 'approval_url', 'start_date')
+        read_only_fields = ('customer_name', 'plan_name', 'plan_price',
+                            'state', 'user', 'username', 'approval_url', 'start_date')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'customer': {'lookup_field': 'uuid'},

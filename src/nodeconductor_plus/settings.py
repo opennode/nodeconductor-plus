@@ -26,5 +26,10 @@ NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
         'task': 'nodeconductor.insights.check_unmanaged_resources',
         'schedule': timedelta(minutes=60),
         'args': ()
+    },
+    'check-orders': {
+        'task': 'nodeconductor.plans.check_orders',
+        'schedule': timedelta(minutes=60),
+        'args': ()
     }
 }
