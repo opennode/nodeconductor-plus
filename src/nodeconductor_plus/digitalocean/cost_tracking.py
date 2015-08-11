@@ -13,8 +13,8 @@ class DigitalOceanCostTracking(CostTrackingStrategy):
 
     @classmethod
     def get_costs_estimates(cls, customer=None):
-        queryset = Droplet.objects.exclude(state=Droplet.States.ERRED)
-        for droplet in cls.filter_queryset_for_customer(queryset, customer):
+        queryset = Droplet.objects.by_customer(customer).exclude(state=Droplet.States.ERRED)
+        for droplet in queryset.iterator():
             try:
                 backend = droplet.get_backend()
                 monthly_cost = backend.get_cost_estimate(droplet.backend_id)
