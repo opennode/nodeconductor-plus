@@ -18,28 +18,15 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
         return obj.quotas.values('name', 'value')
 
 
-class PlanCustomerSerializer(serializers.HyperlinkedModelSerializer):
-
-    plan = PlanSerializer()
-
-    class Meta:
-        model = models.PlanCustomer
-        fields = ('url', 'uuid', 'customer', 'plan')
-        view_name = 'plan_customer-detail'
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-            'customer': {'lookup_field': 'uuid'},
-        }
-
-
-class OrderSerializer(serializers.HyperlinkedModelSerializer):
+class AgreementSerializer(serializers.HyperlinkedModelSerializer):
+    customer_name = serializers.ReadOnlyField(source='customer.name')
+    plan_name = serializers.ReadOnlyField(source='plan.name')
+    plan_price = serializers.ReadOnlyField(source='plan.price')
 
     class Meta:
-        model = models.Order
-        fields = ('url', 'uuid', 'customer', 'customer_name', 'plan',  'plan_name', 'plan_price',
-                  'state', 'user', 'username', 'approval_url', 'start_date')
-        read_only_fields = ('customer_name', 'plan_name', 'plan_price',
-                            'state', 'user', 'username', 'approval_url', 'start_date')
+        model = models.Agreement
+        fields = ('url', 'uuid', 'customer', 'plan', 'state', 'user', 'approval_url', 'start_date')
+        read_only_fields = ('state', 'user', 'approval_url', 'start_date')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'customer': {'lookup_field': 'uuid'},

@@ -15,6 +15,11 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'price']
     search_fields = ['name']
     inlines = [PlanQuotaInline]
+    actions = ['push_to_backend']
+
+    def push_to_backend(self, request, queryset):
+        for plan in queryset:
+            plan.push_to_backend(request)
 
 
 admin.site.register(Plan, PlanAdmin)
