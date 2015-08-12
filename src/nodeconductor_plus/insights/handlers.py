@@ -45,4 +45,5 @@ def check_customer_quota_exceeded(sender, instance, **kwargs):
             alert_logger.quota_check.close(scope=instance.scope, alert_type=alert_type)
 
     if instance.name == 'nc_service_count' and instance.usage == 0:
-        init_managed_services_alert(None, instance.scope)
+        if isinstance(instance.scope, Customer):
+            init_managed_services_alert(None, instance.scope)
