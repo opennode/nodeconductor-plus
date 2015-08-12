@@ -28,7 +28,7 @@ NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(minutes=60),
         'args': ()
     },
-   'check-customers': {
+    'check-customers': {
         'task': 'nodeconductor.insights.check_customers',
         'schedule': timedelta(hours=24),
         'args': (),
