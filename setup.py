@@ -49,6 +49,9 @@ setup(
             'plans = nodeconductor_plus.plans.urls',
             'premium_support = nodeconductor_plus.premium_support.urls',
         ),
+        'cost_tracking_strategies': (
+            'digitalocean = nodeconductor_plus.digitalocean.cost_tracking:DigitalOceanCostTracking',
+        ),
     },
     tests_require=tests_requires,
     include_package_data=True,

@@ -92,7 +92,24 @@ class DigitalOceanBaseBackend(ServiceBackend):
 class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     """ NodeConductor interface to Digital Ocean API.
         https://developers.digitalocean.com/documentation/v2/
+        https://github.com/koalalorenzo/python-digitalocean
     """
+
+    def ping(self):
+        try:
+            self.manager.get_account()
+        except digitalocean.DataReadError:
+            return False
+        else:
+            return True
+
+    def ping_resource(self, droplet):
+        try:
+            self.get_droplet(droplet.backend_id)
+        except DigitalOceanBackendError:
+            return False
+        else:
+            return True
 
     def pull_service_properties(self):
         self.pull_regions()
@@ -177,6 +194,10 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             return self.manager.get_droplet(backend_droplet_id)
         except digitalocean.DataReadError as e:
             six.reraise(DigitalOceanBackendError, e)
+
+    def get_cost_estimate(self, backend_droplet_id):
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        return backend_droplet.size['price_monthly']
 
     def get_resources_for_import(self):
         cur_droplets = models.Droplet.objects.all().values_list('backend_id', flat=True)

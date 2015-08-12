@@ -33,6 +33,10 @@ class GitLabBaseBackend(ServiceBackend):
     def __init__(self, settings):
         self.settings = settings
 
+    def ping(self):
+        # Session validation occurs on class creation so assume it's active
+        return True
+
     def provision(self, resource, **kwargs):
         kwargs.update({'name': resource.name, 'description': resource.description})
         if isinstance(resource, Group):
@@ -115,6 +119,22 @@ class GitLabRealBackend(GitLabBaseBackend):
             self.manager.auth()
         except gitlab.GitlabAuthenticationError as e:
             six.reraise(GitLabBackendError, e)
+
+    def ping_resource(self, resource):
+        if isinstance(resource, Group):
+            try:
+                self.manager.Group(resource.backend_id)
+            except gitlab.GitlabGetError:
+                return False
+        elif isinstance(resource, Project):
+            try:
+                self.manager.Project(resource.backend_id)
+            except gitlab.GitlabGetError:
+                return False
+        else:
+            raise NotImplementedError
+
+        return True
 
     def provision_group(self, group, **kwargs):
         try:
