@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name='nodeconductor.plans.check_agreements')
 def check_agreements():
-    for agreement in Agreement.objects.filter(state=Agreement.States.ACTIVE):
+    for agreement in Agreement.objects.filter(state=Agreement.States.ACTIVE, backend_id__isnull=False):
         check_agreement.delay(agreement.pk)
 
 
@@ -60,6 +60,7 @@ def activate_agreement(agreement_id):
     # That's why we need to cancel old agreement before activating new one
     try:
         old_agreement = Agreement.objects.get(customer=agreement.customer,
+                                              backend_id__isnull=False,
                                               state=Agreement.States.ACTIVE)
         cancel_agreement.delay(old_agreement.pk)
     except Agreement.DoesNotExist:
