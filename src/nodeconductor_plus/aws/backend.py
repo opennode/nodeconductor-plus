@@ -1,4 +1,6 @@
 import logging
+import calendar
+import datetime
 
 from django.utils import six
 from libcloud.compute.drivers.ec2 import EC2NodeDriver
@@ -74,6 +76,18 @@ class AWSRealBackend(AWSBaseBackend):
                     })
 
         map(lambda i: i.delete(), cur_images.values())
+
+    def get_cost_estimate(self, instance):
+        try:
+            instance = (self.manager.list_nodes(ex_node_ids=[instance.backend_id]))[0]
+        except Exception as e:
+            six.reraise(AWSBackendError, e)
+
+        now = datetime.datetime.now()
+        days = calendar.monthrange(now.year, now.month)[1]
+        size = next(s for s in self.manager.list_sizes() if s.id == instance.extra['instance_type'])
+
+        return 24 * days * size.price
 
     def get_instance(self, instance_id):
         try:
