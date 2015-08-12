@@ -43,6 +43,22 @@ class AWSRealBackend(AWSBaseBackend):
         https://libcloud.apache.org/
     """
 
+    def ping(self):
+        try:
+            self.manager.list_images(ex_owner='self')
+        except:
+            return False
+        else:
+            return True
+
+    def ping_resource(self, instance):
+        try:
+            self.manager.list_nodes(ex_node_ids=[instance.backend_id])
+        except:
+            return False
+        else:
+            return True
+
     def pull_service_properties(self):
         self.pull_images()
 

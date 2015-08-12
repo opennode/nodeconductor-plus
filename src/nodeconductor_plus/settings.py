@@ -19,12 +19,18 @@ NODECONDUCTOR_PLUS = {
     'GOOGLE_SECRET': 'CHANGE_ME_TO_GOOGLE_SECRET',
     'FACEBOOK_SECRET': 'CHANGE_ME_TO_FACEBOOK_SECRET',
     'CREATE_CUSTOMER_ON_USER_CREATION': False,
+    'PROJECTED_COSTS_EXCESS': 20,
 }
 
 NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
-    'check-unmanaged-resources': {
-        'task': 'nodeconductor.insights.check_unmanaged_resources',
+    'check-services': {
+        'task': 'nodeconductor.insights.check_services',
         'schedule': timedelta(minutes=60),
         'args': ()
-    }
+    },
+    'check-customers': {
+        'task': 'nodeconductor.insights.check_customers',
+        'schedule': timedelta(hours=24),
+        'args': (),
+    },
 }

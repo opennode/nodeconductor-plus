@@ -92,7 +92,24 @@ class DigitalOceanBaseBackend(ServiceBackend):
 class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     """ NodeConductor interface to Digital Ocean API.
         https://developers.digitalocean.com/documentation/v2/
+        https://github.com/koalalorenzo/python-digitalocean
     """
+
+    def ping(self):
+        try:
+            self.manager.get_account()
+        except digitalocean.DataReadError:
+            return False
+        else:
+            return True
+
+    def ping_resource(self, droplet):
+        try:
+            self.get_droplet(droplet.backend_id)
+        except DigitalOceanBackendError:
+            return False
+        else:
+            return True
 
     def pull_service_properties(self):
         self.pull_regions()

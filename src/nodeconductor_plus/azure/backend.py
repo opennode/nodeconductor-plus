@@ -5,6 +5,8 @@ from django.conf import settings as django_settings
 
 # TODO: Replace it with libcloud AzureNodeDriver as soon as its support released
 # from libcloud.compute.drivers.azure import AzureNodeDriver
+from ssl import SSLError
+from azure import WindowsAzureError
 from azure.servicemanagement import ServiceManagementService
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
@@ -45,8 +47,24 @@ class AzureBaseBackend(ServiceBackend):
 class AzureRealBackend(AzureBaseBackend):
     """ NodeConductor interface to Azure API.
         https://libcloud.apache.org/
-        http://azure-sdk-for-python.readthedocs.org/en/latest/servicemanagement.html
+        https://github.com/Azure/azure-sdk-for-python
     """
+
+    def ping(self):
+        try:
+            self.manager.list_locations()
+        except (WindowsAzureError, SSLError):
+            return False
+        else:
+            return True
+
+    def ping_resource(self, instance):
+        try:
+            self.get_vm(instance.backend_id)
+        except AzureBackendError:
+            return False
+        else:
+            return True
 
     def pull_service_properties(self):
         self.pull_images()
@@ -77,7 +95,10 @@ class AzureRealBackend(AzureBaseBackend):
         map(lambda i: i.delete(), cur_locations.values())
 
     def get_vm(self, vm_name):
-        return self.manager.get_hosted_service_properties(vm_name)
+        try:
+            return self.manager.get_hosted_service_properties(vm_name)
+        except WindowsAzureError as e:
+            six.reraise(AzureBackendError, e)
 
     def get_resources_for_import(self):
         cur_vms = models.VirtualMachine.objects.all().values_list('backend_id', flat=True)
