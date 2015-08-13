@@ -50,6 +50,7 @@ setup(
             'premium_support = nodeconductor_plus.premium_support.urls',
         ),
         'cost_tracking_strategies': (
+            'azure = nodeconductor_plus.azure.cost_tracking:AzureCostTracking',
             'digitalocean = nodeconductor_plus.digitalocean.cost_tracking:DigitalOceanCostTracking',
         ),
     },
