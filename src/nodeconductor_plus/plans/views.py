@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from nodeconductor.billing.backend import BillingBackend
 from nodeconductor.structure import filters as structure_filters
+from nodeconductor.structure import models as structure_models
 from nodeconductor_plus.plans.models import Plan, Agreement
 from nodeconductor_plus.plans.serializers import PlanSerializer, AgreementSerializer
 
@@ -49,6 +50,14 @@ class AgreementViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
     filter_class = AgreementFilter
     backend = BillingBackend()
+
+    def get_queryset(self):
+        queryset = super(AgreementViewSet, self).get_queryset()
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(
+                customer__roles__permission_group__user=self.request.user,
+                customer__roles__role_type=structure_models.CustomerRole.OWNER)
+        return queryset
 
     def perform_create(self, serializer):
         """
@@ -109,5 +118,5 @@ class AgreementViewSet(mixins.CreateModelMixin,
     @detail_route()
     def transactions(self, request, uuid):
         agreement = self.get_object()
-        txs = self.backend.get_agreement_transactions(agreement.backend_id, agreement.created_at)
+        txs = self.backend.get_agreement_transactions(agreement.backend_id, agreement.created)
         return Response(txs, status=status.HTTP_200_OK)

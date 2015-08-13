@@ -129,4 +129,4 @@ class Agreement(UuidMixin, TimeStampedModel):
         agreement = Agreement.objects.create(
             plan=default_plan, customer=customer, state=Agreement.States.ACTIVE)
         agreement.apply_quotas()
-        logger.info('Default plan for customer %s has been applied', self.customer.name)
+        logger.info('Default plan for customer %s has been applied', customer.name)

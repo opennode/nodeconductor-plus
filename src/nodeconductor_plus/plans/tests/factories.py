@@ -24,39 +24,22 @@ class PlanFactory(factory.DjangoModelFactory):
         return 'http://testserver' + reverse('plan-list')
 
 
-class PlanCustomerFactory(factory.DjangoModelFactory):
+class AgreementFactory(factory.DjangoModelFactory):
     class Meta(object):
-        model = models.PlanCustomer
-
-    plan = factory.SubFactory(PlanFactory)
-    customer = factory.SubFactory(structure_factories.CustomerFactory)
-
-    @classmethod
-    def get_url(self, plan_customer=None):
-        if plan_customer is None:
-            plan_customer = PlanCustomerFactory()
-        return 'http://testserver' + reverse('plan_customer-detail', kwargs={'uuid': plan_customer.uuid})
-
-    @classmethod
-    def get_list_url(cls):
-        return 'http://testserver' + reverse('plan_customer-list')
-
-
-class OrderFactory(factory.DjangoModelFactory):
-    class Meta(object):
-        model = models.Order
+        model = models.Agreement
 
     plan = factory.SubFactory(PlanFactory)
     customer = factory.SubFactory(structure_factories.CustomerFactory)
     user = factory.SubFactory(structure_factories.UserFactory)
+    backend_id = factory.Sequence(lambda n: 'AGREEMENT_ID%s' % n)
+    token = factory.Sequence(lambda n: 'TOKEN%s' % n)
 
     @classmethod
-    def get_url(self, order=None, action=None):
-        if order is None:
-            order = OrderFactory()
-        url = 'http://testserver' + reverse('order-detail', kwargs={'uuid': order.uuid})
-        return url if action is None else url + action + '/'
+    def get_url(self, agreement=None):
+        if agreement is None:
+            agreement = AgreementFactory()
+        return 'http://testserver' + reverse('agreement-detail', kwargs={'uuid': agreement.uuid})
 
     @classmethod
     def get_list_url(cls):
-        return 'http://testserver' + reverse('order-list')
+        return 'http://testserver' + reverse('agreement-list')
