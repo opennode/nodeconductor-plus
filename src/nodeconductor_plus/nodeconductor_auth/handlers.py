@@ -14,7 +14,7 @@ def create_user_first_customer_and_project(sender, instance=None, created=False,
     user = instance
     customer = structure_models.Customer.objects.create(name=user.full_name, native_name=user.full_name)
     customer.add_user(user, structure_models.CustomerRole.OWNER)
-    project = structure_models.Project.objects.create(customer=customer, name='My First Project')
+    project = structure_models.Project.objects.create(customer=customer, name='Default')
     project.add_user(user, structure_models.ProjectRole.ADMINISTRATOR)
 
 

@@ -10,7 +10,7 @@ class SignalsTest(TransactionTestCase):
         user = get_user_model().objects.create_user(username='test', password='test', full_name='test_user')
 
         customer = structure_models.Customer.objects.get(name=user.full_name)
-        project = structure_models.Project.objects.get(name='My First Project', customer__name=user.full_name)
+        project = structure_models.Project.objects.get(name='Default', customer__name=user.full_name)
         self.assertTrue(customer.has_user(user, structure_models.CustomerRole.OWNER))
         self.assertTrue(project.has_user(user, structure_models.ProjectRole.ADMINISTRATOR))
 
