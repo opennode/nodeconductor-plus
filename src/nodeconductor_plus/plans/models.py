@@ -82,7 +82,7 @@ class Agreement(UuidMixin, TimeStampedModel):
             (ERRED, 'Erred'),
         )
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     plan = models.ForeignKey(Plan)
     customer = models.ForeignKey(structure_models.Customer)
 

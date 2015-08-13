@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                 ('state', django_fsm.FSMField(default=b'created', help_text=b'WARNING! Should not be changed manually unless you really know what you are doing.', max_length=20, choices=[(b'created', b'Created'), (b'pending', b'Pending'), (b'approved', b'Approved'), (b'active', b'Active'), (b'cancelled', b'Cancelled'), (b'erred', b'Erred')])),
                 ('customer', models.ForeignKey(to='structure.Customer')),
                 ('plan', models.ForeignKey(to='plans.Plan')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True)),
             ],
             options={
                 'abstract': False,
