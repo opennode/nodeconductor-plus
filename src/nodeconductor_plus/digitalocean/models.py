@@ -4,16 +4,15 @@ from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
 from nodeconductor.structure import models as structure_models
-from nodeconductor.iaas import models as iaas_models
 
 
-class Service(structure_models.Service):
+class DigitalOceanService(structure_models.Service):
     projects = models.ManyToManyField(
-        structure_models.Project, related_name='+', through='ServiceProjectLink')
+        structure_models.Project, related_name='digitalocean_services', through='DigitalOceanServiceProjectLink')
 
 
-class ServiceProjectLink(structure_models.ServiceProjectLink):
-    service = models.ForeignKey(Service)
+class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
+    service = models.ForeignKey(DigitalOceanService)
 
 
 class Region(structure_models.ServiceProperty):
@@ -45,12 +44,26 @@ class Size(structure_models.ServiceProperty):
     transfer = models.PositiveIntegerField(help_text='Amount of transfer bandwidth in MiB')
 
 
-class Droplet(structure_models.Resource, iaas_models.VirtualMachineMixin):
+class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
     service_project_link = models.ForeignKey(
-        ServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
+        DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
     ip_address = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
-    cores = models.PositiveSmallIntegerField(default=0, help_text='Number of cores in a VM')
-    ram = models.PositiveIntegerField(default=0, help_text='Memory size in MiB')
-    disk = models.PositiveIntegerField(default=0, help_text='Disk size in MiB')
     transfer = models.PositiveIntegerField(default=0, help_text='Amount of transfer bandwidth in MiB')
+
+    # TODO: Move IP address definition to VirtualMachineMixin
+    @property
+    def external_ips(self):
+        return self.ip_address
+
+    @external_ips.setter
+    def external_ips(self, value):
+        self.ip_address = value
+
+    @property
+    def internal_ips(self):
+        return None
+
+    @internal_ips.setter
+    def internal_ips(self, value):
+        pass

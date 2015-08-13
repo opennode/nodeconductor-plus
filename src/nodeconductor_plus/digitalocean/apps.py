@@ -8,7 +8,7 @@ class DigitalOceanConfig(AppConfig):
     verbose_name = "NodeConductor DigitalOcean"
 
     def ready(self):
-        Service = self.get_model('Service')
+        DigitalOceanService = self.get_model('DigitalOceanService')
 
         from .backend import DigitalOceanBackend
-        SupportedServices.register_backend(Service, DigitalOceanBackend)
+        SupportedServices.register_backend(DigitalOceanService, DigitalOceanBackend)

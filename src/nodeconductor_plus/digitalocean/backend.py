@@ -92,7 +92,24 @@ class DigitalOceanBaseBackend(ServiceBackend):
 class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     """ NodeConductor interface to Digital Ocean API.
         https://developers.digitalocean.com/documentation/v2/
+        https://github.com/koalalorenzo/python-digitalocean
     """
+
+    def ping(self):
+        try:
+            self.manager.get_account()
+        except digitalocean.DataReadError:
+            return False
+        else:
+            return True
+
+    def ping_resource(self, droplet):
+        try:
+            self.get_droplet(droplet.backend_id)
+        except DigitalOceanBackendError:
+            return False
+        else:
+            return True
 
     def pull_service_properties(self):
         self.pull_regions()
@@ -178,9 +195,17 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         except digitalocean.DataReadError as e:
             six.reraise(DigitalOceanBackendError, e)
 
-    def get_droplets_for_import(self):
+    def get_cost_estimate(self, backend_droplet_id):
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        return backend_droplet.size['price_monthly']
+
+    def get_resources_for_import(self):
         cur_droplets = models.Droplet.objects.all().values_list('backend_id', flat=True)
         statuses = ('active', 'off')
+        try:
+            droplets = self.manager.get_all_droplets()
+        except digitalocean.Error as e:
+            six.reraise(DigitalOceanBackendError, e)
         return [{
             'id': droplet.id,
             'name': droplet.name,
@@ -189,7 +214,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             'cores': droplet.vcpus,
             'ram': droplet.memory,
             'disk': self.gb2mb(droplet.disk),
-        } for droplet in self.manager.get_all_droplets()
+        } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
 
     def get_or_create_ssh_key(self, ssh_key):
@@ -218,7 +243,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         return backend_ssh_key
 
     def _get_current_properties(self, model):
-        return {p.backend_id: p for p in model.objects.filter(settings=self.settings)}
+        return {p.backend_id: p for p in model.objects.all()}
 
     def _update_entity_regions(self, entity, backend_entity):
         all_regions = set(entity.regions.all())

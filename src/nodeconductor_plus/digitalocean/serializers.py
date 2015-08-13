@@ -6,9 +6,7 @@ from django.utils import dateparse
 
 from rest_framework import serializers
 
-from nodeconductor.core import models as core_models
 from nodeconductor.structure import SupportedServices
-from nodeconductor.structure import models as structure_models
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
@@ -56,21 +54,21 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.Service
+        model = models.DigitalOceanService
         view_name = 'digitalocean-detail'
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
-        model = models.ServiceProjectLink
+        model = models.DigitalOceanServiceProjectLink
         view_name = 'digitalocean-spl-detail'
         extra_kwargs = {
             'service': {'lookup_field': 'uuid', 'view_name': 'digitalocean-detail'},
         }
 
 
-class DropletSerializer(structure_serializers.BaseResourceSerializer):
+class DropletSerializer(structure_serializers.VirtualMachineSerializer):
 
     service = serializers.HyperlinkedRelatedField(
         source='service_project_link.service',
@@ -80,7 +78,7 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
-        queryset=models.ServiceProjectLink.objects.all(),
+        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
         write_only=True)
 
     region = serializers.HyperlinkedRelatedField(
@@ -101,33 +99,15 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         queryset=models.Size.objects.all().select_related('settings'),
         write_only=True)
 
-    ssh_public_key = serializers.HyperlinkedRelatedField(
-        view_name='sshpublickey-detail',
-        lookup_field='uuid',
-        queryset=core_models.SshPublicKey.objects.all(),
-        required=False,
-        write_only=True)
-
-    external_ips = serializers.SerializerMethodField()
-
-    class Meta(structure_serializers.BaseResourceSerializer.Meta):
+    class Meta(structure_serializers.VirtualMachineSerializer.Meta):
         model = models.Droplet
         view_name = 'digitalocean-droplet-detail'
-        read_only_fields = ('start_time', 'cores', 'ram', 'disk', 'transfer')
-        fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'cores', 'ram', 'disk', 'transfer', 'external_ips',
-            'region', 'image', 'size', 'ssh_public_key',
-            'user_data',
+        fields = structure_serializers.VirtualMachineSerializer.Meta.fields + (
+            'region', 'image', 'size',
         )
-
-    def get_fields(self):
-        user = self.context['user']
-        fields = super(DropletSerializer, self).get_fields()
-        fields['ssh_public_key'].queryset = fields['ssh_public_key'].queryset.filter(user=user)
-        return fields
-
-    def get_external_ips(self, obj):
-        return [obj.ip_address] if obj.ip_address else []
+        protected_fields = structure_serializers.VirtualMachineSerializer.Meta.protected_fields + (
+            'region', 'image', 'size',
+        )
 
     def validate(self, attrs):
         region = attrs['region']
@@ -150,63 +130,28 @@ class DropletSerializer(structure_serializers.BaseResourceSerializer):
         return attrs
 
 
-class DropletImportSerializer(structure_serializers.PermissionFieldFilteringMixin,
-                              serializers.HyperlinkedModelSerializer):
+class DropletImportSerializer(structure_serializers.BaseResourceImportSerializer):
 
-    backend_id = serializers.CharField(write_only=True)
-    project = serializers.HyperlinkedRelatedField(
-        queryset=structure_models.Project.objects.all(),
-        view_name='project-detail',
-        lookup_field='uuid',
-        write_only=True)
-
-    state = serializers.ReadOnlyField(source='get_state_display')
-    created = serializers.DateTimeField(read_only=True)
-
-    class Meta(object):
+    class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.Droplet
         view_name = 'digitalocean-droplet-detail'
-        fields = (
-            'url', 'uuid', 'name', 'state', 'created',
-            'backend_id', 'project'
-        )
-        read_only_fields = ('name',)
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
 
-    def get_filtered_field_names(self):
-        return 'project',
-
-    def validate(self, attrs):
-        service = self.context['service']
-        backend = service.get_backend()
-
+    def create(self, validated_data):
+        backend = self.context['service'].get_backend()
         try:
-            attrs['service_project_link'] = models.ServiceProjectLink.objects.get(
-                service=service, project=attrs.pop('project'))
-        except models.ServiceProjectLink.DoesNotExist:
-            raise serializers.ValidationError({'project': "Unknown project or ServiceProjectLink missed."})
-
-        if models.Droplet.objects.filter(backend_id=attrs['backend_id']).exists():
-            raise serializers.ValidationError(
-                {'backend_id': "This droplet is already linked to NodeConductor"})
-
-        try:
-            droplet = backend.get_droplet(attrs['backend_id'])
+            droplet = backend.get_droplet(validated_data['backend_id'])
         except DigitalOceanBackendError:
             raise serializers.ValidationError(
-                {'backend_id': "Can't find droplet with ID %s" % attrs['backend_id']})
-        else:
-            attrs['name'] = droplet.name
-            attrs['cores'] = droplet.vcpus
-            attrs['ram'] = droplet.memory
-            attrs['disk'] = backend.gb2mb(droplet.disk)
-            attrs['transfer'] = backend.tb2mb(droplet.size['transfer'])
-            attrs['ip_address'] = droplet.ip_address
-            attrs['name'] = droplet.name
-            attrs['created'] = dateparse.parse_datetime(droplet.created_at)
-            attrs['state'] = models.Droplet.States.ONLINE if droplet.status == 'active' else \
-                models.Droplet.States.OFFLINE
+                {'backend_id': "Can't find droplet with ID %s" % validated_data['backend_id']})
 
-        return attrs
+        validated_data['name'] = droplet.name
+        validated_data['cores'] = droplet.vcpus
+        validated_data['ram'] = droplet.memory
+        validated_data['disk'] = backend.gb2mb(droplet.disk)
+        validated_data['transfer'] = backend.tb2mb(droplet.size['transfer'])
+        validated_data['ip_address'] = droplet.ip_address
+        validated_data['created'] = dateparse.parse_datetime(droplet.created_at)
+        validated_data['state'] = models.Droplet.States.ONLINE if droplet.status == 'active' else \
+            models.Droplet.States.OFFLINE
+
+        return super(DropletImportSerializer, self).create(validated_data)

@@ -4,7 +4,7 @@ from nodeconductor.structure.models import ProjectRole, CustomerRole, ProjectGro
 from nodeconductor.structure.tests import factories as structure_factories
 
 from . import factories
-from ..models import Service
+from ..models import DigitalOceanService
 
 
 class ServicePermissionTest(test.APITransactionTestCase):
@@ -213,7 +213,7 @@ class ServicePermissionTest(test.APITransactionTestCase):
         response = self.client.patch(factories.DigitalOceanServiceFactory.get_url(service), data=payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        reread_service = Service.objects.get(pk=service.pk)
+        reread_service = DigitalOceanService.objects.get(pk=service.pk)
         self.assertEqual(reread_service.customer, service.customer)
 
     def test_user_can_change_service_name_of_service_he_owns(self):
@@ -225,7 +225,7 @@ class ServicePermissionTest(test.APITransactionTestCase):
         response = self.client.patch(factories.DigitalOceanServiceFactory.get_url(service), data=payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
-        reread_service = Service.objects.get(pk=service.pk)
+        reread_service = DigitalOceanService.objects.get(pk=service.pk)
         self.assertEqual(reread_service.name, 'new name')
 
     def _get_valid_payload(self, resource):

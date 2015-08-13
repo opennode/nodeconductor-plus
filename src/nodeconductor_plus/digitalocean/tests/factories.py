@@ -9,7 +9,7 @@ from .. import models
 
 class DigitalOceanServiceFactory(factory.DjangoModelFactory):
     class Meta(object):
-        model = models.Service
+        model = models.DigitalOceanService
 
     name = factory.Sequence(lambda n: 'service%s' % n)
     settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
@@ -28,7 +28,7 @@ class DigitalOceanServiceFactory(factory.DjangoModelFactory):
 
 class DigitalOceanServiceProjectLingFactory(factory.DjangoModelFactory):
     class Meta(object):
-        model = models.ServiceProjectLink
+        model = models.DigitalOceanServiceProjectLink
 
     service = factory.SubFactory(DigitalOceanServiceFactory)
     project = factory.SubFactory(structure_factories.ProjectFactory)
