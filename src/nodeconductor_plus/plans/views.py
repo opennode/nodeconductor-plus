@@ -100,6 +100,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
         if agreement:
             try:
                 agreement.set_cancelled()
+                agreement.save()
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
