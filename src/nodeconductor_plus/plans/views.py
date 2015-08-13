@@ -23,8 +23,8 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
 
-    def get_queryset(self):
-        return self.queryset.exclude(backend_id__isnull=True)
+    def filter_queryset(self, queryset):
+        return queryset.exclude(backend_id__isnull=True)
 
 
 class AgreementFilter(django_filters.FilterSet):
@@ -83,6 +83,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
         if agreement:
             try:
                 agreement.set_approved()
+                agreement.save()
                 tasks.activate_agreement.delay(agreement.pk)
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')

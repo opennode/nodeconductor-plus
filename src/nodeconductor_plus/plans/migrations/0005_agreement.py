@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('structure', '0017_add_azure_service_type'),
         ('plans', '0004_connect_existed_customers_with_plans'),
     ]
 
@@ -27,8 +28,6 @@ class Migration(migrations.Migration):
                 ('backend_id', models.CharField(max_length=255, null=True)),
                 ('token', models.CharField(max_length=120, null=True)),
                 ('approval_url', models.URLField(null=True)),
-                ('start_date', models.DateTimeField(help_text=b'Date when agreement has been activated', null=True)),
-                ('end_date', models.DateTimeField(help_text=b'Date when agreement has been cancelled', null=True)),
                 ('state', django_fsm.FSMField(default=b'created', help_text=b'WARNING! Should not be changed manually unless you really know what you are doing.', max_length=20, choices=[(b'created', b'Created'), (b'pending', b'Pending'), (b'approved', b'Approved'), (b'active', b'Active'), (b'cancelled', b'Cancelled'), (b'erred', b'Erred')])),
                 ('customer', models.ForeignKey(to='structure.Customer')),
                 ('plan', models.ForeignKey(to='plans.Plan')),
@@ -39,10 +38,36 @@ class Migration(migrations.Migration):
             },
             bases=(models.Model,),
         ),
+        migrations.RemoveField(
+            model_name='order',
+            name='customer',
+        ),
+        migrations.RemoveField(
+            model_name='order',
+            name='plan',
+        ),
+        migrations.RemoveField(
+            model_name='order',
+            name='user',
+        ),
         migrations.DeleteModel(
             name='Order',
         ),
+        migrations.RemoveField(
+            model_name='plancustomer',
+            name='customer',
+        ),
+        migrations.RemoveField(
+            model_name='plancustomer',
+            name='plan',
+        ),
         migrations.DeleteModel(
             name='PlanCustomer',
+        ),
+        migrations.AddField(
+            model_name='plan',
+            name='backend_id',
+            field=models.CharField(max_length=255, null=True),
+            preserve_default=True,
         ),
     ]

@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.db import models, transaction, IntegrityError
 from django.utils import timezone
@@ -9,13 +11,17 @@ from rest_framework.reverse import reverse
 from nodeconductor.billing.backend import BillingBackend
 from nodeconductor.core.models import UuidMixin
 from nodeconductor.structure import models as structure_models
+from nodeconductor_plus.plans.settings import DEFAULT_PLAN
+
+
+logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
 class Plan(UuidMixin, models.Model):
     name = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=12, decimal_places=2)
-    backend_id = models.CharField(max_length=255, blank=True)
+    backend_id = models.CharField(max_length=255, null=True)
 
     def __str__(self):
         return self.name
@@ -33,6 +39,15 @@ class Plan(UuidMixin, models.Model):
                                          cancel_url=cancel_url)
         self.backend_id = backend_id
         self.save()
+
+    @staticmethod
+    def get_or_create_default_plan():
+        default_plan, created = Plan.objects.get_or_create(
+            name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
+        if created:
+            for quota_name, quota_value in DEFAULT_PLAN['quotas']:
+                PlanQuota.objects.get_or_create(name=quota_name, value=quota_value, plan=default_plan)
+        return default_plan
 
 
 class PlanQuota(models.Model):
@@ -87,24 +102,31 @@ class Agreement(UuidMixin, TimeStampedModel):
     def set_pending(self, approval_url, token):
         self.approval_url = approval_url
         self.token = token
-        self.save()
 
     @transition(field=state, source=States.PENDING, target=States.APPROVED)
     def set_approved(self):
-        self.save()
+        pass
 
     @transition(field=state, source=States.APPROVED, target=States.ACTIVE)
     def set_active(self):
-        self.save()
+        pass
 
     @transition(field=state, source=(States.PENDING, States.ACTIVE), target=States.CANCELLED)
     def set_cancelled(self):
-        self.save()
+        pass
 
     @transition(field=state, source='*', target=States.ERRED)
     def set_erred(self):
-        self.save()
+        pass
 
     def apply_quotas(self):
         for quota in self.plan.quotas.all():
             self.customer.set_quota_limit(quota.name, quota.value)
+
+    @staticmethod
+    def apply_default_plan(customer):
+        default_plan = Plan.get_or_create_default_plan()
+        agreement = Agreement.objects.create(
+            plan=default_plan, customer=customer, state=Agreement.States.ACTIVE)
+        agreement.apply_quotas()
+        logger.info('Default plan for customer %s has been applied', self.customer.name)

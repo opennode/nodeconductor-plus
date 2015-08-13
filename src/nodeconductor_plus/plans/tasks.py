@@ -3,8 +3,8 @@ import logging
 
 from celery import shared_task
 from nodeconductor.billing.backend import BillingBackend, BillingBackendError
-from nodeconductor_plus.plans.handlers import apply_default_plan
 from nodeconductor_plus.plans.models import Agreement
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,43 +18,66 @@ def check_agreements():
 @shared_task(name='nodeconductor.plans.check_agreement')
 def check_agreement(agreement_id):
     """
-    Apply default quotas for customer if his current agreement has been cancelled
+    Check if agreement has been cancelled in backend and then apply default quotas for customer
     """
     agreement = Agreement.objects.get(pk=agreement_id)
-
     backend = BillingBackend()
-    backend_agreement = backend.get_agreement(agreement.backend_id)
 
-    if backend_agreement.state != 'Active':
-        agreement.set_cancelled()
-        apply_default_plan(agreement.customer)
+    try:
+        backend_agreement = backend.get_agreement(agreement.backend_id)
+        if backend_agreement.state != 'Active':
+            agreement.set_cancelled()
+            agreement.save()
+            Agreement.apply_default_plan(agreement.customer)
+    except BillingBackendError:
+        agreement.set_erred()
+        agreement.save()
+        logger.warning('Unable to fetch agreement from backend %s', agreement.backend_id)
 
 
 @shared_task(name='nodeconductor.plans.push_agreement')
 def push_agreement(agreement_id):
+    """
+    Push billing agreement to backend
+    """
     agreement = Agreement.objects.get(pk=agreement_id)
+    backend = BillingBackend()
 
     try:
-        backend = BillingBackend()
         approval_url, token = backend.create_agreement(agreement.plan.backend_id, agreement.plan.name)
         agreement.set_pending(approval_url, token)
+        agreement.save()
+
+        message = 'Agreement for plan %s and customer %s has been pushed to backend'
+        logger.info(message, agreement.plan.name, agreement.customer.name)
+
     except BillingBackendError:
-        logger.warning('Unable to push agreement because of backend error')
         agreement.set_erred()
+        agreement.save()
+
+        message = 'Unable to push agreement for plan %s and customer %s because of backend error'
+        logger.warning(message, agreement.plan.name, agreement.customer.name)
 
 
 @shared_task(name='nodeconductor.plans.activate_agreement')
 def activate_agreement(agreement_id):
+    """
+    Apply quotas for customer according to plan and cancel other active agreement
+    """
     agreement = Agreement.objects.get(pk=agreement_id)
+    backend = BillingBackend()
 
     try:
-        backend = BillingBackend()
         agreement.backend_id = backend.execute_agreement(agreement.token)
-        agreement.save()
-        agreement.apply_quotas()
+        message = 'Agreement for plan %s and customer %s has been activated'
+        logger.info(message, agreement.plan.name, agreement.customer.name)
+
     except BillingBackendError:
-        logger.warning('Unable to execute agreement because of backend error')
         agreement.set_erred()
+        agreement.save()
+
+        message = 'Unable to execute agreement for plan %s and customer %s because of backend error'
+        logger.warning(message, agreement.plan.name, agreement.customer.name)
 
     # Customer should have only one active agreement at time
     # That's why we need to cancel old agreement before activating new one
@@ -66,19 +89,31 @@ def activate_agreement(agreement_id):
     except Agreement.DoesNotExist:
         logger.info('There is no active agreement for customer')
 
+    agreement.apply_quotas()
     agreement.set_active()
+    agreement.save()
     logger.info('New agreement has been activated')
 
 
 @shared_task(name='nodeconductor.plans.cancel_agreement')
 def cancel_agreement(agreement_id):
+    """
+    Cancel active agreement
+    """
     agreement = Agreement.objects.get(pk=agreement_id)
+    backend = BillingBackend()
 
     try:
-        backend = BillingBackend()
         backend.cancel_agreement(agreement.backend_id)
         agreement.set_cancelled()
-        logger.info('Agreement has been cancelled')
+        agreement.save()
+
+        message = 'Agreement for plan %s and customer %s has been cancelled'
+        logger.info(message, agreement.plan.name, agreement.customer.name)
+
     except BillingBackendError:
-        logger.warning('Unable to cancel agreement because of backend error')
         agreement.set_erred()
+        agreement.save()
+
+        message = 'Unable to cancel agreement for plan %s and customer %s because of backend error'
+        logger.warning(message, agreement.plan.name, agreement.customer.name)
