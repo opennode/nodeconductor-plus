@@ -87,7 +87,7 @@ def check_service_resources_availability(service_str):
                 available = False
 
             if not available:
-                alert_logger.service_state.warning(
+                alert_logger.resource_state.warning(
                     'Resource {resource_name} has disappeared from the backend',
                     scope=resource,
                     alert_type='resource_disappeared_from_backend',
