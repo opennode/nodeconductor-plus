@@ -18,26 +18,16 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
         return obj.quotas.values('name', 'value')
 
 
-class PlanCustomerSerializer(serializers.HyperlinkedModelSerializer):
-
-    plan = PlanSerializer()
-
-    class Meta:
-        model = models.PlanCustomer
-        fields = ('url', 'uuid', 'customer', 'plan')
-        view_name = 'plan_customer-detail'
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-            'customer': {'lookup_field': 'uuid'},
-        }
-
-
-class OrderSerializer(serializers.HyperlinkedModelSerializer):
+class AgreementSerializer(serializers.HyperlinkedModelSerializer):
+    customer_name = serializers.ReadOnlyField(source='customer.name')
+    plan_name = serializers.ReadOnlyField(source='plan.name')
+    plan_price = serializers.ReadOnlyField(source='plan.price')
 
     class Meta:
-        model = models.Order
-        fields = ('url', 'uuid', 'customer', 'plan', 'customer_name', 'plan_name', 'plan_price', 'state', 'user')
-        read_only_fields = ('customer_name', 'plan_name', 'plan_price', 'state', 'user')
+        model = models.Agreement
+        fields = ('url', 'uuid', 'state', 'created', 'modified', 'approval_url',
+                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price')
+        read_only_fields = ('state', 'user', 'approval_url')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'customer': {'lookup_field': 'uuid'},
@@ -46,7 +36,7 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
         }
 
     def get_fields(self):
-        fields = super(OrderSerializer, self).get_fields()
+        fields = super(AgreementSerializer, self).get_fields()
         fields['customer'].required = True
         fields['plan'].required = True
         return fields
@@ -55,5 +45,5 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
         try:
             validated_data['user'] = self.context['request'].user
         except AttributeError:
-            raise AttributeError('OrderSerializer have to be initialized with `request` in context')
-        return super(OrderSerializer, self).create(validated_data)
+            raise AttributeError('AgreementSerializer have to be initialized with `request` in context')
+        return super(AgreementSerializer, self).create(validated_data)

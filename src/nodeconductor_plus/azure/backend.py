@@ -1,7 +1,10 @@
 import os.path
 import logging
+import calendar
+import datetime
 
 from django.conf import settings as django_settings
+from django.utils import six
 
 # TODO: Replace it with libcloud AzureNodeDriver as soon as its support released
 # from libcloud.compute.drivers.azure import AzureNodeDriver
@@ -14,6 +17,32 @@ from . import models
 
 
 logger = logging.getLogger(__name__)
+
+
+# Prices are for Linux instances in East US data center. To see what pricing will actually be, visit:
+# http://azure.microsoft.com/en-gb/pricing/details/virtual-machines/
+AZURE_COMPUTE_INSTANCE_PRICES = {
+    'ExtraSmall': 0.0211,       # AO
+    'Small': 0.0633,            # A1
+    'Medium': 0.1266,           # A2
+    'Large': 0.2531,            # A3
+    'ExtraLarge': 0.5062,       # A4
+    'A5': 0.2637,
+    'A6': 0.5273,
+    'A7': 1.0545,
+    'A8': 2.0774,
+    'A9': 4.7137,
+    'A10': 1.2233,
+    'A11': 2.1934,
+    'Standard_D1': 0.0992,
+    'Standard_D2': 0.1983,
+    'Standard_D3': 0.3965,
+    'Standard_D4': 0.7930,
+    'Standard_D11': 0.251,
+    'Standard_D12': 0.502,
+    'Standard_D13': 0.9038,
+    'Standard_D14': 1.6261,
+}
 
 
 class AzureBackendError(ServiceBackendError):
@@ -93,6 +122,20 @@ class AzureRealBackend(AzureBaseBackend):
                 })
 
         map(lambda i: i.delete(), cur_locations.values())
+
+    def get_cost_estimate(self, vm):
+        try:
+            info = self.manager.get_deployment_by_slot(vm.backend_id, 'production')
+        except WindowsAzureError as e:
+            six.reraise(AzureBackendError, e)
+
+        now = datetime.datetime.now()
+        days = calendar.monthrange(now.year, now.month)[1]
+        size = next(i.instance_size for i in info.role_instance_list.role_instances
+                    if i.instance_name == vm.backend_id)
+
+        # calculate a price for current month based on hourly rate
+        return 24 * days * AZURE_COMPUTE_INSTANCE_PRICES.get(size)
 
     def get_vm(self, vm_name):
         try:

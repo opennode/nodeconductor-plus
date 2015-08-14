@@ -51,6 +51,7 @@ setup(
         ),
         'cost_tracking_strategies': (
             'aws = nodeconductor_plus.aws.cost_tracking:AWSCostTracking',
+            'azure = nodeconductor_plus.azure.cost_tracking:AzureCostTracking',
             'digitalocean = nodeconductor_plus.digitalocean.cost_tracking:DigitalOceanCostTracking',
         ),
     },
