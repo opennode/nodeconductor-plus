@@ -49,7 +49,6 @@ class AgreementViewSet(mixins.CreateModelMixin,
     filter_backends = (structure_filters.GenericRoleFilter, filters.DjangoFilterBackend)
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
     filter_class = AgreementFilter
-    backend = BillingBackend()
 
     def get_queryset(self):
         queryset = super(AgreementViewSet, self).get_queryset()
@@ -97,7 +96,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
-        return redirect(self.backend.return_url)
+        return redirect(BillingBackend().return_url)
 
     @list_route()
     def cancel(self, request):
@@ -113,10 +112,10 @@ class AgreementViewSet(mixins.CreateModelMixin,
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
-        return redirect(self.backend.return_url)
+        return redirect(BillingBackend().return_url)
 
     @detail_route()
     def transactions(self, request, uuid):
         agreement = self.get_object()
-        txs = self.backend.get_agreement_transactions(agreement.backend_id, agreement.created)
+        txs = BillingBackend().get_agreement_transactions(agreement.backend_id, agreement.created)
         return Response(txs, status=status.HTTP_200_OK)
