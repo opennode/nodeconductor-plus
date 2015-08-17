@@ -22,11 +22,12 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
     customer_name = serializers.ReadOnlyField(source='customer.name')
     plan_name = serializers.ReadOnlyField(source='plan.name')
     plan_price = serializers.ReadOnlyField(source='plan.price')
+    quotas = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Agreement
         fields = ('url', 'uuid', 'state', 'created', 'modified', 'approval_url',
-                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price')
+                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price', 'quotas')
         read_only_fields = ('state', 'user', 'approval_url')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
@@ -34,6 +35,9 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
             'plan': {'lookup_field': 'uuid'},
             'user': {'lookup_field': 'uuid'},
         }
+
+    def get_quotas(self, obj):
+        return obj.plan.quotas.values('name', 'value')
 
     def get_fields(self):
         fields = super(AgreementSerializer, self).get_fields()
