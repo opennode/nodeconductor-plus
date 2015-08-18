@@ -24,17 +24,27 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.Amazon
     SERVICE_ACCOUNT_FIELDS = {
-        'username': 'AWS access key ID',
-        'token': 'AWS secret access key',
+        'username': 'Access key ID',
+        'token': 'Secret access key',
     }
     SERVICE_ACCOUNT_EXTRA_FIELDS = {
-        'region': 'AWS region (default: "us-east-1")',
+        'region': 'Region',
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.AWSService
         view_name = 'aws-detail'
 
+    def build_unknown_field(self, field_name, model_class):
+        if field_name == 'region':
+            return serializers.ChoiceField, {
+                'choices': models.AWSService.Regions,
+                'default': 'us-east-1',
+                'write_only': True,
+                'required': False,
+                'allow_blank': True
+            }
+        return super(ServiceSerializer, self).build_unknown_field(field_name, model_class)
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
