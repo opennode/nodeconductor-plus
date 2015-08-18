@@ -35,7 +35,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.Azure
     SERVICE_ACCOUNT_FIELDS = {
-        'username': 'Subscription id in the form of GUID',
+        'username': 'Subscription ID in the format of GUID',
         'token': 'Access token',
     }
 
