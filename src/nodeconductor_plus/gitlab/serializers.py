@@ -12,8 +12,8 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.GitLab
     SERVICE_ACCOUNT_FIELDS = {
-        'backend_url': 'GitLab host (e.g. http://git.example.com/)',
-        'username': 'Username or Email',
+        'backend_url': 'Host (e.g. http://git.example.com/)',
+        'username': 'Username or email',
         'password': '',
         'token': 'Private token (will be used instead of username/password if supplied)',
     }

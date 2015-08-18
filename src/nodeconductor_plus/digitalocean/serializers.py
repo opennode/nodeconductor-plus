@@ -50,7 +50,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.DigitalOcean
     SERVICE_ACCOUNT_FIELDS = {
-        'token': 'DigitalOcean personal access token',
+        'token': 'Personal access token',
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):

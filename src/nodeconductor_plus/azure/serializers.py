@@ -35,8 +35,8 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.Azure
     SERVICE_ACCOUNT_FIELDS = {
-        'username': 'Azure subscription id in the form of GUID',
-        'token': 'Path to the Azure X509 certificate file in .pem form',
+        'username': 'Subscription ID in the format of GUID',
+        'token': 'Access token',
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
