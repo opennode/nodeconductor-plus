@@ -145,13 +145,17 @@ class AzureRealBackend(AzureBaseBackend):
 
     def get_resources_for_import(self):
         cur_vms = models.VirtualMachine.objects.all().values_list('backend_id', flat=True)
+        try:
+            vms = self.manager.list_hosted_services().hosted_services
+        except WindowsAzureError as e:
+            six.reraise(AzureBackendError, e)
+
         return [{
             'id': vm.service_name,
             'name': vm.service_name,
             'created': vm.hosted_service_properties.date_created,
             'location': vm.hosted_service_properties.location,
-        } for vm in self.manager.list_hosted_services().hosted_services
-            if vm.service_name not in cur_vms]
+        } for vm in vms if vm.service_name not in cur_vms]
 
 
 class AzureDummyBackend(AzureBaseBackend):

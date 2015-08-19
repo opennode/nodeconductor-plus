@@ -3,6 +3,7 @@ import calendar
 import datetime
 
 from django.utils import six
+from libcloud.common.types import LibcloudError
 from libcloud.compute.drivers.ec2 import EC2NodeDriver
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
@@ -113,12 +114,16 @@ class AWSRealBackend(AWSBaseBackend):
 
     def get_resources_for_import(self):
         cur_instances = models.Instance.objects.all().values_list('backend_id', flat=True)
+        try:
+            instances = self.manager.list_nodes()
+        except LibcloudError as e:
+            six.reraise(AWSBackendError, e)
         return [{
             'id': instance.id,
             'name': instance.name or instance.uuid,
             'created_at': instance.extra['launch_time'],
             'size': instance.extra['instance_type'],
-        } for instance in self.manager.list_nodes()
+        } for instance in instances
             if instance.id not in cur_instances and
             instance.state == self.manager.NODE_STATE_MAP['running']]
 
