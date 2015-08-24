@@ -125,8 +125,11 @@ class Agreement(UuidMixin, TimeStampedModel):
 
     @staticmethod
     def apply_default_plan(customer):
-        default_plan = Plan.get_or_create_default_plan()
-        agreement = Agreement.objects.create(
-            plan=default_plan, customer=customer, state=Agreement.States.ACTIVE)
-        agreement.apply_quotas()
-        logger.info('Default plan for customer %s has been applied', customer.name)
+        try:
+            default_plan = Plan.objects.get(name=DEFAULT_PLAN['name'])
+            agreement = Agreement.objects.create(
+                plan=default_plan, customer=customer, state=Agreement.States.ACTIVE)
+            agreement.apply_quotas()
+            logger.info('Default plan for customer %s has been applied', customer.name)
+        except Plan.DoesNotExist:
+            logger.warning('Default plan does not exist')
