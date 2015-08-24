@@ -6,21 +6,27 @@ from nodeconductor.core.fields import MappedChoiceField
 from nodeconductor.structure import SupportedServices, serializers as structure_serializers
 
 from . import models
-
+import logging
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.GitLab
     SERVICE_ACCOUNT_FIELDS = {
         'backend_url': 'Host (e.g. http://git.example.com/)',
-        'username': 'Username or email',
+        'username': '',
         'password': '',
-        'token': 'Private token (will be used instead of username/password if supplied)',
+        'token': 'Used instead of username/password if supplied',
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.GitLabService
         view_name = 'gitlab-detail'
+
+    def get_fields(self):
+        fields = super(ServiceSerializer, self).get_fields()
+        fields['token'].label = 'Private token'
+        fields['username'].label = 'Username or email'
+        return fields
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
