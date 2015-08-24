@@ -50,12 +50,17 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.DigitalOcean
     SERVICE_ACCOUNT_FIELDS = {
-        'token': 'Personal access token',
+        'token': '',
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.DigitalOceanService
         view_name = 'digitalocean-detail'
+
+    def get_fields(self):
+        fields = super(ServiceSerializer, self).get_fields()
+        fields['token'].label = 'Access token'
+        return fields
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
