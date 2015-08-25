@@ -1,7 +1,5 @@
 import os.path
 import logging
-import calendar
-import datetime
 
 from django.conf import settings as django_settings
 from django.utils import six
@@ -11,6 +9,7 @@ from django.utils import six
 from ssl import SSLError
 from azure import WindowsAzureError
 from azure.servicemanagement import ServiceManagementService
+from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
 from . import models
@@ -129,13 +128,11 @@ class AzureRealBackend(AzureBaseBackend):
         except WindowsAzureError as e:
             six.reraise(AzureBackendError, e)
 
-        now = datetime.datetime.now()
-        days = calendar.monthrange(now.year, now.month)[1]
         size = next(i.instance_size for i in info.role_instance_list.role_instances
                     if i.instance_name == vm.backend_id)
 
         # calculate a price for current month based on hourly rate
-        return 24 * days * AZURE_COMPUTE_INSTANCE_PRICES.get(size)
+        return AZURE_COMPUTE_INSTANCE_PRICES.get(size) * hours_in_month()
 
     def get_vm(self, vm_name):
         try:

@@ -1,10 +1,10 @@
 import logging
-import calendar
-import datetime
 
 from django.utils import six
 from libcloud.common.types import LibcloudError
 from libcloud.compute.drivers.ec2 import EC2NodeDriver
+
+from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
 from . import models
@@ -84,11 +84,10 @@ class AWSRealBackend(AWSBaseBackend):
         except Exception as e:
             six.reraise(AWSBackendError, e)
 
-        now = datetime.datetime.now()
-        days = calendar.monthrange(now.year, now.month)[1]
         size = next(s for s in self.manager.list_sizes() if s.id == instance.extra['instance_type'])
 
-        return 24 * days * size.price
+        # calculate a price for current month based on hourly rate
+        return size.price * hours_in_month()
 
     def get_instance(self, instance_id):
         try:
