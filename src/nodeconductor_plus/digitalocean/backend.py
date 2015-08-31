@@ -39,6 +39,9 @@ class DigitalOceanBaseBackend(ServiceBackend):
     def sync(self):
         self.pull_service_properties()
 
+    def sync_link(self, service_project_link):
+        self.pull_droplets(service_project_link)
+
     def provision(self, droplet, region=None, image=None, size=None, ssh_key=None):
         droplet.cores = size.cores
         droplet.ram = size.ram
@@ -160,6 +163,37 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
 
         map(lambda i: i.delete(), cur_sizes.values())
 
+    def pull_droplets(self, service_project_link):
+        backend_droplets = {six.text_type(droplet.id): droplet for droplet in self.get_all_droplets()}
+        backend_ids = set(backend_droplets.keys())
+
+        nc_droplets = models.Droplet.objects.filter(service_project_link=service_project_link)
+        nc_droplets = {droplet.backend_id: droplet for droplet in nc_droplets}
+        nc_ids = set(nc_droplets.keys())
+
+        # Mark stale droplets as erred if they are removed from the backend
+        for droplet_id in nc_ids - backend_ids:
+            nc_droplet = nc_droplets[droplet_id]
+            nc_droplet.set_erred()
+            nc_droplet.save()
+
+        # Update state of matching droplets
+        for droplet_id in nc_ids & backend_ids:
+            backend_droplet = backend_droplets[droplet_id]
+            nc_droplet = nc_droplets[droplet_id]
+            nc_droplet.state = self._get_droplet_state(backend_droplet)
+            nc_droplet.save()
+
+    def _get_droplet_state(self, droplet):
+        digitalocean_to_nodeconductor = {
+            'new': models.Droplet.States.PROVISIONING,
+            'active': models.Droplet.States.ONLINE,
+            'off': models.Droplet.States.OFFLINE,
+            'archive': models.Droplet.States.OFFLINE,
+        }
+
+        return digitalocean_to_nodeconductor.get(droplet.status, models.Droplet.States.ERRED)
+
     def provision_droplet(self, droplet, backend_region_id=None, backend_image_id=None,
                           backend_size_id=None, ssh_key_uuid=None):
         if ssh_key_uuid:
@@ -202,10 +236,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     def get_resources_for_import(self):
         cur_droplets = models.Droplet.objects.all().values_list('backend_id', flat=True)
         statuses = ('active', 'off')
-        try:
-            droplets = self.manager.get_all_droplets()
-        except digitalocean.Error as e:
-            six.reraise(DigitalOceanBackendError, e)
+        droplets = self.get_all_droplets()
         return [{
             'id': droplet.id,
             'name': droplet.name,
@@ -216,6 +247,12 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             'disk': self.gb2mb(droplet.disk),
         } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
+
+    def get_all_droplets(self):
+        try:
+            return self.manager.get_all_droplets()
+        except digitalocean.Error as e:
+            six.reraise(DigitalOceanBackendError, e)
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
