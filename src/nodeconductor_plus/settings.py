@@ -38,4 +38,4 @@ NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(minutes=60),
         'args': ()
     }
-} 
+}
