@@ -8,6 +8,7 @@ from nodeconductor.core.utils import pwgen
 from nodeconductor.core.tasks import send_task
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
+from . import ResourceType
 from .models import Group, Project
 
 
@@ -169,24 +170,62 @@ class GitLabRealBackend(GitLabBaseBackend):
         project.web_url = backend_project.web_url
         project.ssh_url_to_repo = backend_project.ssh_url_to_repo
         project.http_url_to_repo = backend_project.http_url_to_repo
+        project.visibility_level = backend_project.visibility_level
         project.save()
 
         for user in self._get_project_users(project.service_project_link.project):
             self.add_project_member(project, user)
 
+    def get_group(self, group_id):
+        try:
+            return self.manager.Group(group_id)
+        except gitlab.GitlabGetError as e:
+            six.reraise(GitLabBackendError, e)
+
+    def get_project(self, project_id):
+        try:
+            return self.manager.Project(project_id)
+        except gitlab.GitlabGetError as e:
+            six.reraise(GitLabBackendError, e)
+
     def delete_group(self, group):
         try:
-            backend_group = self.manager.Group(group.backend_id)
+            backend_group = self.get_group(group.backend_id)
             backend_group.delete()
         except gitlab.GitlabDeleteError as e:
             six.reraise(GitLabBackendError, e)
 
     def delete_project(self, project):
         try:
-            backend_project = self.manager.Project(project.backend_id)
+            backend_project = self.get_project(project.backend_id)
             backend_project.delete()
         except gitlab.GitlabDeleteError as e:
             six.reraise(GitLabBackendError, e)
+
+    def get_resources_for_import(self):
+        resources = []
+
+        cur_projects = Project.objects.all().values_list('backend_id', flat=True)
+        for proj in self.manager.Project():
+            if str(proj.id) not in cur_projects:
+                resources.append({
+                    'id': proj.id,
+                    'type': ResourceType.PROJECT,
+                    'name': proj.path_with_namespace,
+                    'created_at': proj.created_at,
+                    'public': proj.public,
+                })
+
+        cur_groups = Group.objects.all().values_list('backend_id', flat=True)
+        for grp in self.manager.Group():
+            if str(grp.id) not in cur_groups:
+                resources.append({
+                    'id': grp.id,
+                    'type': ResourceType.GROUP,
+                    'name': grp.name,
+                })
+
+        return resources
 
     def _get_access_level(self, resource, user):
         project = resource.service_project_link.project
