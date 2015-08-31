@@ -1,12 +1,22 @@
 from nodeconductor.core import exceptions as core_exceptions
 from nodeconductor.structure import views as structure_views
 
-from . import models, serializers
+from . import ResourceType, models, serializers
 
 
 class GitLabServiceViewSet(structure_views.BaseServiceViewSet):
     queryset = models.GitLabService.objects.all()
     serializer_class = serializers.ServiceSerializer
+    import_serializer_class = serializers.GroupImportSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            resource_type = self.request.data.get('type')
+            if resource_type == ResourceType.GROUP:
+                return serializers.GroupImportSerializer
+            elif resource_type == ResourceType.PROJECT:
+                return serializers.ProjectImportSerializer
+        return super(GitLabServiceViewSet, self).get_serializer_class()
 
 
 class GitLabServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):

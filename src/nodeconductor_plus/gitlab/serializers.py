@@ -5,8 +5,9 @@ from rest_framework import serializers
 from nodeconductor.core.fields import MappedChoiceField
 from nodeconductor.structure import SupportedServices, serializers as structure_serializers
 
-from . import models
-import logging
+from . import ResourceType, models
+from .backend import GitLabBackendError
+
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
@@ -149,3 +150,60 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
                 {'group': "Group belongs to different service project link."})
 
         return attrs
+
+
+class GroupImportSerializer(structure_serializers.BaseResourceImportSerializer):
+
+    type = serializers.ChoiceField(choices=ResourceType.CHOICES)
+
+    class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
+        model = models.Group
+        view_name = 'gitlab-group-detail'
+        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + ('type',)
+
+    def create(self, validated_data):
+        backend = self.context['service'].get_backend()
+        try:
+            group = backend.get_group(validated_data['backend_id'])
+        except GitLabBackendError:
+            raise serializers.ValidationError(
+                {'backend_id': "Can't find group with ID %s" % validated_data['backend_id']})
+
+        validated_data['name'] = group.name
+        validated_data['path'] = group.path
+
+        return super(GroupImportSerializer, self).create(validated_data)
+
+
+class ProjectImportSerializer(structure_serializers.BaseResourceImportSerializer):
+
+    type = serializers.ChoiceField(choices=ResourceType.CHOICES)
+
+    class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
+        model = models.Project
+        view_name = 'gitlab-project-detail'
+        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + ('type',)
+
+    def create(self, validated_data):
+        backend = self.context['service'].get_backend()
+        try:
+            project = backend.get_project(validated_data['backend_id'])
+        except GitLabBackendError:
+            raise serializers.ValidationError(
+                {'backend_id': "Can't find project with ID %s" % validated_data['backend_id']})
+
+        try:
+            group_id = project.namespace.id
+            group = models.Group.objects.get(backend_id=group_id)
+        except models.Group.DoesNotExist:
+            raise serializers.ValidationError(
+                "You must import group with ID %s first" % group_id)
+
+        validated_data['name'] = project.name
+        validated_data['group'] = group
+        validated_data['web_url'] = project.web_url
+        validated_data['ssh_url_to_repo'] = project.ssh_url_to_repo
+        validated_data['http_url_to_repo'] = project.http_url_to_repo
+        validated_data['visibility_level'] = project.visibility_level
+
+        return super(ProjectImportSerializer, self).create(validated_data)
