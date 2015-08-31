@@ -38,9 +38,7 @@ class DigitalOceanBaseBackend(ServiceBackend):
 
     def sync(self):
         self.pull_service_properties()
-
-    def sync_link(self, service_project_link):
-        self.pull_droplets(service_project_link)
+        self.pull_droplets()
 
     def provision(self, droplet, region=None, image=None, size=None, ssh_key=None):
         droplet.cores = size.cores
@@ -163,11 +161,11 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
 
         map(lambda i: i.delete(), cur_sizes.values())
 
-    def pull_droplets(self, service_project_link):
+    def pull_droplets(self):
         backend_droplets = {six.text_type(droplet.id): droplet for droplet in self.get_all_droplets()}
         backend_ids = set(backend_droplets.keys())
 
-        nc_droplets = models.Droplet.objects.filter(service_project_link=service_project_link)
+        nc_droplets = models.Droplet.objects.filter(service_project_link__service__settings=self.settings)
         nc_droplets = {droplet.backend_id: droplet for droplet in nc_droplets}
         nc_ids = set(nc_droplets.keys())
 
