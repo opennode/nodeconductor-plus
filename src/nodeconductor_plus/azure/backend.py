@@ -122,10 +122,10 @@ class AzureRealBackend(AzureBaseBackend):
 
         map(lambda i: i.delete(), cur_locations.values())
 
-    def get_cost_estimate(self, vm):
+    def get_monthly_cost_estimate(self, vm):
         try:
             info = self.manager.get_deployment_by_slot(vm.backend_id, 'production')
-        except WindowsAzureError as e:
+        except (WindowsAzureError, SSLError) as e:
             six.reraise(AzureBackendError, e)
 
         size = next(i.instance_size for i in info.role_instance_list.role_instances
@@ -137,14 +137,14 @@ class AzureRealBackend(AzureBaseBackend):
     def get_vm(self, vm_name):
         try:
             return self.manager.get_hosted_service_properties(vm_name)
-        except WindowsAzureError as e:
+        except (WindowsAzureError, SSLError) as e:
             six.reraise(AzureBackendError, e)
 
     def get_resources_for_import(self):
         cur_vms = models.VirtualMachine.objects.all().values_list('backend_id', flat=True)
         try:
             vms = self.manager.list_hosted_services().hosted_services
-        except WindowsAzureError as e:
+        except (WindowsAzureError, SSLError) as e:
             six.reraise(AzureBackendError, e)
 
         return [{

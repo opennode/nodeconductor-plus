@@ -227,7 +227,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         except digitalocean.DataReadError as e:
             six.reraise(DigitalOceanBackendError, e)
 
-    def get_cost_estimate(self, droplet):
+    def get_monthly_cost_estimate(self, droplet):
         backend_droplet = self.get_droplet(droplet.backend_id)
         return backend_droplet.size['price_monthly']
 

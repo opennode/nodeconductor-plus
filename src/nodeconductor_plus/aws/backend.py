@@ -78,7 +78,7 @@ class AWSRealBackend(AWSBaseBackend):
 
         map(lambda i: i.delete(), cur_images.values())
 
-    def get_cost_estimate(self, instance):
+    def get_monthly_cost_estimate(self, instance):
         try:
             instance = (self.manager.list_nodes(ex_node_ids=[instance.backend_id]))[0]
         except Exception as e:
