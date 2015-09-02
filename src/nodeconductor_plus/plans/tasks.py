@@ -35,12 +35,10 @@ def check_agreement(agreement_id):
         logger.warning('Unable to fetch agreement from backend %s', agreement.backend_id)
 
 
-@shared_task(name='nodeconductor.plans.push_agreement')
-def push_agreement(agreement_id):
+def push_agreement(agreement):
     """
     Push billing agreement to backend
     """
-    agreement = Agreement.objects.get(pk=agreement_id)
     backend = BillingBackend()
 
     try:

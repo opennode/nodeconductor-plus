@@ -27,6 +27,9 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     def filter_queryset(self, queryset):
         return queryset.exclude(backend_id__isnull=True)
 
+    def get_queryset(self):
+        return Plan.objects.order_by('price')
+
 
 class AgreementFilter(django_filters.FilterSet):
     customer = django_filters.CharFilter(
@@ -52,6 +55,8 @@ class AgreementViewSet(mixins.CreateModelMixin,
 
     def get_queryset(self):
         queryset = super(AgreementViewSet, self).get_queryset()
+        queryset = queryset.exclude(state=Agreement.States.CANCELLED)
+
         if not self.request.user.is_staff:
             queryset = queryset.filter(
                 customer__roles__permission_group__user=self.request.user,
@@ -63,15 +68,17 @@ class AgreementViewSet(mixins.CreateModelMixin,
         Create new billing agreement
         """
         customer = serializer.validated_data['customer']
+        plan = serializer.validated_data['plan']
+
         if not customer.has_user(self.request.user) and not self.request.user.is_staff:
             raise exceptions.PermissionDenied('You do not have permission to perform this action')
 
-        serializer.is_valid(raise_exception=True)
-        if not serializer.validated_data['plan'].backend_id:
+        if not plan.backend_id:
             raise exceptions.ValidationError('Plan is not synced with backend')
 
         agreement = serializer.save()
-        tasks.push_agreement.delay(agreement.pk)
+        tasks.push_agreement(agreement)
+        serializer.object = agreement
 
     def get_pending_agreement(self):
         token = self.request.query_params.get('token')
