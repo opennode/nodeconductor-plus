@@ -66,10 +66,10 @@ class Agreement(UuidMixin, TimeStampedModel):
         project_group_path = 'customer__project_groups'
 
     class States(object):
-        CREATED = 'created' # agreement has been created in our database, but not yet pushed to backend
-        PENDING = 'pending' # agreement has been pushed to backend, but not yet approved by user
-        APPROVED = 'approved' # agreement has been approved by user but quotas have not been applied
-        ACTIVE = 'active' # appropriate quotas have been applied, other agreements (if any) are cancelled
+        CREATED = 'created'  # agreement has been created in our database, but not yet pushed to backend
+        PENDING = 'pending'  # agreement has been pushed to backend, but not yet approved by user
+        APPROVED = 'approved'  # agreement has been approved by user but quotas have not been applied
+        ACTIVE = 'active'  # appropriate quotas have been applied, other agreements (if any) are cancelled
         CANCELLED = 'cancelled'
         ERRED = 'erred'
 

@@ -39,7 +39,7 @@ class AgreementFilter(django_filters.FilterSet):
 
     class Meta(object):
         model = Agreement
-        fields = ['customer']
+        fields = ['customer', 'state']
 
 
 class AgreementViewSet(mixins.CreateModelMixin,
