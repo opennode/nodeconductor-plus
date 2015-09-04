@@ -11,7 +11,7 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Plan
         fields = ('url', 'uuid', 'name', 'description', 'base_rate', 'hour_rate')
         extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
+            'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-plan-detail'},
         }
 
 
@@ -34,7 +34,7 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
 
     def validate_project(self, project):
         if models.Contract.objects.filter(project=project)\
-                 .exclude(state=models.Contract.States.CANCELLED).exists():
+                 .exclude(state=models.Contract.States.APPROVED).exists():
             raise serializers.ValidationError('Contract for this project already exists')
 
         return project
