@@ -2,17 +2,33 @@ from rest_framework import serializers
 
 from nodeconductor.core.serializers import AugmentedSerializerMixin, GenericRelatedField
 from nodeconductor.structure import models as structure_models
+from nodeconductor.structure.serializers import ProjectSerializer
 from nodeconductor_plus.premium_support import models
 
 
-class PlanSerializer(serializers.HyperlinkedModelSerializer):
+def get_plan_for_project(serializer, project):
+    contract = models.Contract.objects.filter(project=project, state=models.Contract.States.APPROVED).first()
+    if contract:
+        serializer = BasicPlanSerializer(instance=contract.plan, context=serializer.context)
+        return serializer.data
 
+
+ProjectSerializer.add_field('plan', serializers.SerializerMethodField)
+ProjectSerializer.add_to_class('get_plan', get_plan_for_project)
+
+
+class BasicPlanSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Plan
-        fields = ('url', 'uuid', 'name', 'description', 'base_rate', 'hour_rate')
+        fields = ('url', 'uuid', 'name')
         extra_kwargs = {
-            'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-plan-detail'},
+            'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-plan-detail'}
         }
+
+
+class PlanSerializer(BasicPlanSerializer):
+    class Meta(BasicPlanSerializer.Meta):
+        fields = BasicPlanSerializer.Meta.fields + ('description',  'terms', 'base_rate', 'hour_rate')
 
 
 class ContractSerializer(serializers.HyperlinkedModelSerializer):

@@ -16,6 +16,10 @@ def get_resource_models():
 class Plan(UuidMixin, NameMixin, DescribableMixin):
     base_rate = models.DecimalField(decimal_places=2, max_digits=10)
     hour_rate = models.DecimalField(decimal_places=2, max_digits=10)
+    terms = models.TextField()
+
+    def __str__(self):
+        return self.name
 
 
 class Contract(UuidMixin):
