@@ -1,6 +1,20 @@
 from rest_framework import serializers
 
+from nodeconductor.structure.serializers import CustomerSerializer
 from . import models
+
+
+def get_plan_for_customer(serializer, customer):
+    try:
+        agreement = models.Agreement.objects.get(customer=customer, state=models.Agreement.States.ACTIVE)
+        serializer = PlanSerializer(instance=agreement.plan, context=serializer.context)
+        return serializer.data
+    except models.Agreement.DoesNotExist:
+        return
+
+
+CustomerSerializer.add_field('plan', serializers.SerializerMethodField)
+CustomerSerializer.add_to_class('get_plan', get_plan_for_customer)
 
 
 class PlanSerializer(serializers.HyperlinkedModelSerializer):
