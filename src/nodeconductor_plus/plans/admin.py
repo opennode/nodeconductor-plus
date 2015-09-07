@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from nodeconductor.billing.backend import BillingBackendError
-from .models import PlanQuota, Plan
+from .models import PlanQuota, Plan, Agreement
 
 
 class PlanQuotaInline(admin.TabularInline):
@@ -17,6 +17,7 @@ class PlanAdmin(admin.ModelAdmin):
     search_fields = ['name']
     inlines = [PlanQuotaInline]
     actions = ['push_to_backend']
+    ordering = ['price']
 
     def push_to_backend(self, request, queryset):
         erred_plans = []
@@ -35,4 +36,9 @@ class PlanAdmin(admin.ModelAdmin):
     push_to_backend.short_description = 'Push billing plans to backend'
 
 
+class AgreementAdmin(admin.ModelAdmin):
+    list_display = ['customer', 'plan', 'state']
+
+
 admin.site.register(Plan, PlanAdmin)
+admin.site.register(Agreement, AgreementAdmin)
