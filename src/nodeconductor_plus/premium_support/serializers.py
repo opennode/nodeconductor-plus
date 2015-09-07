@@ -7,12 +7,10 @@ from nodeconductor_plus.premium_support import models
 
 
 def get_plan_for_project(serializer, project):
-    try:
-        contract = models.Contract.objects.filter(project=project, state=models.Contract.States.APPROVED).first()
+    contract = models.Contract.objects.filter(project=project, state=models.Contract.States.APPROVED).first()
+    if contract:
         serializer = BasicPlanSerializer(instance=contract.plan, context=serializer.context)
         return serializer.data
-    except models.Contract.DoesNotExist:
-        return
 
 
 ProjectSerializer.add_field('plan', serializers.SerializerMethodField)
