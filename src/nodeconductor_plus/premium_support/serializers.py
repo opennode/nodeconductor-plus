@@ -13,8 +13,15 @@ def get_plan_for_project(serializer, project):
         return serializer.data
 
 
+def get_pending_contracts_for_project(serializer, project):
+    return models.Contract.objects.filter(project=project, state=models.Contract.States.REQUESTED).exists()
+
+
 ProjectSerializer.add_field('plan', serializers.SerializerMethodField)
 ProjectSerializer.add_to_class('get_plan', get_plan_for_project)
+
+ProjectSerializer.add_field('has_pending_contracts', serializers.SerializerMethodField)
+ProjectSerializer.add_to_class('get_has_pending_contracts', get_pending_contracts_for_project)
 
 
 class BasicPlanSerializer(serializers.HyperlinkedModelSerializer):
