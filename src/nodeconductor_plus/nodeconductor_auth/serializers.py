@@ -3,9 +3,6 @@ from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 
 
-from .utils import send_email
-
-
 User = get_user_model()
 
 
