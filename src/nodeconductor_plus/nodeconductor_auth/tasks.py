@@ -14,7 +14,7 @@ def send_activation_email(user_uuid):
     user = get_user_model().objects.get(uuid=user_uuid, is_active=False)
 
     token = default_token_generator.make_token(user)
-    url_template = settings.NODECONDUCTOR.get('USER_ACTIVATION_URL_TEMPLATE')
+    url_template = settings.NODECONDUCTOR_PLUS['USER_ACTIVATION_URL_TEMPLATE']
     url = url_template.format(token=token, user_uuid=user_uuid)
     context = {'activation_url': url}
 
