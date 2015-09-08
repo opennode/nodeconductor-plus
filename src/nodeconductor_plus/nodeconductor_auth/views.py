@@ -8,10 +8,12 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import views, status, response
+from rest_framework import views, status, response, generics
 from rest_framework.authtoken.models import Token
 
+from nodeconductor.core.tasks import send_task
 from .models import AuthProfile
+from .serializers import RegistrationSerializer, ActivationSerializer
 
 
 nc_plus_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
@@ -122,3 +124,25 @@ class FacebookView(views.APIView):
             user.auth_profile.save()
             token = Token.objects.get(user=user)
             return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
+
+
+class RegistrationView(generics.CreateAPIView):
+    permission_classes = ()
+    authentication_classes = ()
+    serializer_class = RegistrationSerializer
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        user.is_active = False
+        user.save()
+        send_task('nodeconductor_auth', 'send_activation_email')(user.uuid.hex)
+
+
+class ActivationView(generics.CreateAPIView):
+    permission_classes = ()
+    authentication_classes = ()
+    serializer_class = ActivationSerializer
+
+    def perform_create(self, serializer):
+        serializer.user.is_active = True
+        serializer.user.save()
