@@ -142,7 +142,7 @@ class AgreementBillingTasksTest(test.APITransactionTestCase):
     def test_cancel_agreement_task_calls_billing(self):
         agreement = factories.AgreementFactory(state=models.Agreement.States.ACTIVE)
         with patch('nodeconductor_plus.plans.tasks.BillingBackend') as mocked_billing:
-            tasks.cancel_agreement(agreement.pk)
+            tasks.cancel_agreement(agreement)
             mocked_billing().cancel_agreement.assert_called_with(agreement.backend_id)
 
             agreement = models.Agreement.objects.get(pk=agreement.pk)

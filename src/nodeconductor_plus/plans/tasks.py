@@ -83,7 +83,7 @@ def activate_agreement(agreement_id):
         old_agreement = Agreement.objects.get(customer=agreement.customer,
                                               backend_id__isnull=False,
                                               state=Agreement.States.ACTIVE)
-        cancel_agreement.delay(old_agreement.pk)
+        cancel_agreement(old_agreement)
     except Agreement.DoesNotExist:
         logger.info('There is no active agreement for customer')
 
@@ -93,12 +93,10 @@ def activate_agreement(agreement_id):
     logger.info('New agreement has been activated')
 
 
-@shared_task(name='nodeconductor.plans.cancel_agreement')
-def cancel_agreement(agreement_id):
+def cancel_agreement(agreement):
     """
     Cancel active agreement
     """
-    agreement = Agreement.objects.get(pk=agreement_id)
     backend = BillingBackend()
 
     try:
