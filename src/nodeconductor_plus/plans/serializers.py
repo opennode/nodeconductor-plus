@@ -5,12 +5,11 @@ from . import models
 
 
 def get_plan_for_customer(serializer, customer):
-    try:
-        agreement = models.Agreement.objects.get(customer=customer, state=models.Agreement.States.ACTIVE)
+    agreement = models.Agreement.objects.filter(
+        customer=customer, state=models.Agreement.States.ACTIVE).order_by('modified').last()
+    if agreement:
         serializer = PlanSerializer(instance=agreement.plan, context=serializer.context)
         return serializer.data
-    except models.Agreement.DoesNotExist:
-        return
 
 
 CustomerSerializer.add_field('plan', serializers.SerializerMethodField)
