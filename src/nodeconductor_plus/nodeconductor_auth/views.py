@@ -138,11 +138,16 @@ class RegistrationView(generics.CreateAPIView):
         send_task('nodeconductor_auth', 'send_activation_email')(user.uuid.hex)
 
 
-class ActivationView(generics.CreateAPIView):
+class ActivationView(views.APIView):
     permission_classes = ()
     authentication_classes = ()
-    serializer_class = ActivationSerializer
 
-    def perform_create(self, serializer):
+    def post(self, request):
+        serializer = ActivationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         serializer.user.is_active = True
         serializer.user.save()
+
+        token = Token.objects.get(user=serializer.user)
+        return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
