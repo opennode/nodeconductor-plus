@@ -9,17 +9,6 @@ from . import models
 from .backend import AWSBackendError
 
 
-class ImageSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta(object):
-        model = models.Image
-        view_name = 'aws-image-detail'
-        fields = ('url', 'uuid', 'name')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.Amazon
@@ -45,6 +34,20 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields['username'].label = 'Access key ID'
         fields['token'].label = 'Secret access key'
         return fields
+
+
+class ImageSerializer(structure_serializers.BasePropertySerializer):
+
+    SERVICE_TYPE = SupportedServices.Types.Amazon
+
+    class Meta(object):
+        model = models.Image
+        view_name = 'aws-image-detail'
+        fields = ('url', 'uuid', 'name')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 

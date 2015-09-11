@@ -16,13 +16,13 @@ class AzureServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewS
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class ImageViewSet(viewsets.ReadOnlyModelViewSet):
+class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
     lookup_field = 'uuid'
 
 
-class LocationViewSet(viewsets.ReadOnlyModelViewSet):
+class LocationViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Location.objects.all()
     serializer_class = serializers.LocationSerializer
     lookup_field = 'uuid'

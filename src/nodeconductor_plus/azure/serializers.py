@@ -9,28 +9,6 @@ from . import models
 from .backend import AzureBackendError
 
 
-class ImageSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta(object):
-        model = models.Image
-        view_name = 'azure-image-detail'
-        fields = ('url', 'uuid', 'name')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
-class LocationSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta(object):
-        model = models.Location
-        view_name = 'azure-location-detail'
-        fields = ('url', 'uuid', 'name')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.Azure
@@ -48,6 +26,32 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields['username'].label = 'Subscription ID'
         fields['token'].label = 'Private certificate file'
         return fields
+
+
+class ImageSerializer(structure_serializers.BasePropertySerializer):
+
+    SERVICE_TYPE = SupportedServices.Types.Azure
+
+    class Meta(object):
+        model = models.Image
+        view_name = 'azure-image-detail'
+        fields = ('url', 'uuid', 'name')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+
+class LocationSerializer(structure_serializers.BasePropertySerializer):
+
+    SERVICE_TYPE = SupportedServices.Types.Azure
+
+    class Meta(object):
+        model = models.Location
+        view_name = 'azure-location-detail'
+        fields = ('url', 'uuid', 'name')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):

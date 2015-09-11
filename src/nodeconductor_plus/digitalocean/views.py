@@ -20,11 +20,11 @@ class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLi
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class ImageFilter(django_filters.FilterSet):
+class ImageFilter(structure_views.BaseServicePropertyFilter):
 
     class Meta(object):
         model = models.Image
-        fields = 'distribution', 'type'
+        fields = structure_views.BaseServicePropertyFilter.Meta.fields + ('distribution', 'type')
         order_by = (
             'distribution',
             'type',
@@ -34,20 +34,20 @@ class ImageFilter(django_filters.FilterSet):
         )
 
 
-class ImageViewSet(viewsets.ReadOnlyModelViewSet):
+class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
     filter_class = ImageFilter
     lookup_field = 'uuid'
 
 
-class RegionViewSet(viewsets.ReadOnlyModelViewSet):
+class RegionViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Region.objects.all()
     serializer_class = serializers.RegionSerializer
     lookup_field = 'uuid'
 
 
-class SizeViewSet(viewsets.ReadOnlyModelViewSet):
+class SizeViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
     lookup_field = 'uuid'

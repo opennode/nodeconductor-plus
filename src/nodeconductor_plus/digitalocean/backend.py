@@ -282,8 +282,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
 
     def _update_entity_regions(self, entity, backend_entity):
         all_regions = set(entity.regions.all())
-        actual_regions = set(models.Region.objects.filter(
-            settings=self.settings, backend_id__in=backend_entity.regions))
+        actual_regions = set(models.Region.objects.filter(backend_id__in=backend_entity.regions))
 
         entity.regions.add(*(actual_regions - all_regions))
         entity.regions.remove(*(all_regions - actual_regions))
