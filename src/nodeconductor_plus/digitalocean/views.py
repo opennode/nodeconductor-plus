@@ -34,20 +34,20 @@ class ImageFilter(django_filters.FilterSet):
         )
 
 
-class ImageViewSet(structure_views.BaseServicePropertyView):
+class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
     filter_class = ImageFilter
     lookup_field = 'uuid'
 
 
-class RegionViewSet(structure_views.BaseServicePropertyView):
+class RegionViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Region.objects.all()
     serializer_class = serializers.RegionSerializer
     lookup_field = 'uuid'
 
 
-class SizeViewSet(structure_views.BaseServicePropertyView):
+class SizeViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
     lookup_field = 'uuid'
