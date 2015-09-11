@@ -20,11 +20,11 @@ class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLi
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class ImageFilter(django_filters.FilterSet):
+class ImageFilter(structure_views.BaseServicePropertyFilter):
 
     class Meta(object):
         model = models.Image
-        fields = 'distribution', 'type'
+        fields = structure_views.BaseServicePropertyFilter.Meta.fields + ('distribution', 'type')
         order_by = (
             'distribution',
             'type',
@@ -32,18 +32,6 @@ class ImageFilter(django_filters.FilterSet):
             '-distribution',
             '-type',
         )
-
-
-class RegionFilter(django_filters.FilterSet):
-    class Meta(object):
-        model = models.Region
-        fields = ('name',)
-
-
-class SizeFilter(django_filters.FilterSet):
-    class Meta(object):
-        model = models.Size
-        fields = ('name',)
 
 
 class ImageViewSet(structure_views.BaseServicePropertyViewSet):
@@ -57,14 +45,12 @@ class RegionViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Region.objects.all()
     serializer_class = serializers.RegionSerializer
     lookup_field = 'uuid'
-    filter_class = RegionFilter
 
 
 class SizeViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
     lookup_field = 'uuid'
-    filter_class = SizeFilter
 
 
 class DropletViewSet(structure_views.BaseResourceViewSet):
