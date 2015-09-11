@@ -34,6 +34,18 @@ class ImageFilter(django_filters.FilterSet):
         )
 
 
+class RegionFilter(django_filters.FilterSet):
+    class Meta(object):
+        model = models.Region
+        fields = ('name',)
+
+
+class SizeFilter(django_filters.FilterSet):
+    class Meta(object):
+        model = models.Size
+        fields = ('name',)
+
+
 class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
@@ -45,12 +57,14 @@ class RegionViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Region.objects.all()
     serializer_class = serializers.RegionSerializer
     lookup_field = 'uuid'
+    filter_class = RegionFilter
 
 
 class SizeViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
     lookup_field = 'uuid'
+    filter_class = SizeFilter
 
 
 class DropletViewSet(structure_views.BaseResourceViewSet):
