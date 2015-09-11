@@ -13,39 +13,6 @@ from . import models
 from .backend import DigitalOceanBackendError
 
 
-class ImageSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta(object):
-        model = models.Image
-        view_name = 'digitalocean-image-detail'
-        fields = ('url', 'uuid', 'name', 'distribution', 'type')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
-class RegionSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta(object):
-        model = models.Region
-        view_name = 'digitalocean-region-detail'
-        fields = ('url', 'uuid', 'name')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
-class SizeSerializer(serializers.HyperlinkedModelSerializer):
-
-    class Meta(object):
-        model = models.Size
-        view_name = 'digitalocean-size-detail'
-        fields = ('url', 'uuid', 'name')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_TYPE = SupportedServices.Types.DigitalOcean
@@ -61,6 +28,49 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields = super(ServiceSerializer, self).get_fields()
         fields['token'].label = 'Access token'
         return fields
+
+
+class RegionSerializer(structure_serializers.BasePropertySerializer):
+
+    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
+
+    class Meta(object):
+        model = models.Region
+        view_name = 'digitalocean-region-detail'
+        fields = ('url', 'uuid', 'name')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+
+class ImageSerializer(structure_serializers.BasePropertySerializer):
+
+    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
+
+    class Meta(object):
+        model = models.Image
+        view_name = 'digitalocean-image-detail'
+        fields = ('url', 'uuid', 'name', 'distribution', 'type', 'regions')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+    regions = RegionSerializer(many=True, read_only=True)
+
+
+class SizeSerializer(structure_serializers.BasePropertySerializer):
+
+    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
+
+    class Meta(object):
+        model = models.Size
+        view_name = 'digitalocean-size-detail'
+        fields = ('url', 'uuid', 'name', 'cores', 'ram', 'disk', 'transfer', 'regions')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+    regions = RegionSerializer(many=True, read_only=True)
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):

@@ -123,6 +123,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             if backend_region.available:
                 cur_regions.pop(backend_region.slug, None)
                 models.Region.objects.update_or_create(
+                    settings=self.settings,
                     backend_id=backend_region.slug,
                     defaults={'name': backend_region.name})
 
