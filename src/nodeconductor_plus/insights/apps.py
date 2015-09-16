@@ -22,7 +22,7 @@ class InsightsConfig(AppConfig):
             )
 
             signals.post_save.connect(
-                handlers.check_managed_services,
+                handlers.close_alert_when_entity_created('customer_has_zero_services'),
                 sender=service,
                 dispatch_uid=(
                     'nodeconductor_plus.insights.handlers.check_managed_services_{}_{}'
@@ -38,6 +38,20 @@ class InsightsConfig(AppConfig):
                     .format(resource.__name__, index))
             )
 
+            signals.post_save.connect(
+                handlers.close_alert_when_entity_created('customer_has_zero_resources'),
+                sender=resource,
+                dispatch_uid=(
+                    'nodeconductor_plus.insights.handlers.check_managed_resources_{}_{}'
+                    .format(resource.__name__, index))
+            )
+
+        signals.post_save.connect(
+            handlers.close_alert_when_entity_created('customer_has_zero_projects'),
+            sender=Project,
+            dispatch_uid='nodeconductor_plus.insights.handlers.check_managed_projects'
+        )
+
         signals.post_save.connect(
             handlers.check_customer_quota_exceeded,
             sender=Quota,
@@ -48,4 +62,16 @@ class InsightsConfig(AppConfig):
             handlers.init_managed_services_alert,
             sender=Customer,
             dispatch_uid='nodeconductor_plus.insights.handlers.init_managed_services_alert'
+        )
+
+        signals.post_save.connect(
+            handlers.init_managed_resources_alert,
+            sender=Customer,
+            dispatch_uid='nodeconductor_plus.insights.handlers.init_managed_resources_alert'
+        )
+
+        signals.post_save.connect(
+            handlers.init_managed_projects_alert,
+            sender=Customer,
+            dispatch_uid='nodeconductor_plus.insights.handlers.init_managed_projects_alert'
         )

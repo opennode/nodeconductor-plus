@@ -15,17 +15,35 @@ def check_missed_resources(sender, instance, **kwargs):
     alert_logger.resource_state.close(scope=instance, alert_type='resource_disappeared_from_backend')
 
 
+def close_alert_when_entity_created(alert_type):
+    def handler(sender, instance, created=False, **kwargs):
+        if created:
+            alert_logger.customer_state.close(scope=instance.customer, alert_type=alert_type)
+    return handler
+
+
 def init_managed_services_alert(sender, instance, **kwargs):
     alert_logger.customer_state.warning(
-        'Customer {customer_name} has zero services configured',
+        'Customer {customer_name} has zero services configured.',
         scope=instance,
         alert_type='customer_has_zero_services',
         alert_context={'customer': instance})
 
 
-def check_managed_services(sender, instance, created=False, **kwargs):
-    if created:
-        alert_logger.customer_state.close(scope=instance, alert_type='customer_has_zero_services')
+def init_managed_resources_alert(sender, instance, **kwargs):
+    alert_logger.customer_state.warning(
+        'Customer {customer_name} does not have any resources.',
+        scope=instance,
+        alert_type='customer_has_zero_resources',
+        alert_context={'customer': instance})
+
+
+def init_managed_projects_alert(sender, instance, **kwargs):
+    alert_logger.customer_state.warning(
+        'Customer {customer_name} does not have any projects.',
+        scope=instance,
+        alert_type='customer_has_zero_projects',
+        alert_context={'customer': instance})
 
 
 def check_customer_quota_exceeded(sender, instance, **kwargs):
@@ -37,7 +55,7 @@ def check_customer_quota_exceeded(sender, instance, **kwargs):
         alert_type = instance.name.replace('nc_', 'customer_') + '_exceeded'
         if instance.is_exceeded():
             alert_logger.quota_check.warning(
-                'Customer {customer_name} has exceeded quota {quota_name}',
+                'Customer {customer_name} has exceeded quota {quota_name}.',
                 scope=instance.scope,
                 alert_type=alert_type,
                 alert_context={'customer': instance.scope, 'quota_name': instance.name})
