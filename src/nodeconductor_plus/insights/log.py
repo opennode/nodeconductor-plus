@@ -21,6 +21,8 @@ class CustomerStateAlertLogger(AlertLogger):
 
     class Meta:
         alert_types = ('customer_has_zero_services',
+                       'customer_has_zero_resources',
+                       'customer_has_zero_projects',
                        'customer_projected_costs_exceeded')
 
 
