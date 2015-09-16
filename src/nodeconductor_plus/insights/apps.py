@@ -2,7 +2,7 @@ from django.apps import AppConfig
 from django.db.models import signals
 
 from nodeconductor.quotas.models import Quota
-from nodeconductor.structure.models import Customer, Service, Resource
+from nodeconductor.structure.models import Customer, Service, Resource, Project
 from nodeconductor_plus.insights import handlers
 
 
@@ -22,7 +22,7 @@ class InsightsConfig(AppConfig):
             )
 
             signals.post_save.connect(
-                handlers.close_alert_when_entity_created('customer_has_zero_services'),
+                handlers.check_managed_services,
                 sender=service,
                 dispatch_uid=(
                     'nodeconductor_plus.insights.handlers.check_managed_services_{}_{}'
@@ -39,7 +39,7 @@ class InsightsConfig(AppConfig):
             )
 
             signals.post_save.connect(
-                handlers.close_alert_when_entity_created('customer_has_zero_resources'),
+                handlers.check_managed_resources,
                 sender=resource,
                 dispatch_uid=(
                     'nodeconductor_plus.insights.handlers.check_managed_resources_{}_{}'
@@ -47,7 +47,7 @@ class InsightsConfig(AppConfig):
             )
 
         signals.post_save.connect(
-            handlers.close_alert_when_entity_created('customer_has_zero_projects'),
+            handlers.check_managed_projects,
             sender=Project,
             dispatch_uid='nodeconductor_plus.insights.handlers.check_managed_projects'
         )

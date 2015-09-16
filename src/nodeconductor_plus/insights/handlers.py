@@ -15,11 +15,19 @@ def check_missed_resources(sender, instance, **kwargs):
     alert_logger.resource_state.close(scope=instance, alert_type='resource_disappeared_from_backend')
 
 
-def close_alert_when_entity_created(alert_type):
-    def handler(sender, instance, created=False, **kwargs):
-        if created:
-            alert_logger.customer_state.close(scope=instance.customer, alert_type=alert_type)
-    return handler
+def check_managed_services(sender, instance, created=False, **kwargs):
+    if created:
+        alert_logger.customer_state.close(scope=instance.customer, alert_type='customer_has_zero_services')
+
+
+def check_managed_resources(sender, instance, created=False, **kwargs):
+    if created:
+        alert_logger.customer_state.close(scope=instance.customer, alert_type='customer_has_zero_resources')
+
+
+def check_managed_projects(sender, instance, created=False, **kwargs):
+    if created:
+        alert_logger.customer_state.close(scope=instance.customer, alert_type='customer_has_zero_projects')
 
 
 def init_managed_services_alert(sender, instance, **kwargs):
@@ -64,3 +72,9 @@ def check_customer_quota_exceeded(sender, instance, **kwargs):
 
         if instance.name == 'nc_service_count' and instance.usage == 0:
             init_managed_services_alert(None, instance.scope)
+
+        if instance.name == 'nc_resource_count' and instance.usage == 0:
+            init_managed_resources_alert(None, instance.scope)
+
+        if instance.name == 'nc_project_count' and instance.usage == 0:
+            init_managed_projects_alert(None, instance.scope)
