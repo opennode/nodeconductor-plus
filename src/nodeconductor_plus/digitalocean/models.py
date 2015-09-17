@@ -16,8 +16,7 @@ class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
 
 
 class Region(structure_models.ServiceProperty):
-    class Meta:
-        ordering = ['name']
+    pass
 
 
 @python_2_unicode_compatible

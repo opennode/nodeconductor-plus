@@ -46,6 +46,9 @@ class RegionViewSet(structure_views.BaseServicePropertyViewSet):
     serializer_class = serializers.RegionSerializer
     lookup_field = 'uuid'
 
+    def get_queryset(self):
+        return models.Region.objects.order_by('name')
+
 
 class SizeViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Size.objects.all()
