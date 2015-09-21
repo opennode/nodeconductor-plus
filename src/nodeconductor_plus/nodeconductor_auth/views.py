@@ -21,6 +21,31 @@ GOOGLE_SECRET = nc_plus_settings.get('GOOGLE_SECRET')
 FACEBOOK_SECRET = nc_plus_settings.get('FACEBOOK_SECRET')
 
 
+class AuthException(Exception):
+    pass
+
+
+class FacebookException(AuthException):
+    def __init__(self, facebook_error):
+        self.message_text = facebook_error.get('message', 'Undefined')
+        self.message_type = facebook_error.get('type', 'Undefined')
+        self.message_code = facebook_error.get('code', 'Undefined')
+        self.message = 'Facebook error {} (code:{}): {}'.format(self.message_type, self.message_code, self.message_text)
+
+    def __str__(self):
+        return self.message
+
+
+class GoogleException(AuthException):
+    def __init__(self, google_error):
+        self.message_text = google_error.get('message', 'Undefined')
+        self.message_code = google_error.get('code', 'Undefined')
+        self.message = 'Google error (code:{}): {}'.format(self.message_code, self.message_text)
+
+    def __str__(self):
+        return self.message
+
+
 def generate_password(length=10):
     chars = string.ascii_letters + string.digits + '!@#$%^&*()'
     random.seed = (os.urandom(1024))
@@ -59,8 +84,7 @@ class GoogleView(views.APIView):
 
         # Step 3. Check is response valid.
         if 'error' in response_data:
-            return response.Response(
-                {'message': response_data['error']['message']}, status=response_data['error']['code'])
+            raise GoogleException(response_data['error'])
 
         # Step 4. Create a new user or get existing one.
         try:
@@ -105,6 +129,9 @@ class FacebookView(views.APIView):
         # Step 2. Retrieve information about the current user.
         r = requests.get(graph_api_url, params=access_token)
         response_data = json.loads(r.text)
+
+        if 'error' in response_data:
+            raise FacebookException(response_data['error'])
 
         # Step 3. Create a new user or get existing one.
         try:
