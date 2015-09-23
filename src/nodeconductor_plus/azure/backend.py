@@ -1,7 +1,5 @@
-import os.path
 import logging
 
-from django.conf import settings as django_settings
 from django.utils import six
 
 # TODO: Replace it with libcloud AzureNodeDriver as soon as its support released
@@ -62,11 +60,8 @@ class AzureBaseBackend(ServiceBackend):
 
     def __init__(self, settings):
         self.settings = settings
-        key_file = settings.token
-        if not key_file.startswith('/'):
-            key_file = os.path.join(django_settings.BASE_DIR, key_file)
-
-        self.manager = ServiceManagementService(settings.username, key_file)
+        cert_file = settings.certificate.path if settings.certificate else None
+        self.manager = ServiceManagementService(settings.username, cert_file)
 
     def sync(self):
         self.pull_service_properties()

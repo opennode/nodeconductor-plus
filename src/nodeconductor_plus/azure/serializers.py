@@ -14,7 +14,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     SERVICE_TYPE = SupportedServices.Types.Azure
     SERVICE_ACCOUNT_FIELDS = {
         'username': 'In the format of GUID',
-        'token': '',
+        'certificate': '',
     }
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
@@ -24,7 +24,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     def get_fields(self):
         fields = super(ServiceSerializer, self).get_fields()
         fields['username'].label = 'Subscription ID'
-        fields['token'].label = 'Private certificate file'
+        fields['certificate'].label = 'Private certificate file'
         return fields
 
 
