@@ -30,28 +30,31 @@ def check_managed_projects(sender, instance, created=False, **kwargs):
         alert_logger.customer_state.close(scope=instance.customer, alert_type='customer_has_zero_projects')
 
 
-def init_managed_services_alert(sender, instance, **kwargs):
-    alert_logger.customer_state.warning(
-        'Customer {customer_name} has zero services configured.',
-        scope=instance,
-        alert_type='customer_has_zero_services',
-        alert_context={'customer': instance})
+def init_managed_services_alert(sender, instance, created=False, **kwargs):
+    if created:
+        alert_logger.customer_state.warning(
+            'Customer {customer_name} has zero services configured.',
+            scope=instance,
+            alert_type='customer_has_zero_services',
+            alert_context={'customer': instance})
 
 
-def init_managed_resources_alert(sender, instance, **kwargs):
-    alert_logger.customer_state.warning(
-        'Customer {customer_name} does not have any resources.',
-        scope=instance,
-        alert_type='customer_has_zero_resources',
-        alert_context={'customer': instance})
+def init_managed_resources_alert(sender, instance, created=False, **kwargs):
+    if created:
+        alert_logger.customer_state.warning(
+            'Customer {customer_name} does not have any resources.',
+            scope=instance,
+            alert_type='customer_has_zero_resources',
+            alert_context={'customer': instance})
 
 
-def init_managed_projects_alert(sender, instance, **kwargs):
-    alert_logger.customer_state.warning(
-        'Customer {customer_name} does not have any projects.',
-        scope=instance,
-        alert_type='customer_has_zero_projects',
-        alert_context={'customer': instance})
+def init_managed_projects_alert(sender, instance, created=False, **kwargs):
+    if created:
+        alert_logger.customer_state.warning(
+            'Customer {customer_name} does not have any projects.',
+            scope=instance,
+            alert_type='customer_has_zero_projects',
+            alert_context={'customer': instance})
 
 
 def check_customer_quota_exceeded(sender, instance, **kwargs):
