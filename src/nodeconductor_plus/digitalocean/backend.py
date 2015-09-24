@@ -117,6 +117,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         self.pull_images()
         self.pull_sizes()
 
+    @transaction.atomic
     def pull_regions(self):
         cur_regions = self._get_current_properties(models.Region)
         for backend_region in self.manager.get_all_regions():
@@ -128,39 +129,40 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
 
         map(lambda i: i.delete(), cur_regions.values())
 
+    @transaction.atomic
     def pull_images(self):
         cur_images = self._get_current_properties(models.Image)
         for backend_image in self.manager.get_all_images():
             cur_images.pop(str(backend_image.id), None)
-            with transaction.atomic():
-                image, _ = models.Image.objects.update_or_create(
-                    backend_id=backend_image.id,
-                    defaults={
-                        'name': backend_image.name,
-                        'type': backend_image.type,
-                        'distribution': backend_image.distribution,
-                    })
-                self._update_entity_regions(image, backend_image)
+            image, _ = models.Image.objects.update_or_create(
+                backend_id=backend_image.id,
+                defaults={
+                    'name': backend_image.name,
+                    'type': backend_image.type,
+                    'distribution': backend_image.distribution,
+                })
+            self._update_entity_regions(image, backend_image)
 
         map(lambda i: i.delete(), cur_images.values())
 
+    @transaction.atomic
     def pull_sizes(self):
         cur_sizes = self._get_current_properties(models.Size)
         for backend_size in self.manager.get_all_sizes():
             cur_sizes.pop(backend_size.slug, None)
-            with transaction.atomic():
-                size, _ = models.Size.objects.update_or_create(
-                    backend_id=backend_size.slug,
-                    defaults={
-                        'name': backend_size.slug,
-                        'cores': backend_size.vcpus,
-                        'ram': backend_size.memory,
-                        'disk': self.gb2mb(backend_size.disk),
-                        'transfer': int(self.tb2mb(backend_size.transfer))})
-                self._update_entity_regions(size, backend_size)
+            size, _ = models.Size.objects.update_or_create(
+                backend_id=backend_size.slug,
+                defaults={
+                    'name': backend_size.slug,
+                    'cores': backend_size.vcpus,
+                    'ram': backend_size.memory,
+                    'disk': self.gb2mb(backend_size.disk),
+                    'transfer': int(self.tb2mb(backend_size.transfer))})
+            self._update_entity_regions(size, backend_size)
 
         map(lambda i: i.delete(), cur_sizes.values())
 
+    @transaction.atomic
     def pull_droplets(self):
         backend_droplets = {six.text_type(droplet.id): droplet for droplet in self.get_all_droplets()}
         backend_ids = set(backend_droplets.keys())
