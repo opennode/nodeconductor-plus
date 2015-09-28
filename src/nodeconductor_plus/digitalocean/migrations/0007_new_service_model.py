@@ -29,11 +29,6 @@ class Migration(migrations.Migration):
             },
             bases=(models.Model,),
         ),
-        migrations.RunSQL(
-            "INSERT INTO digitalocean_service (id, uuid, name, customer_id, settings_id) "
-            "SELECT id, uuid, name, customer_id, settings_id "
-            "FROM structure_service s JOIN digitalocean_digitaloceanservice ds ON (s.id = ds.service_ptr_id);"
-        ),
         migrations.CreateModel(
             name='ServiceProjectLink',
             fields=[
