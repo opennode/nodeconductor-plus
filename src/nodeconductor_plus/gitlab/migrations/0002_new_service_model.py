@@ -29,11 +29,6 @@ class Migration(migrations.Migration):
             },
             bases=(models.Model,),
         ),
-        migrations.RunSQL(
-            "INSERT INTO gitlab_service (id, uuid, name, customer_id, settings_id) "
-            "SELECT id, uuid, name, customer_id, settings_id "
-            "FROM structure_service s JOIN gitlab_gitlabservice gs ON (s.id = gs.service_ptr_id);"
-        ),
         migrations.CreateModel(
             name='ServiceProjectLink',
             fields=[
