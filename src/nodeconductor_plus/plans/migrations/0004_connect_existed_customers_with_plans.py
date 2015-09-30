@@ -19,7 +19,6 @@ def connect_existed_cusotmers_with_default_plan(apps, schema_editor):
     Plan = apps.get_model('plans', 'Plan')
     PlanQuota = apps.get_model('plans', 'PlanQuota')
     
-    # Comment for Jenkins MR trigger
     if not Plan.objects.filter(name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price']).exists():
         default_plan = Plan.objects.create(
             uuid=uuid4().hex, name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
