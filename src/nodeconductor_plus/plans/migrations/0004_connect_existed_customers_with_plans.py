@@ -18,17 +18,18 @@ def connect_existed_cusotmers_with_default_plan(apps, schema_editor):
     PlanCustomer = apps.get_model('plans', 'PlanCustomer')
     Plan = apps.get_model('plans', 'Plan')
     PlanQuota = apps.get_model('plans', 'PlanQuota')
+    
+    if not Plan.objects.filter(name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price']).exists():
+        default_plan = Plan.objects.create(
+            uuid=uuid4().hex, name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
 
-    default_plan, created = Plan.objects.get_or_create(
-        uuid=uuid4().hex, name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
-    if created:
         for quota_name, quota_value in DEFAULT_PLAN['quotas']:
             PlanQuota.objects.get_or_create(name=quota_name, value=quota_value, plan=default_plan)
 
-    for customer in Customer.objects.all():
-        if not PlanCustomer.objects.filter(customer=customer).exists():
-            # We need to add UUID explicitly, because django ignores auto=True parameter in migration UUID field
-            PlanCustomer.objects.create(uuid=uuid4().hex, customer=customer, plan=default_plan)
+        for customer in Customer.objects.all():
+            if not PlanCustomer.objects.filter(customer=customer).exists():
+                # We need to add UUID explicitly, because django ignores auto=True parameter in migration UUID field
+                PlanCustomer.objects.create(uuid=uuid4().hex, customer=customer, plan=default_plan)
 
 
 class Migration(migrations.Migration):
