@@ -11,6 +11,12 @@ class AzureService(structure_models.Service):
 class AzureServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(AzureService)
 
+    cloud_service_name = models.CharField(max_length=255, blank=True)
+
+    def get_backend(self):
+        return super(AzureServiceProjectLink, self).get_backend(
+            cloud_service_name=self.cloud_service_name)
+
 
 class Image(structure_models.ServiceProperty):
     pass

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from django.utils import dateparse
+from django.utils import dateparse, timezone
 
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
@@ -102,18 +102,25 @@ class VirtualMachineImportSerializer(structure_serializers.BaseResourceImportSer
     class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.VirtualMachine
         view_name = 'azure-virtualmachine-detail'
+        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + (
+            'external_ips', 'internal_ips',
+        )
 
     def create(self, validated_data):
-        backend = self.context['service'].get_backend()
+        spl = validated_data['service_project_link']
+        backend = spl.get_backend()
+
         try:
             vm = backend.get_vm(validated_data['backend_id'])
         except AzureBackendError:
             raise serializers.ValidationError(
                 {'backend_id': "Can't find Virtual Machine with ID %s" % validated_data['backend_id']})
 
-        validated_data['name'] = vm.service_name
-        validated_data['description'] = vm.hosted_service_properties.description
-        validated_data['created'] = dateparse.parse_datetime(vm.hosted_service_properties.date_created)
-        validated_data['state'] = models.VirtualMachine.States.ONLINE
+        validated_data['name'] = vm.name
+        validated_data['created'] = timezone.now()
+        validated_data['external_ips'] = vm.public_ips[0]
+        validated_data['internal_ips'] = vm.private_ips[0]
+        validated_data['state'] = models.VirtualMachine.States.ONLINE \
+            if vm.extra['power_state'] == 'Started' else models.VirtualMachine.States.OFFLINE
 
         return super(VirtualMachineImportSerializer, self).create(validated_data)
