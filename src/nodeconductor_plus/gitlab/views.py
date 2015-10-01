@@ -9,6 +9,9 @@ class GitLabServiceViewSet(structure_views.BaseServiceViewSet):
     serializer_class = serializers.ServiceSerializer
     import_serializer_class = serializers.GroupImportSerializer
 
+    def get_import_context(self):
+        return {'resource_type': self.request.query_params.get('resource_type')}
+
     def get_serializer_class(self):
         if self.request.method == 'POST':
             resource_type = self.request.data.get('type')

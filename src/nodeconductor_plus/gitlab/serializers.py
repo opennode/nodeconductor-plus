@@ -3,7 +3,7 @@ import re
 from rest_framework import serializers
 
 from nodeconductor.core.fields import MappedChoiceField
-from nodeconductor.structure import SupportedServices, serializers as structure_serializers
+from nodeconductor.structure import SupportedServices, serializers as structure_serializers, models as structure_models
 
 from . import ResourceType, models
 from .backend import GitLabBackendError
@@ -154,7 +154,7 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
 
 class GroupImportSerializer(structure_serializers.BaseResourceImportSerializer):
 
-    type = serializers.ChoiceField(choices=ResourceType.CHOICES)
+    type = serializers.ChoiceField(choices=ResourceType.CHOICES, write_only=True)
 
     class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.Group
@@ -171,13 +171,15 @@ class GroupImportSerializer(structure_serializers.BaseResourceImportSerializer):
 
         validated_data['name'] = group.name
         validated_data['path'] = group.path
+        validated_data['state'] = structure_models.Resource.States.ONLINE
+        del validated_data['type']
 
-        return super(GroupImportSerializer, self).create(validated_data)
+        super(GroupImportSerializer, self).create(validated_data)
 
 
 class ProjectImportSerializer(structure_serializers.BaseResourceImportSerializer):
 
-    type = serializers.ChoiceField(choices=ResourceType.CHOICES)
+    type = serializers.ChoiceField(choices=ResourceType.CHOICES, write_only=True)
 
     class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.Project
@@ -205,5 +207,7 @@ class ProjectImportSerializer(structure_serializers.BaseResourceImportSerializer
         validated_data['ssh_url_to_repo'] = project.ssh_url_to_repo
         validated_data['http_url_to_repo'] = project.http_url_to_repo
         validated_data['visibility_level'] = project.visibility_level
+        validated_data['state'] = structure_models.Resource.States.ONLINE
+        del validated_data['type']
 
         return super(ProjectImportSerializer, self).create(validated_data)

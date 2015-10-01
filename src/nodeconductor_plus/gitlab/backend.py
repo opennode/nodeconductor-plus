@@ -98,6 +98,35 @@ class GitLabBaseBackend(ServiceBackend):
             logger.exception('Failed to delete ssh public key %s from backend', ssh_key.name)
             six.reraise(GitLabBackendError, e)
 
+    def get_resources_for_import(self, resource_type=None):
+        resources = []
+
+        if resource_type is None or resource_type == ResourceType.PROJECT:
+            cur_projects = Project.objects.all().values_list('backend_id', flat=True)
+            cur_groups = Group.objects.all().values_list('backend_id', flat=True)
+            for proj in self.manager.Project():
+                # Only project from already imported groups are available for import
+                if str(proj.id) not in cur_projects and str(proj.namespace.id) in cur_groups:
+                    resources.append({
+                        'id': proj.id,
+                        'type': ResourceType.PROJECT,
+                        'name': proj.path_with_namespace,
+                        'created_at': proj.created_at,
+                        'public': proj.public,
+                    })
+
+        if resource_type is None or resource_type == ResourceType.GROUP:
+            cur_groups = Group.objects.all().values_list('backend_id', flat=True)
+            for grp in self.manager.Group():
+                if str(grp.id) not in cur_groups:
+                    resources.append({
+                        'id': grp.id,
+                        'type': ResourceType.GROUP,
+                        'name': grp.name,
+                    })
+
+        return resources
+
 
 class GitLabRealBackend(GitLabBaseBackend):
     """ NodeConductor interface to GitLab API.
@@ -201,31 +230,6 @@ class GitLabRealBackend(GitLabBaseBackend):
             backend_project.delete()
         except gitlab.GitlabDeleteError as e:
             six.reraise(GitLabBackendError, e)
-
-    def get_resources_for_import(self):
-        resources = []
-
-        cur_projects = Project.objects.all().values_list('backend_id', flat=True)
-        for proj in self.manager.Project():
-            if str(proj.id) not in cur_projects:
-                resources.append({
-                    'id': proj.id,
-                    'type': ResourceType.PROJECT,
-                    'name': proj.path_with_namespace,
-                    'created_at': proj.created_at,
-                    'public': proj.public,
-                })
-
-        cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-        for grp in self.manager.Group():
-            if str(grp.id) not in cur_groups:
-                resources.append({
-                    'id': grp.id,
-                    'type': ResourceType.GROUP,
-                    'name': grp.name,
-                })
-
-        return resources
 
     def _get_access_level(self, resource, user):
         project = resource.service_project_link.project

@@ -89,4 +89,3 @@ def set_group_erred(group_uuid, transition_entity=None):
 @transition(Project, 'set_erred')
 def set_project_erred(project_uuid, transition_entity=None):
     pass
-
