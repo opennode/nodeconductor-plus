@@ -4,6 +4,7 @@ import django_filters
 
 from rest_framework import viewsets
 
+from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import views as structure_views
 
 from . import models, serializers
@@ -20,11 +21,11 @@ class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLi
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class ImageFilter(structure_views.BaseServicePropertyFilter):
+class ImageFilter(structure_filters.BaseServicePropertyFilter):
 
     class Meta(object):
         model = models.Image
-        fields = structure_views.BaseServicePropertyFilter.Meta.fields + ('distribution', 'type')
+        fields = structure_filters.BaseServicePropertyFilter.Meta.fields + ('distribution', 'type')
         order_by = (
             'distribution',
             'type',
