@@ -4,6 +4,14 @@ from nodeconductor.structure import models as structure_models
 
 
 class AzureService(structure_models.Service):
+    Locations = (('Central US', 'Central US'),
+                 ('East US 2', 'East US 2'),
+                 ('South Central US', 'South Central US'),
+                 ('North Europe', 'North Europe'),
+                 ('East Asia', 'East Asia'),
+                 ('Southeast Asia', 'Southeast Asia'),
+                 ('Japan West', 'Japan West'))
+
     projects = models.ManyToManyField(
         structure_models.Project, related_name='azure_services', through='AzureServiceProjectLink')
 

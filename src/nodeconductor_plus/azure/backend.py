@@ -30,6 +30,10 @@ class AzureBackend(object):
 class AzureBaseBackend(ServiceBackend):
 
     def __init__(self, settings, cloud_service_name=None):
+        self.location = 'Central US'
+        if settings.options and 'location' in settings.options:
+            self.location = settings.options['location']
+
         self.settings = settings
         self.cloud_service_name = cloud_service_name
         self.manager = AzureNodeDriver(
@@ -38,6 +42,9 @@ class AzureBaseBackend(ServiceBackend):
 
     def sync(self):
         self.pull_service_properties()
+
+    def sync_link(self, service_project_link, is_initial=False):
+        self.push_link(service_project_link)
 
 
 class AzureRealBackend(AzureBaseBackend):
@@ -88,6 +95,15 @@ class AzureRealBackend(AzureBaseBackend):
                 })
 
         map(lambda i: i.delete(), cur_locations.values())
+
+    def push_link(self, service_project_link):
+        cloud_service_name = 'nc-%s' % service_project_link.project.uuid.hex
+        services = [s.service_name for s in self.manager.ex_list_cloud_services()]
+
+        if cloud_service_name not in services:
+            self.manager.ex_create_cloud_service(cloud_service_name, self.location)
+            service_project_link.cloud_service_name = cloud_service_name
+            service_project_link.save(update_fields=['cloud_service_name'])
 
     def get_monthly_cost_estimate(self, vm):
         # calculate a price for current month based on hourly rate

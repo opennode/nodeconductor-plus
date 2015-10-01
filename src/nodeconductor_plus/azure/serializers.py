@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from django.utils import dateparse, timezone
+from django.utils import timezone
 
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
@@ -16,6 +16,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         'username': 'In the format of GUID',
         'certificate': '',
     }
+    SERVICE_ACCOUNT_EXTRA_FIELDS = {
+        'location': '',
+    }
+
+    location = serializers.ChoiceField(choices=models.AzureService.Locations,
+                                       write_only=True,
+                                       required=False,
+                                       allow_blank=True)
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.AzureService
@@ -103,6 +111,7 @@ class VirtualMachineImportSerializer(structure_serializers.BaseResourceImportSer
         model = models.VirtualMachine
         view_name = 'azure-virtualmachine-detail'
         fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + (
+            'cores', 'ram', 'disk',
             'external_ips', 'internal_ips',
         )
 
@@ -118,6 +127,9 @@ class VirtualMachineImportSerializer(structure_serializers.BaseResourceImportSer
 
         validated_data['name'] = vm.name
         validated_data['created'] = timezone.now()
+        validated_data['ram'] = vm.size.ram
+        validated_data['disk'] = vm.size.disk
+        validated_data['cores'] = vm.size.extra['cores']
         validated_data['external_ips'] = vm.public_ips[0]
         validated_data['internal_ips'] = vm.private_ips[0]
         validated_data['state'] = models.VirtualMachine.States.ONLINE \
