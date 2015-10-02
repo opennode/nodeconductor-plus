@@ -17,11 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 # Build a list of size choices supported by Azure
-SIZES = tuple(
-    (s.id, s.name) for s in sorted(type('AzureDriver', (azure.AzureNodeDriver,), {
-        '__init__': lambda self, *a, **kw: None,
-        'connection': type('AzureConnection', (object,), {'driver': azure.AzureNodeDriver})
-    })().list_sizes(), key=lambda s: float(s.price)))
+SIZES = tuple((k, v['name']) for k, v in sorted(azure.AZURE_COMPUTE_INSTANCE_TYPES.items(), key=lambda s: s[1]['price']))
 
 # libcloud doesn't match Visual Studio images properly
 azure.WINDOWS_SERVER_REGEX = re.compile(
