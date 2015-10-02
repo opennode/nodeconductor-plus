@@ -1,9 +1,12 @@
+import re
 import logging
 
 from django.utils import six
 from libcloud.common.types import LibcloudError
-from libcloud.compute.drivers.azure import AzureNodeDriver
+from libcloud.compute.base import NodeAuthPassword
+from libcloud.compute.drivers import azure
 
+from nodeconductor.core.tasks import send_task
 from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
@@ -11,6 +14,19 @@ from . import models
 
 
 logger = logging.getLogger(__name__)
+
+
+# Build a list of size choices supported by Azure
+SIZES = tuple(
+    (s.id, s.name) for s in sorted(type('AzureDriver', (azure.AzureNodeDriver,), {
+        '__init__': lambda self, *a, **kw: None,
+        'connection': type('AzureConnection', (object,), {'driver': azure.AzureNodeDriver})
+    })().list_sizes(), key=lambda s: float(s.price)))
+
+# libcloud doesn't match Visual Studio images properly
+azure.WINDOWS_SERVER_REGEX = re.compile(
+    azure.WINDOWS_SERVER_REGEX.pattern + '|VS-201[35]'
+)
 
 
 class AzureBackendError(ServiceBackendError):
@@ -30,13 +46,14 @@ class AzureBackend(object):
 class AzureBaseBackend(ServiceBackend):
 
     def __init__(self, settings, cloud_service_name=None):
+        self.deployment = 'production'
         self.location = 'Central US'
         if settings.options and 'location' in settings.options:
             self.location = settings.options['location']
 
         self.settings = settings
         self.cloud_service_name = cloud_service_name
-        self.manager = AzureNodeDriver(
+        self.manager = azure.AzureNodeDriver(
             subscription_id=settings.username,
             key_file=settings.certificate.path if settings.certificate else None)
 
@@ -45,6 +62,30 @@ class AzureBaseBackend(ServiceBackend):
 
     def sync_link(self, service_project_link, is_initial=False):
         self.push_link(service_project_link)
+
+    def provision(self, vm, region=None, image=None, size=None, username=None, password=None):
+        size = next(s for s in self.manager.list_sizes() if s.id == size)
+        vm.ram = size.ram
+        vm.disk = size.disk
+        vm.cores = size.extra['cores']
+        vm.save()
+
+        send_task('azure', 'provision')(
+            vm.uuid.hex,
+            backend_image_id=image.backend_id,
+            backend_size_id=size.id,
+            username=username,
+            password=password)
+
+    def destroy(self, vm):
+        vm.schedule_deletion()
+        vm.save()
+        send_task('azure', 'destroy')(vm.uuid.hex)
+
+    def restart(self, vm):
+        vm.schedule_restarting()
+        vm.save()
+        send_task('azure', 'restart')(vm.uuid.hex)
 
 
 class AzureRealBackend(AzureBaseBackend):
@@ -68,9 +109,12 @@ class AzureRealBackend(AzureBaseBackend):
         else:
             return True
 
+    def get_monthly_cost_estimate(self, vm):
+        # calculate a price for current month based on hourly rate
+        return float(self.get_vm(vm.backend_id).size.price) * hours_in_month()
+
     def pull_service_properties(self):
         self.pull_images()
-        self.pull_locations()
 
     def pull_images(self):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
@@ -84,37 +128,68 @@ class AzureRealBackend(AzureBaseBackend):
 
         map(lambda i: i.delete(), cur_images.values())
 
-    def pull_locations(self):
-        cur_locations = {i.backend_id: i for i in models.Location.objects.all()}
-        for backend_location in self.manager.list_locations():
-            cur_locations.pop(backend_location.id, None)
-            models.Location.objects.update_or_create(
-                backend_id=backend_location.id,
-                defaults={
-                    'name': backend_location.name,
-                })
-
-        map(lambda i: i.delete(), cur_locations.values())
-
     def push_link(self, service_project_link):
-        cloud_service_name = 'nc-%s' % service_project_link.project.uuid.hex
+        # XXX: must be less than 24 chars (due to libcloud bug actually)
+        cloud_service_name = 'nc-%x' % service_project_link.project.uuid.node
         services = [s.service_name for s in self.manager.ex_list_cloud_services()]
 
+        # XXX: consider creating storage account here too
         if cloud_service_name not in services:
             self.manager.ex_create_cloud_service(cloud_service_name, self.location)
             service_project_link.cloud_service_name = cloud_service_name
             service_project_link.save(update_fields=['cloud_service_name'])
 
-    def get_monthly_cost_estimate(self, vm):
-        # calculate a price for current month based on hourly rate
-        return float(self.get_vm(vm.backend_id).size.price) * hours_in_month()
+    def reboot(self, vm):
+        self.manager.reboot_node(
+            self.get_vm(vm.backend_id),
+            ex_cloud_service_name=self.cloud_service_name,
+            ex_deployment_slot=self.deployment)
+
+    def destroy_vm(self, vm):
+        # XXX: it doesn't destroy attached storage
+        self.manager.destroy_node(
+            self.get_vm(vm.backend_id),
+            ex_cloud_service_name=self.cloud_service_name,
+            ex_deployment_slot=self.deployment)
+
+    def provision_vm(self, vm, backend_image_id=None, backend_size_id=None,
+                     username=None, password=None):
+        try:
+            backend_vm = self.manager.create_node(
+                name=vm.name,
+                size=self.get_size(backend_size_id),
+                image=self.get_image(backend_image_id),
+                ex_cloud_service_name=self.cloud_service_name,
+                ex_deployment_slot=self.deployment,
+                ex_custom_data=vm.user_data,
+                ex_admin_user_id=username,
+                auth=NodeAuthPassword(password))
+        except LibcloudError as e:
+            logger.exception('Failed to provision virtual machine %s', vm.name)
+            six.reraise(AzureBackendError, e)
+
+        vm.backend_id = backend_vm.id
+        vm.save(update_fields=['backend_id'])
+        return backend_vm
 
     def get_vm(self, vm_id):
         try:
             vm = next(vm for vm in self.manager.list_nodes(self.cloud_service_name) if vm.id == vm_id)
             # XXX: libcloud seems doesn't map size properly
-            vm.size = next(s for s in self.manager.list_sizes() if s.id == vm.extra['instance_size'])
+            vm.size = self.get_size(vm.extra['instance_size'])
             return vm
+        except (StopIteration, LibcloudError) as e:
+            six.reraise(AzureBackendError, e)
+
+    def get_size(self, size_id):
+        try:
+            return next(s for s in self.manager.list_sizes() if s.id == size_id)
+        except (StopIteration, LibcloudError) as e:
+            six.reraise(AzureBackendError, e)
+
+    def get_image(self, image_id):
+        try:
+            return next(s for s in self.manager.list_images() if s.id == image_id)
         except (StopIteration, LibcloudError) as e:
             six.reraise(AzureBackendError, e)
 

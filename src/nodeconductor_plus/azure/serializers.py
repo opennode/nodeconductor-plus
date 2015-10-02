@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 
 from django.utils import timezone
@@ -6,7 +8,7 @@ from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
-from .backend import AzureBackendError
+from .backend import AzureBackendError, SIZES
 
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
@@ -20,10 +22,11 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         'location': '',
     }
 
-    location = serializers.ChoiceField(choices=models.AzureService.Locations,
-                                       write_only=True,
-                                       required=False,
-                                       allow_blank=True)
+    location = serializers.ChoiceField(
+        choices=models.AzureService.Locations,
+        write_only=True,
+        required=False,
+        allow_blank=True)
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.AzureService
@@ -49,19 +52,6 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
         }
 
 
-class LocationSerializer(structure_serializers.BasePropertySerializer):
-
-    SERVICE_TYPE = SupportedServices.Types.Azure
-
-    class Meta(object):
-        model = models.Location
-        view_name = 'azure-location-detail'
-        fields = ('url', 'uuid', 'name')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
-
-
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 
     class Meta(structure_serializers.BaseServiceProjectLinkSerializer.Meta):
@@ -72,7 +62,7 @@ class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkS
         }
 
 
-class VirtualMachineSerializer(structure_serializers.VirtualMachineSerializer):
+class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
 
     service = serializers.HyperlinkedRelatedField(
         source='service_project_link.service',
@@ -91,18 +81,36 @@ class VirtualMachineSerializer(structure_serializers.VirtualMachineSerializer):
         queryset=models.Image.objects.all().select_related('settings'),
         write_only=True)
 
-    class Meta(structure_serializers.VirtualMachineSerializer.Meta):
+    size = serializers.ChoiceField(choices=SIZES, write_only=True, required=True)
+    username = serializers.CharField(write_only=True, required=True)
+    # XXX: it's rather insecure
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    rdp = serializers.HyperlinkedIdentityField(view_name='azure-virtualmachine-rdp', lookup_field='uuid')
+
+    class Meta(structure_serializers.BaseResourceSerializer.Meta):
         model = models.VirtualMachine
         view_name = 'azure-virtualmachine-detail'
-        fields = structure_serializers.VirtualMachineSerializer.Meta.fields + (
-            'image',
+        fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
+            'image', 'size', 'username', 'password', 'user_data', 'rdp'
         )
-        protected_fields = structure_serializers.VirtualMachineSerializer.Meta.protected_fields + (
-            'image',
+        protected_fields = structure_serializers.BaseResourceSerializer.Meta.protected_fields + (
+            'image', 'size', 'username', 'password', 'user_data'
         )
 
     def validate(self, attrs):
-        raise NotImplementedError
+        if not re.match(r'[a-zA-Z0-9-]+', attrs['name']):
+            raise serializers.ValidationError(
+                "Only valid hostname characters are allowed. (a-z, A-Z, 0-9 and -)")
+
+        # passwords must contain characters from at least three of the following four categories:
+        groups = (r'[a-z]', r'[A-Z]', r'[0-9]', r'[^a-zA-Z\d\s:]')
+        if not 6 <= len(attrs['password']) <= 72 or sum(bool(re.search(g, attrs['password'])) for g in groups) < 3:
+            raise serializers.ValidationError(
+                "The supplied password must be 6-72 characters long "
+                "and meet password complexity requirements")
+
+        return attrs
 
 
 class VirtualMachineImportSerializer(structure_serializers.BaseResourceImportSerializer):

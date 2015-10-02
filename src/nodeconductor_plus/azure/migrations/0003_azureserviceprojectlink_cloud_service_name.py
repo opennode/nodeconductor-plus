@@ -17,4 +17,11 @@ class Migration(migrations.Migration):
             field=models.CharField(max_length=255, blank=True),
             preserve_default=True,
         ),
+        migrations.RemoveField(
+            model_name='location',
+            name='settings',
+        ),
+        migrations.DeleteModel(
+            name='Location',
+        ),
     ]

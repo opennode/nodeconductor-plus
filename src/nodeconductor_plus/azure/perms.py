@@ -23,6 +23,5 @@ PERMISSION_LOGICS = (
         any_permission=True,
     )),
     ('azure.VirtualMachine', structure_perms.resource_permission_logic),
-    ('azure.Location', StaffPermissionLogic(any_permission=True)),
     ('azure.Image', StaffPermissionLogic(any_permission=True)),
 )
