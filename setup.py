@@ -15,8 +15,7 @@ tests_requires = [
 ]
 
 install_requires = [
-    'apache-libcloud>=0.17.0',
-    'azure==0.11.1',
+    'apache-libcloud>=0.18.0',
     'nodeconductor>=0.68.0',
     'python-digitalocean>=1.5',
     'python-gitlab>=0.9',
