@@ -92,6 +92,8 @@ def check_service_resources_availability(service_str):
                     scope=resource,
                     alert_type='resource_disappeared_from_backend',
                     alert_context={'resource': resource})
+            else:
+                alert_logger.resource_state.close(scope=resource, alert_type='resource_disappeared_from_backend')
 
 
 @shared_task
