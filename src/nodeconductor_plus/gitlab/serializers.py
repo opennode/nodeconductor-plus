@@ -174,7 +174,7 @@ class GroupImportSerializer(structure_serializers.BaseResourceImportSerializer):
         validated_data['state'] = structure_models.Resource.States.ONLINE
         del validated_data['type']
 
-        super(GroupImportSerializer, self).create(validated_data)
+        return super(GroupImportSerializer, self).create(validated_data)
 
 
 class ProjectImportSerializer(structure_serializers.BaseResourceImportSerializer):

@@ -1,5 +1,7 @@
 from django.apps import AppConfig
+from django.db.models import signals
 
+from . import handlers
 from nodeconductor.structure import SupportedServices
 
 
@@ -9,6 +11,13 @@ class GitLabConfig(AppConfig):
 
     def ready(self):
         GitLabService = self.get_model('GitLabService')
+        GitLabServiceProjectLink = self.get_model('GitLabServiceProjectLink')
 
         from .backend import GitLabBackend
         SupportedServices.register_backend(GitLabService, GitLabBackend)
+
+        signals.post_save.connect(
+            handlers.sync_service_project_link,
+            sender=GitLabServiceProjectLink,
+            dispatch_uid='nodeconductor_plus.gitlab.handlers.sync_service_project_link',
+        )
