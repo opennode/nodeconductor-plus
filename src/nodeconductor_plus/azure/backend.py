@@ -15,7 +15,7 @@ from . import models
 
 logger = logging.getLogger(__name__)
 
-SORTED_SIZES = sorted(azure.AZURE_COMPUTE_INSTANCE_TYPES.items(), key=lambda s: s[1]['price'])
+SORTED_SIZES = sorted(azure.AZURE_COMPUTE_INSTANCE_TYPES.items(), key=lambda s: float(s[1]['price']))
 
 # Build a list of size details supported by Azure
 SIZE_DETAILS = [{
