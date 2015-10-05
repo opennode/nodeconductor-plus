@@ -369,12 +369,12 @@ class GitLabRealBackend(GitLabBaseBackend):
 
         send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
 
-    def _send_access_gained_email(self, user, accessed_object):
+    def _send_access_gained_email(self, user, backend_resource):
         context = {
             'user': user,
-            'accessed_object': accessed_object,
+            'resource': backend_resource,
             'gitlab_url': self.settings.backend_url,
-            'accessed_object_type': accessed_object.__class__.__name__,
+            'resource_type': backend_resource.__class__.__name__,
         }
 
         subject = render_to_string('gitlab/access_gained_email/subject.txt', context)

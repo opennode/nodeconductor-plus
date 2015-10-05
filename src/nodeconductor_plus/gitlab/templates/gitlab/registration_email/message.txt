@@ -1,4 +1,4 @@
-New GitLab account was created at {{ gitlab_url }}
+New GitLab account has been created (URL: {{ gitlab_url }})
 
 Account details:
 
