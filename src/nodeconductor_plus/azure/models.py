@@ -30,6 +30,13 @@ class Image(structure_models.ServiceProperty):
     pass
 
 
+class Size(object):
+    _meta = 'size'
+    @classmethod
+    def get_url_name(cls):
+        return 'azure-size'
+
+
 class VirtualMachine(structure_models.VirtualMachineMixin, structure_models.Resource):
     service_project_link = models.ForeignKey(
         AzureServiceProjectLink, related_name='virtualmachines', on_delete=models.PROTECT)

@@ -1,8 +1,7 @@
 import re
 
+from django.utils import six, timezone
 from rest_framework import serializers
-
-from django.utils import timezone
 
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
@@ -50,6 +49,21 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
+
+
+class SizeSerializer(six.with_metaclass(structure_serializers.PropertySerializerMetaclass,
+                                        serializers.Serializer)):
+
+    SERVICE_TYPE = SupportedServices.Types.Azure
+
+    uuid = serializers.ReadOnlyField()
+    name = serializers.ReadOnlyField()
+    cores = serializers.ReadOnlyField()
+    ram = serializers.ReadOnlyField()
+    disk = serializers.ReadOnlyField()
+
+    class Meta(object):
+        model = models.Size
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):

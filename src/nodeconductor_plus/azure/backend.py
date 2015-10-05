@@ -15,9 +15,19 @@ from . import models
 
 logger = logging.getLogger(__name__)
 
+SORTED_SIZES = sorted(azure.AZURE_COMPUTE_INSTANCE_TYPES.items(), key=lambda s: float(s[1]['price']))
+
+# Build a list of size details supported by Azure
+SIZE_DETAILS = [{
+    'uuid': key,
+    'name': val['name'],
+    'cores': val['cores'],
+    'ram': val['ram'],
+    'disk': val['disk']
+    } for key, val in SORTED_SIZES]
 
 # Build a list of size choices supported by Azure
-SIZES = tuple((k, v['name']) for k, v in sorted(azure.AZURE_COMPUTE_INSTANCE_TYPES.items(), key=lambda s: s[1]['price']))
+SIZES = tuple((k, v['name']) for k, v in SORTED_SIZES)
 
 # libcloud doesn't match Visual Studio images properly
 azure.WINDOWS_SERVER_REGEX = re.compile(
