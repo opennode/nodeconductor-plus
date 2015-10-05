@@ -1,0 +1,3 @@
+Congratulations {{ user.username }}!
+
+You receive access rights to GitLab {{ accessed_object_type }} {{ accessed_object.name }} (URL: {{ accessed_object.web_url }}).

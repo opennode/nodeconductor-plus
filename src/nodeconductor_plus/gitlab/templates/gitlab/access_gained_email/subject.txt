@@ -1,0 +1,1 @@
+You receive access rights to GitLab {{ accessed_object_type }}: {{ accessed_object.name }}.

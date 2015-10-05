@@ -1,11 +1,13 @@
 import gitlab
 import logging
 
+from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils import six
-from django.contrib.auth import get_user_model
 
-from nodeconductor.core.utils import pwgen
 from nodeconductor.core.tasks import send_task
+from nodeconductor.core.utils import pwgen
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
 from . import ResourceType
@@ -13,6 +15,9 @@ from .models import Group, Project
 
 
 logger = logging.getLogger(__name__)
+# XXX: monkey-patch GitLab API parameters for user creation.
+# Should be removed after API version update
+gitlab.User.optionalCreateAttrs.append('confirm')
 
 
 class GitLabBackendError(ServiceBackendError):
@@ -60,13 +65,15 @@ class GitLabBaseBackend(ServiceBackend):
 
     def add_user(self, user, service_project_link):
         try:
+            self.get_or_create_user(user)
+
             for group in service_project_link.groups.all():
                 self.add_group_member(group, user)
-                logger.info("User %s added to Gitlab group %s", user.username, group.backend_url)
+                logger.info("User %s added to Gitlab group %s", user.username, group.uuid.hex)
 
             for project in service_project_link.projects.all():
                 self.add_project_member(project, user)
-                logger.info("User %s added to Gitlab project %s", user.username, project.backend_url)
+                logger.info("User %s added to Gitlab project %s", user.username, project.uuid.hex)
 
         except gitlab.GitlabError as e:
             six.reraise(GitLabBackendError, e)
@@ -75,11 +82,11 @@ class GitLabBaseBackend(ServiceBackend):
         try:
             for group in service_project_link.groups.all():
                 self.delete_group_member(group, user)
-                logger.info("User %s removed from Gitlab group %s", user.username, group.backend_url)
+                logger.info("User %s removed from Gitlab group %s", user.username, group.uuid.hex)
 
             for project in service_project_link.projects.all():
                 self.delete_project_member(project, user)
-                logger.info("User %s removed from Gitlab project %s", user.username, project.backend_url)
+                logger.info("User %s removed from Gitlab project %s", user.username, project.uuid.hex)
 
         except gitlab.GitlabError as e:
             six.reraise(GitLabBackendError, e)
@@ -176,7 +183,7 @@ class GitLabRealBackend(GitLabBaseBackend):
         group.backend_id = backend_group.id
         group.save()
 
-        for user in self._get_project_users(group.service_project_link.project):
+        for user in group.service_project_link.get_related_users():
             self.add_group_member(group, user)
 
     def provision_project(self, project, **kwargs):
@@ -202,7 +209,7 @@ class GitLabRealBackend(GitLabBaseBackend):
         project.visibility_level = backend_project.visibility_level
         project.save()
 
-        for user in self._get_project_users(project.service_project_link.project):
+        for user in project.service_project_link.get_related_users():
             self.add_project_member(project, user)
 
     def get_group(self, group_id):
@@ -234,27 +241,20 @@ class GitLabRealBackend(GitLabBaseBackend):
     def _get_access_level(self, resource, user):
         project = resource.service_project_link.project
 
-        ACCESS_MAPPING = {
-            project.roles.model.ADMINISTRATOR: 40,  # MASTER
-            project.roles.model.MANAGER: 30,        # DEVELOPER
-        }
-
         if not hasattr(self, '_cached_roles'):
             self._cached_roles = {}
 
         if not self._cached_roles.get(user.username):
-            try:
-                role_type = next(r.role_type for r in project.roles.filter(permission_group__user=user))
-            except StopIteration:
-                raise GitLabBackendError(
-                    "Cannot add user %s to Gitlab %s", user.username, self.settings.backend_url)
+            if (project.customer.has_user(user, role_type=project.customer.roles.model.OWNER) or
+                    project.has_user(user, role_type=project.roles.model.ADMINISTRATOR)):
+                access_level = gitlab.Group.DEVELOPER_ACCESS
             else:
-                self._cached_roles[user.username] = ACCESS_MAPPING[role_type]
+                raise GitLabBackendError(
+                    "Cannot add user %s to Gitlab %s. User has no role.", user.username, self.settings.backend_url)
+
+            self._cached_roles[user.username] = access_level
 
         return self._cached_roles[user.username]
-
-    def _get_project_users(self, project):
-        return get_user_model().objects.filter(groups__projectrole__project=project)
 
     def add_group_member(self, group, user):
         backend_user = self.get_or_create_user(user)
@@ -266,6 +266,7 @@ class GitLabRealBackend(GitLabBaseBackend):
                 'access_level': self._get_access_level(group, user),
             })
         member.save()
+        self._send_access_gained_email(user, group)
 
     def add_project_member(self, project, user):
         backend_user = self.get_or_create_user(user)
@@ -277,22 +278,21 @@ class GitLabRealBackend(GitLabBaseBackend):
                 'access_level': self._get_access_level(project, user),
             })
         member.save()
+        self._send_access_gained_email(user, project)
 
     def delete_group_member(self, group, user):
         backend_user = self.get_user(user)
 
         if not backend_user:
-            logger.warn("Cannot remove user %s from Gitlab %s", user.username, self.settings.backend_url)
+            logger.warn("Cannot remove user %s from Gitlab %s. User does not exist at GitLab.",
+                        user.username, self.settings.backend_url)
             return
 
-        member = gitlab.GroupMember(
-            self.manager,
-            {
-                'user_id': backend_user.id,
-                'group_id': group.backend_id,
-            })
-        member._created = True
-        member.delete()
+        members = [member for member in gitlab.GroupMember.list(self.manager, group_id=group.backend_id)
+                   if member.username == backend_user.username]
+
+        for member in members:
+            member.delete()
 
     def delete_project_member(self, project, user):
         backend_user = self.get_user(user)
@@ -301,14 +301,11 @@ class GitLabRealBackend(GitLabBaseBackend):
             logger.warn("Cannot remove user %s from Gitlab %s", user.username, self.settings.backend_url)
             return
 
-        member = gitlab.ProjectMember(
-            self.manager,
-            {
-                'user_id': backend_user.id,
-                'project_id': project.backend_id,
-            })
-        member._created = True
-        member.delete()
+        members = [member for member in gitlab.ProjectMember.list(self.manager, project_id=project.backend_id)
+                   if member.username == backend_user.username]
+
+        for member in members:
+            member.delete()
 
     def push_ssh_key(self, ssh_key):
         backend_user = self.get_or_create_user(ssh_key.user)
@@ -345,16 +342,46 @@ class GitLabRealBackend(GitLabBaseBackend):
     def get_or_create_user(self, user):
         backend_user = self.get_user(user)
         if not backend_user:
+            password = pwgen()
             backend_user = self.manager.User({
                 'email': user.email,
-                'name': user.full_name,
+                'name': user.full_name or user.username,
                 'username': user.username,
-                'password': pwgen(),
-                'extern_uid': user.uuid.hex,
+                'password': password,
+                'confirm': 'false',
             })
             backend_user.save()
+
+            self._send_registration_email(user, password)
             self._cached_users[user.username] = backend_user
-        return backend_user
+        return backend_user, user.username, password
+
+    def _send_registration_email(self, user, password):
+        context = {
+            'user': user,
+            'password': password,
+            'gitlab_url': self.settings.backend_url,
+        }
+
+        subject = render_to_string('gitlab/registration_email/subject.txt', context)
+        text_message = render_to_string('gitlab/registration_email/message.txt', context)
+        html_message = render_to_string('gitlab/registration_email/message.html', context)
+
+        send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
+
+    def _send_access_gained_email(self, user, accessed_object):
+        context = {
+            'user': user,
+            'accessed_object': accessed_object,
+            'gitlab_url': self.settings.backend_url,
+            'accessed_object_type': accessed_object.__class__.__name__,
+        }
+
+        subject = render_to_string('gitlab/access_gained_email/subject.txt', context)
+        text_message = render_to_string('gitlab/access_gained_email/message.txt', context)
+        html_message = render_to_string('gitlab/access_gained_email/message.html', context)
+
+        send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
 
 
 class GitLabDummyBackend(GitLabBaseBackend):

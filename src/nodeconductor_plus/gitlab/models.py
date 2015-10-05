@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.db import models
 
+from nodeconductor.core import models as core_models
 from nodeconductor.structure import models as structure_models
 
 
