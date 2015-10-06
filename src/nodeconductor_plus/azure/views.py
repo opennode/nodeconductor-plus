@@ -1,10 +1,10 @@
 from django.http import HttpResponse
-from rest_framework import decorators, exceptions, mixins, viewsets
+from rest_framework import decorators, exceptions, viewsets
 
 from nodeconductor.structure import ServiceBackendError, views as structure_views
 
 from . import models, serializers
-from .backend import SIZE_DETAILS
+from .backend import SizeQueryset
 
 
 class AzureServiceViewSet(structure_views.BaseServiceViewSet):
@@ -24,11 +24,10 @@ class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     lookup_field = 'uuid'
 
 
-class SizeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class SizeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SizeQueryset()
     serializer_class = serializers.SizeSerializer
-
-    def get_queryset(self):
-        return SIZE_DETAILS
+    lookup_field = 'uuid'
 
 
 class VirtualMachineViewSet(structure_views.BaseResourceViewSet):

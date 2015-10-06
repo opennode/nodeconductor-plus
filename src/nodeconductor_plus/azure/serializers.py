@@ -2,12 +2,13 @@ import re
 
 from django.utils import six, timezone
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
-from .backend import AzureBackendError, SIZES
+from .backend import AzureBackendError, SizeQueryset
 
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
@@ -57,6 +58,7 @@ class SizeSerializer(six.with_metaclass(structure_serializers.PropertySerializer
     SERVICE_TYPE = SupportedServices.Types.Azure
 
     uuid = serializers.ReadOnlyField()
+    url = serializers.SerializerMethodField()
     name = serializers.ReadOnlyField()
     cores = serializers.ReadOnlyField()
     ram = serializers.ReadOnlyField()
@@ -64,6 +66,9 @@ class SizeSerializer(six.with_metaclass(structure_serializers.PropertySerializer
 
     class Meta(object):
         model = models.Size
+
+    def get_url(self, size):
+        return reverse('azure-size-detail', kwargs={'uuid': size.uuid}, request=self.context.get('request'))
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
@@ -95,7 +100,12 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
         queryset=models.Image.objects.all().select_related('settings'),
         write_only=True)
 
-    size = serializers.ChoiceField(choices=SIZES, write_only=True, required=True)
+    size = serializers.HyperlinkedRelatedField(
+        view_name='azure-size-detail',
+        lookup_field='uuid',
+        queryset=SizeQueryset(),
+        write_only=True)
+
     username = serializers.CharField(write_only=True, required=True)
     # XXX: it's rather insecure
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
