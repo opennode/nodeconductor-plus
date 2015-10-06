@@ -1,3 +1,4 @@
+import collections
 import re
 import logging
 
@@ -15,24 +16,42 @@ from . import models
 
 logger = logging.getLogger(__name__)
 
-SORTED_SIZES = sorted(azure.AZURE_COMPUTE_INSTANCE_TYPES.items(), key=lambda s: float(s[1]['price']))
-
-# Build a list of size details supported by Azure
-SIZE_DETAILS = [{
-    'uuid': key,
-    'name': val['name'],
-    'cores': val['cores'],
-    'ram': val['ram'],
-    'disk': val['disk']
-    } for key, val in SORTED_SIZES]
-
-# Build a list of size choices supported by Azure
-SIZES = tuple((k, v['name']) for k, v in SORTED_SIZES)
-
 # libcloud doesn't match Visual Studio images properly
 azure.WINDOWS_SERVER_REGEX = re.compile(
     azure.WINDOWS_SERVER_REGEX.pattern + '|VS-201[35]'
 )
+
+
+class SizeQueryset(object):
+    def __init__(self):
+        self.items = []
+        for key, val in azure.AZURE_COMPUTE_INSTANCE_TYPES.items():
+            self.items.append(SizeQueryset.Size(uuid=key,
+                                                name=val['name'],
+                                                cores=val['cores'],
+                                                ram=val['ram'],
+                                                disk=val['disk'] * 1024, # gb to mb
+                                                price=float(val['price'])))
+
+        self.items = list(sorted(self.items, key=lambda s: s.price))
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, key):
+        return self.items[key]
+
+    def all(self):
+        return self.items
+
+    def get(self, uuid):
+        for item in self.items:
+            if item.uuid == uuid:
+                return item
+
+    class Size(collections.namedtuple('Size', ('uuid', 'name', 'cores', 'ram', 'disk', 'price'))):
+        def __str__(self):
+            return self.name
 
 
 class AzureBackendError(ServiceBackendError):
