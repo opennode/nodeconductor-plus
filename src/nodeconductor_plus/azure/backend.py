@@ -30,7 +30,7 @@ class SizeQueryset(object):
                                                 name=val['name'],
                                                 cores=val['cores'],
                                                 ram=val['ram'],
-                                                disk=val['disk'] * 1024, # gb to mb
+                                                disk=ServiceBackend.gb2mb(val['disk']),
                                                 price=float(val['price'])))
 
         self.items = list(sorted(self.items, key=lambda s: s.price))
