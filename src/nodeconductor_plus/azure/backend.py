@@ -25,8 +25,8 @@ azure.WINDOWS_SERVER_REGEX = re.compile(
 class SizeQueryset(object):
     def __init__(self):
         self.items = []
-        for key, val in azure.AZURE_COMPUTE_INSTANCE_TYPES.items():
-            self.items.append(SizeQueryset.Size(uuid=key,
+        for val in azure.AZURE_COMPUTE_INSTANCE_TYPES.values():
+            self.items.append(SizeQueryset.Size(uuid=val['id'],
                                                 name=val['name'],
                                                 cores=val['cores'],
                                                 ram=val['ram'],
