@@ -4,6 +4,7 @@ from django.utils import six, timezone
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
+from nodeconductor.core import serializers as core_serializers
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
@@ -106,6 +107,11 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
         queryset=SizeQueryset(),
         write_only=True)
 
+    external_ips = serializers.ListField(
+        child=core_serializers.IPAddressField(),
+        read_only=True,
+    )
+
     username = serializers.CharField(write_only=True, required=True)
     # XXX: it's rather insecure
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
@@ -116,7 +122,7 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
         model = models.VirtualMachine
         view_name = 'azure-virtualmachine-detail'
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
-            'image', 'size', 'username', 'password', 'user_data', 'rdp'
+            'image', 'size', 'username', 'password', 'user_data', 'rdp', 'external_ips'
         )
         protected_fields = structure_serializers.BaseResourceSerializer.Meta.protected_fields + (
             'image', 'size', 'username', 'password', 'user_data'
