@@ -30,3 +30,10 @@ Request example:
         "backend_id": "45",
         "type": "project"
     }
+
+
+Project commits count
+---------------------
+
+To get GitLab project commits count - check project "commit_count" quota. Quota history can be used as commits count
+historical data. Look "Quotas" section for more details.
