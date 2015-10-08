@@ -29,7 +29,7 @@ class SizeQueryset(object):
             self.items.append(SizeQueryset.Size(uuid=val['id'],
                                                 pk=val['id'],
                                                 name=val['name'],
-                                                cores=isinstance(val['cores'], int) and val['cores'] or 0,
+                                                cores=isinstance(val['cores'], int) and val['cores'] or 1,
                                                 ram=val['ram'],
                                                 disk=ServiceBackend.gb2mb(val['disk']),
                                                 price=float(val['price'])))
