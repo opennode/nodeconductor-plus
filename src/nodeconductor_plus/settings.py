@@ -37,6 +37,11 @@ NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
     'check-orders': {
         'task': 'nodeconductor.plans.check_orders',
         'schedule': timedelta(minutes=60),
-        'args': ()
+        'args': (),
+    },
+    'update-gitlab-statistics': {
+        'task': 'nodeconductor.gitlab.update_statistics',
+        'schedule': timedelta(minutes=60),
+        'args': (),
     }
 }

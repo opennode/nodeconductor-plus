@@ -2,7 +2,7 @@ from celery import shared_task
 
 from nodeconductor.core.tasks import transition
 
-from .models import Group, Project
+from .models import Group, Project, GitLabServiceProjectLink
 
 
 @shared_task(name='nodeconductor.gitlab.provision_group')
@@ -49,6 +49,13 @@ def destroy_project(project_uuid, transition_entity=None):
         raise
     else:
         project.delete()
+
+
+@shared_task(name='nodeconductor.gitlab.update_statistics')
+def update_statistics():
+    for spl in GitLabServiceProjectLink.objects.all():
+        backend = spl.get_backend()
+        backend.update_statistics()
 
 
 @shared_task
