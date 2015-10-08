@@ -27,8 +27,9 @@ class SizeQueryset(object):
         self.items = []
         for val in azure.AZURE_COMPUTE_INSTANCE_TYPES.values():
             self.items.append(SizeQueryset.Size(uuid=val['id'],
+                                                pk=val['id'],
                                                 name=val['name'],
-                                                cores=val['cores'],
+                                                cores=isinstance(val['cores'], int) and val['cores'] or 1,
                                                 ram=val['ram'],
                                                 disk=ServiceBackend.gb2mb(val['disk']),
                                                 price=float(val['price'])))
@@ -48,8 +49,9 @@ class SizeQueryset(object):
         for item in self.items:
             if item.uuid == uuid:
                 return item
+        raise ValueError
 
-    class Size(collections.namedtuple('Size', ('uuid', 'name', 'cores', 'ram', 'disk', 'price'))):
+    class Size(collections.namedtuple('Size', ('uuid', 'pk', 'name', 'cores', 'ram', 'disk', 'price'))):
         def __str__(self):
             return self.name
 
@@ -89,16 +91,15 @@ class AzureBaseBackend(ServiceBackend):
         self.push_link(service_project_link)
 
     def provision(self, vm, region=None, image=None, size=None, username=None, password=None):
-        size = next(s for s in self.manager.list_sizes() if s.id == size)
         vm.ram = size.ram
         vm.disk = size.disk
-        vm.cores = size.extra['cores']
+        vm.cores = size.cores
         vm.save()
 
         send_task('azure', 'provision')(
             vm.uuid.hex,
             backend_image_id=image.backend_id,
-            backend_size_id=size.id,
+            backend_size_id=size.pk,
             username=username,
             password=password)
 
