@@ -1,7 +1,6 @@
-from django.conf import settings
 from django.db import models
 
-from nodeconductor.core import models as core_models
+from nodeconductor.quotas import models as quotas_models
 from nodeconductor.structure import models as structure_models
 
 
@@ -26,7 +25,7 @@ class Group(structure_models.Resource):
             self.path) if self.path else None
 
 
-class Project(structure_models.Resource):
+class Project(quotas_models.QuotaModelMixin, structure_models.Resource):
     class Levels:
         PRIVATE = 0
         INTERNAL = 10
@@ -37,6 +36,8 @@ class Project(structure_models.Resource):
             (INTERNAL, 'The project can be cloned by any logged in user.'),
             (PUBLIC, 'The project can be cloned without any authentication.'),
         )
+
+    QUOTAS_NAMES = ['commit_count']  # XXX: commit_count quotas is used only for statistics
 
     service_project_link = models.ForeignKey(
         GitLabServiceProjectLink, related_name='projects', on_delete=models.PROTECT)

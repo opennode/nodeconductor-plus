@@ -1,10 +1,12 @@
 import gitlab
 import logging
+import dateutil
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils import six
+from django.utils import six, timezone
+import reversion
 
 from nodeconductor.core.tasks import send_task
 from nodeconductor.core.utils import pwgen
@@ -111,7 +113,7 @@ class GitLabBaseBackend(ServiceBackend):
         if resource_type is None or resource_type == ResourceType.PROJECT:
             cur_projects = Project.objects.all().values_list('backend_id', flat=True)
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-            for proj in self.manager.Project():
+            for proj in self.get_gitlab_objects(gitlab.Project):
                 # Only project from already imported groups are available for import
                 if str(proj.id) not in cur_projects and str(proj.namespace.id) in cur_groups:
                     resources.append({
@@ -124,7 +126,7 @@ class GitLabBaseBackend(ServiceBackend):
 
         if resource_type is None or resource_type == ResourceType.GROUP:
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-            for grp in self.manager.Group():
+            for grp in self.get_gitlab_objects(gitlab.Group):
                 if str(grp.id) not in cur_groups:
                     resources.append({
                         'id': grp.id,
@@ -134,11 +136,19 @@ class GitLabBaseBackend(ServiceBackend):
 
         return resources
 
+    def update_statistics(self):
+        for project in Project.objects.all():
+            try:
+                self.update_project_statistics(project)
+            except gitlab.GitlabError as e:
+                logger.warning('Failed to update statistics for project %s. Exception: %s.', project.name, str(e))
+
 
 class GitLabRealBackend(GitLabBaseBackend):
-    """ NodeConductor interface to GitLab API.
-        http://doc.gitlab.com/ce/api/README.html
-        http://github.com/gpocentek/python-gitlab
+    """NodeConductor interface to GitLab API.
+
+    http://doc.gitlab.com/ce/api/README.html
+    http://github.com/gpocentek/python-gitlab
     """
 
     class Namespace(gitlab.GitlabObject):
@@ -156,6 +166,21 @@ class GitLabRealBackend(GitLabBaseBackend):
             self.manager.auth()
         except gitlab.GitlabAuthenticationError as e:
             six.reraise(GitLabBackendError, e)
+
+    def get_gitlab_objects(self, object_cls, **kwargs):
+        """Get GitLab objects iterator.
+
+        Iterator hides pagination process and allows to iterate through all available objects.
+        """
+        page = kwargs.pop('page', 0)
+        page_size = kwargs.pop('page_size', 20)
+        while True:
+            objects = object_cls.list(self.manager, page=page, page_size=page_size, **kwargs)
+            for obj in objects:
+                yield obj
+            if not objects or len(objects) < page_size:
+                raise StopIteration
+            page += 1
 
     def ping_resource(self, resource):
         if isinstance(resource, Group):
@@ -189,7 +214,7 @@ class GitLabRealBackend(GitLabBaseBackend):
     def provision_project(self, project, **kwargs):
         if project.group:
             try:
-                for namespace in self.Namespace.list(self.manager):
+                for namespace in self.get_gitlab_objects(self.Namespace):
                     if namespace.kind == 'group' and namespace.path == project.group.path:
                         kwargs['namespace_id'] = namespace.id
             except gitlab.GitlabError as e:
@@ -355,6 +380,19 @@ class GitLabRealBackend(GitLabBaseBackend):
             self._send_registration_email(user, password)
             self._cached_users[user.username] = backend_user
         return backend_user, user.username, password
+
+    def update_project_statistics(self, project):
+        quota = project.quotas.get(name='commit_count')
+        last_version = reversion.get_for_date(quota, timezone.now())
+        last_update = last_version.revision.date_created
+        commit_count = 0
+        for commit in self.get_gitlab_objects(gitlab.ProjectCommit, project_id=project.backend_id):
+            if dateutil.parser.parse(commit.created_at) > last_update:
+                commit_count += 1
+            else:
+                break
+        if commit_count:
+            project.add_quota_usage('commit_count', commit_count)
 
     def _send_registration_email(self, user, password):
         context = {
