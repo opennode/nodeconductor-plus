@@ -1,6 +1,7 @@
-import collections
 import re
+import time
 import logging
+import collections
 
 from django.utils import six
 from libcloud.common.types import LibcloudError
@@ -9,7 +10,7 @@ from libcloud.compute.drivers import azure
 
 from nodeconductor.core.tasks import send_task
 from nodeconductor.core.utils import hours_in_month
-from nodeconductor.structure import ServiceBackend, ServiceBackendError
+from nodeconductor.structure import ServiceBackend, ServiceBackendError, ServiceBackendNotImplemented
 
 from . import models
 
@@ -20,6 +21,10 @@ logger = logging.getLogger(__name__)
 azure.WINDOWS_SERVER_REGEX = re.compile(
     azure.WINDOWS_SERVER_REGEX.pattern + '|VS-201[35]'
 )
+
+# there's a hope libcloud will implement this method in further releases
+azure.AzureNodeDriver.ex_list_storage_services = lambda self: \
+    self._perform_get(self._get_path('services', 'storageservices'), StorageServices)
 
 
 class SizeQueryset(object):
@@ -56,6 +61,37 @@ class SizeQueryset(object):
             return self.name
 
 
+class StorageServiceProperties(azure.WindowsAzureData):
+
+    def __init__(self):
+        self.description = ''
+        self.location = ''
+        self.affinity_group = ''
+        self.label = azure._Base64String()
+        self.status = ''
+        self.createion_time = ''
+
+
+class StorageService(azure.WindowsAzureData):
+    _repr_attributes = [
+        'service_name',
+        'url'
+    ]
+
+    def __init__(self):
+        self.url = ''
+        self.service_name = ''
+        self.storage_service_properties = StorageServiceProperties()
+
+
+class StorageServices(azure.WindowsAzureDataTypedList, azure.ReprMixin):
+    list_type = StorageService
+
+    _repr_attributes = [
+        'items'
+    ]
+
+
 class AzureBackendError(ServiceBackendError):
     pass
 
@@ -89,6 +125,10 @@ class AzureBaseBackend(ServiceBackend):
 
     def sync_link(self, service_project_link, is_initial=False):
         self.push_link(service_project_link)
+
+    def remove_link(self, service_project_link):
+        # TODO: this should remove storage and cloud service
+        raise ServiceBackendNotImplemented
 
     def provision(self, vm, region=None, image=None, size=None, username=None, password=None):
         vm.ram = size.ram
@@ -155,15 +195,26 @@ class AzureRealBackend(AzureBaseBackend):
         map(lambda i: i.delete(), cur_images.values())
 
     def push_link(self, service_project_link):
-        # XXX: must be less than 24 chars (due to libcloud bug actually)
         cloud_service_name = 'nc-%x' % service_project_link.project.uuid.node
         services = [s.service_name for s in self.manager.ex_list_cloud_services()]
-
-        # XXX: consider creating storage account here too
         if cloud_service_name not in services:
             self.manager.ex_create_cloud_service(cloud_service_name, self.location)
             service_project_link.cloud_service_name = cloud_service_name
             service_project_link.save(update_fields=['cloud_service_name'])
+
+        storage_name = self.get_storage_name(cloud_service_name)
+        storages = [s.service_name for s in self.manager.ex_list_storage_services()]
+        if storage_name not in storages:
+            self.manager.ex_create_storage_service(storage_name, self.location)
+
+            # XXX: missed libcloud feature
+            #      it will block celery worker for a while (5 min max)
+            #      but it's easiest workaround for azure and general syncing workflow
+            for _ in range(100):
+                storage = self.get_storage(storage_name)
+                if storage.storage_service_properties.status == 'Created':  # ResolvingDns otherwise
+                    break
+                time.sleep(30)
 
     def reboot(self, vm):
         self.manager.reboot_node(
@@ -172,7 +223,6 @@ class AzureRealBackend(AzureBaseBackend):
             ex_deployment_slot=self.deployment)
 
     def destroy_vm(self, vm):
-        # XXX: it doesn't destroy attached storage
         self.manager.destroy_node(
             self.get_vm(vm.backend_id),
             ex_cloud_service_name=self.cloud_service_name,
@@ -186,6 +236,7 @@ class AzureRealBackend(AzureBaseBackend):
                 size=self.get_size(backend_size_id),
                 image=self.get_image(backend_image_id),
                 ex_cloud_service_name=self.cloud_service_name,
+                ex_storage_service_name=self.get_storage_name(),
                 ex_deployment_slot=self.deployment,
                 ex_custom_data=vm.user_data,
                 ex_admin_user_id=username,
@@ -205,7 +256,7 @@ class AzureRealBackend(AzureBaseBackend):
             vm.size = self.get_size(vm.extra['instance_size'])
             return vm
         except (StopIteration, LibcloudError) as e:
-            six.reraise(AzureBackendError, e)
+            six.reraise(AzureBackendError, e.message or "Virtual machine doesn't exist")
 
     def get_size(self, size_id):
         try:
@@ -217,7 +268,20 @@ class AzureRealBackend(AzureBaseBackend):
         try:
             return next(s for s in self.manager.list_images() if s.id == image_id)
         except (StopIteration, LibcloudError) as e:
-            six.reraise(AzureBackendError, e)
+            six.reraise(AzureBackendError, e.message or "Image doesn't exist")
+
+    def get_storage(self, storage_name):
+        try:
+            return next(s for s in self.manager.ex_list_storage_services() if s.service_name == storage_name)
+        except (StopIteration, LibcloudError) as e:
+            six.reraise(AzureBackendError, e.message or "Storage doesn't exist")
+
+    def get_storage_name(self, cloud_service_name=None):
+        if not cloud_service_name:
+            cloud_service_name = self.cloud_service_name
+        # Storage account name must be between 3 and 24 characters in length
+        # and use numbers and lower-case letters only
+        return re.sub(r'[\W_-]+', '', cloud_service_name.lower())[:24]
 
     def get_resources_for_import(self):
         if not self.cloud_service_name:

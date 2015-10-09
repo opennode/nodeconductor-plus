@@ -129,16 +129,19 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
         )
 
     def validate(self, attrs):
-        if not re.match(r'[a-zA-Z0-9-]+', attrs['name']):
+        if not re.match(r'[a-zA-Z][a-zA-Z0-9-]{0,13}[a-zA-Z0-9]$', attrs['name']):
             raise serializers.ValidationError(
-                "Only valid hostname characters are allowed. (a-z, A-Z, 0-9 and -)")
+                {'name': "The name can contain only letters, numbers, and hyphens. "
+                         "The name must be shorter than 15 characters and start with "
+                         "a letter and must end with a letter or a number."})
 
         # passwords must contain characters from at least three of the following four categories:
         groups = (r'[a-z]', r'[A-Z]', r'[0-9]', r'[^a-zA-Z\d\s:]')
         if not 6 <= len(attrs['password']) <= 72 or sum(bool(re.search(g, attrs['password'])) for g in groups) < 3:
-            raise serializers.ValidationError(
-                "The supplied password must be 6-72 characters long "
-                "and meet password complexity requirements")
+            raise serializers.ValidationError({
+                'password': "The supplied password must be 6-72 characters long "
+                "and contain 3 of the following: a lowercase character, "
+                "an uppercase character, a number, a special character"})
 
         return attrs
 
