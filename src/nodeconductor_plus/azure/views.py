@@ -54,7 +54,7 @@ class VirtualMachineViewSet(structure_views.BaseResourceViewSet):
         response['Content-Disposition'] = 'attachment; filename="{}.rdp"'.format(backend_vm.name)
         response.write(
             "full address:s:%s.cloudapp.net:%s\n"
-            "prompt for credentials:i:1\n\n" % (backend_vm.name, rdp_port))
+            "prompt for credentials:i:1\n\n" % (vm.service_project_link.cloud_service_name, rdp_port))
 
         return response
 

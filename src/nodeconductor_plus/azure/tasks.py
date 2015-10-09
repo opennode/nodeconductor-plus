@@ -44,6 +44,8 @@ def restart(vm_uuid):
 
 # XXX: azure instance turns online few times during provisioning
 #      hence give it at least 10 min before first try
+# XXX: it's still fragile and could trigger before provisioning is over
+#      seems like the only possible solution is to increment minimum time again
 @shared_task(max_retries=4, default_retry_delay=600)
 @retry_if_false
 def wait_for_provision_end(vm_uuid):
