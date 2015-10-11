@@ -207,13 +207,13 @@ class AzureRealBackend(AzureBaseBackend):
         # create cloud
         services = [s.service_name for s in self.manager.ex_list_cloud_services()]
         if cloud_service_name not in services:
-            logger.debug('About to create new azure cloud for SPL %s', service_project_link.pk)
+            logger.debug('About to create new azure cloud service for SPL %s', service_project_link.pk)
             self.manager.ex_create_cloud_service(cloud_service_name, self.location)
             service_project_link.cloud_service_name = cloud_service_name
             service_project_link.save(update_fields=['cloud_service_name'])
             logger.info('Successfully created new azure cloud for SPL %s', service_project_link.pk)
         else:
-            logger.debug('Skipped azure cloud creation for SPL %s - such cloud already exists', service_project_link.pk)
+            logger.debug('Skipped azure cloud service creation for SPL %s - such cloud already exists', service_project_link.pk)
 
         # create storage
         storage_name = self.get_storage_name(cloud_service_name)
