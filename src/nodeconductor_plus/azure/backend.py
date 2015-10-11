@@ -195,16 +195,31 @@ class AzureRealBackend(AzureBaseBackend):
         map(lambda i: i.delete(), cur_images.values())
 
     def push_link(self, service_project_link):
-        cloud_service_name = 'nc-%x' % service_project_link.project.uuid.node
+        # define cloud service name
+        options = service_project_link.service.settings.options
+        if options and 'cloud_service_name' in options:
+            cloud_service_name = options['cloud_service_name']
+            service_project_link.cloud_service_name = cloud_service_name
+            service_project_link.save(update_fields=['cloud_service_name'])
+        else:
+            cloud_service_name = 'nc-%x' % service_project_link.project.uuid.node
+
+        # create cloud
         services = [s.service_name for s in self.manager.ex_list_cloud_services()]
         if cloud_service_name not in services:
+            logger.debug('About to create new azure cloud service for SPL %s', service_project_link.pk)
             self.manager.ex_create_cloud_service(cloud_service_name, self.location)
             service_project_link.cloud_service_name = cloud_service_name
             service_project_link.save(update_fields=['cloud_service_name'])
+            logger.info('Successfully created new azure cloud for SPL %s', service_project_link.pk)
+        else:
+            logger.debug('Skipped azure cloud service creation for SPL %s - such cloud already exists', service_project_link.pk)
 
+        # create storage
         storage_name = self.get_storage_name(cloud_service_name)
         storages = [s.service_name for s in self.manager.ex_list_storage_services()]
         if storage_name not in storages:
+            logger.debug('About to create new azure storage for SPL %s', service_project_link.pk)
             self.manager.ex_create_storage_service(storage_name, self.location)
 
             # XXX: missed libcloud feature
@@ -215,6 +230,10 @@ class AzureRealBackend(AzureBaseBackend):
                 if storage.storage_service_properties.status == 'Created':  # ResolvingDns otherwise
                     break
                 time.sleep(30)
+            logger.info('Successfully created new azure cloud for SPL %s', service_project_link.pk)
+        else:
+            logger.debug(
+                'Skipped azure storage creation for SPL %s - such cloud already exists', service_project_link.pk)
 
     def reboot(self, vm):
         self.manager.reboot_node(

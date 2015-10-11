@@ -32,6 +32,7 @@ class Image(structure_models.ServiceProperty):
 
 class Size(object):
     _meta = 'size'
+
     @classmethod
     def get_url_name(cls):
         return 'azure-size'
