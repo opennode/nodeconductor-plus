@@ -97,20 +97,26 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
     """
 
     def ping(self):
-        try:
-            self.manager.get_account()
-        except digitalocean.DataReadError:
-            return False
-        else:
-            return True
+        tries_count = 3
+        for _ in range(tries_count):
+            try:
+                self.manager.get_account()
+            except digitalocean.DataReadError:
+                pass
+            else:
+                return True
+        return False
 
     def ping_resource(self, droplet):
-        try:
-            self.get_droplet(droplet.backend_id)
-        except DigitalOceanBackendError:
-            return False
-        else:
-            return True
+        tries_count = 3
+        for _ in range(tries_count):
+            try:
+                self.get_droplet(droplet.backend_id)
+            except DigitalOceanBackendError:
+                pass
+            else:
+                return True
+        return False
 
     def pull_service_properties(self):
         self.pull_regions()
