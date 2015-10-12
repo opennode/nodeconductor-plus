@@ -32,11 +32,31 @@ def destroy(vm_uuid, transition_entity=None):
         vm.delete()
 
 
+@shared_task(name='nodeconductor.azure.start')
+def start(vm_uuid):
+    chain(
+        begin_starting.s(vm_uuid),
+        wait_for_vm_state.si(vm_uuid, 'Started'),
+    ).apply_async(
+        link=set_online.si(vm_uuid),
+        link_error=set_erred.si(vm_uuid))
+
+
+@shared_task(name='nodeconductor.azure.stop')
+def stop(vm_uuid):
+    chain(
+        begin_stopping.s(vm_uuid),
+        wait_for_vm_state.si(vm_uuid, 'Stopped'),
+    ).apply_async(
+        link=set_offline.si(vm_uuid),
+        link_error=set_erred.si(vm_uuid))
+
+
 @shared_task(name='nodeconductor.azure.restart')
 def restart(vm_uuid):
     chain(
         begin_restarting.s(vm_uuid),
-        wait_for_vm_online.si(vm_uuid),
+        wait_for_vm_state.si(vm_uuid, 'Started'),
     ).apply_async(
         link=set_online.si(vm_uuid),
         link_error=set_erred.si(vm_uuid))
@@ -60,11 +80,11 @@ def wait_for_provision_end(vm_uuid):
 
 @shared_task(max_retries=300, default_retry_delay=3)
 @retry_if_false
-def wait_for_vm_online(vm_uuid):
+def wait_for_vm_state(vm_uuid, state=''):
     vm = VirtualMachine.objects.get(uuid=vm_uuid)
     backend = vm.get_backend()
     backend_vm = backend.get_vm(vm.backend_id)
-    return backend_vm.extra['power_state'] == 'Started'
+    return backend_vm.extra['power_state'] == state
 
 
 @shared_task(is_heavy_task=True)
@@ -76,11 +96,27 @@ def provision_vm(vm_uuid, transition_entity=None, **kwargs):
 
 
 @shared_task
+@transition(VirtualMachine, 'begin_starting')
+def begin_starting(vm_uuid, transition_entity=None):
+    vm = transition_entity
+    backend = vm.get_backend()
+    backend.start_vm(vm)
+
+
+@shared_task
+@transition(VirtualMachine, 'begin_stopping')
+def begin_stopping(vm_uuid, transition_entity=None):
+    vm = transition_entity
+    backend = vm.get_backend()
+    backend.stop_vm(vm)
+
+
+@shared_task
 @transition(VirtualMachine, 'begin_restarting')
 def begin_restarting(vm_uuid, transition_entity=None):
     vm = transition_entity
     backend = vm.get_backend()
-    backend.reboot(vm)
+    backend.reboot_vm(vm)
 
 
 @shared_task
