@@ -148,6 +148,16 @@ class AzureBaseBackend(ServiceBackend):
         vm.save()
         send_task('azure', 'destroy')(vm.uuid.hex)
 
+    def start(self, vm):
+        vm.schedule_starting()
+        vm.save()
+        send_task('azure', 'start')(vm.uuid.hex)
+
+    def stop(self, vm):
+        vm.schedule_stopping()
+        vm.save()
+        send_task('azure', 'stop')(vm.uuid.hex)
+
     def restart(self, vm):
         vm.schedule_restarting()
         vm.save()
@@ -235,11 +245,49 @@ class AzureRealBackend(AzureBaseBackend):
             logger.debug(
                 'Skipped azure storage creation for SPL %s - such cloud already exists', service_project_link.pk)
 
-    def reboot(self, vm):
+    def reboot_vm(self, vm):
         self.manager.reboot_node(
             self.get_vm(vm.backend_id),
             ex_cloud_service_name=self.cloud_service_name,
             ex_deployment_slot=self.deployment)
+
+    def stop_vm(self, vm):
+        deployment_name = self.manager._get_deployment(
+            service_name=self.cloud_service_name,
+            deployment_slot=self.deployment
+        ).name
+
+        try:
+            response = self.manager._perform_post(
+                self.manager._get_deployment_path_using_name(
+                    self.cloud_service_name, deployment_name
+                ) + '/roleinstances/' + azure._str(vm.backend_id) + '/Operations',
+                azure.AzureXmlSerializer.shutdown_role_operation_to_xml()
+            )
+
+            self.manager.raise_for_response(response, 202)
+            self.manager._ex_complete_async_azure_operation(response)
+        except Exception as e:
+            six.reraise(AzureBackendError, e)
+
+    def start_vm(self, vm):
+        deployment_name = self.manager._get_deployment(
+            service_name=self.cloud_service_name,
+            deployment_slot=self.deployment
+        ).name
+
+        try:
+            response = self.manager._perform_post(
+                self.manager._get_deployment_path_using_name(
+                    self.cloud_service_name, deployment_name
+                ) + '/roleinstances/' + azure._str(vm.backend_id) + '/Operations',
+                azure.AzureXmlSerializer.start_role_operation_to_xml()
+            )
+
+            self.manager.raise_for_response(response, 202)
+            self.manager._ex_complete_async_azure_operation(response)
+        except Exception as e:
+            six.reraise(AzureBackendError, e)
 
     def destroy_vm(self, vm):
         self.manager.destroy_node(
