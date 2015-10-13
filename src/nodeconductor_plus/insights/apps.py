@@ -30,7 +30,7 @@ class InsightsConfig(AppConfig):
             )
 
         for index, resource in enumerate(Resource.get_all_models()):
-            signals.post_delete.connect(
+            signals.pre_delete.connect(
                 handlers.check_missed_resources,
                 sender=resource,
                 dispatch_uid=(
