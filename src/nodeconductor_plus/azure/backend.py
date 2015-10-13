@@ -193,8 +193,22 @@ class AzureRealBackend(AzureBaseBackend):
         self.pull_images()
 
     def pull_images(self):
+        options = self.settings.options
+        if options and 'images_regex' in options:
+            regex = re.compile(options['images_regex'])
+        else:
+            regex = re.compile(r'.')
+
+        images = {}
+        for image in self.manager.list_images():
+            images.setdefault(image.name, [])
+            images[image.name].append(image)
+
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
-        for backend_image in self.manager.list_images():
+        for backend_images in images.values():
+            backend_image = sorted(backend_images)[-1]  # get last image with same name (perhaps newest one)
+            if not regex.match(backend_image.name):
+                continue
             cur_images.pop(backend_image.id, None)
             models.Image.objects.update_or_create(
                 backend_id=backend_image.id,
