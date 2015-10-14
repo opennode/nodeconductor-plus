@@ -11,10 +11,6 @@ def check_unmanaged_resources(sender, instance, created=False, **kwargs):
         check_service_resources.delay(instance.to_string())
 
 
-def check_missed_resources(sender, instance, **kwargs):
-    alert_logger.resource_state.close(scope=instance, alert_type='resource_disappeared_from_backend')
-
-
 def check_managed_services(sender, instance, created=False, **kwargs):
     if created:
         alert_logger.customer_state.close(scope=instance.customer, alert_type='customer_has_zero_services')

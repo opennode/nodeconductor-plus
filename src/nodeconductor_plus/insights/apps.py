@@ -30,14 +30,6 @@ class InsightsConfig(AppConfig):
             )
 
         for index, resource in enumerate(Resource.get_all_models()):
-            signals.pre_delete.connect(
-                handlers.check_missed_resources,
-                sender=resource,
-                dispatch_uid=(
-                    'nodeconductor_plus.insights.handlers.check_missed_resources_{}_{}'
-                    .format(resource.__name__, index))
-            )
-
             signals.post_save.connect(
                 handlers.check_managed_resources,
                 sender=resource,
