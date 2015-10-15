@@ -23,6 +23,9 @@ class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     serializer_class = serializers.ImageSerializer
     lookup_field = 'uuid'
 
+    def get_queryset(self):
+        return models.Image.objects.order_by('name')
+
 
 class SizeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SizeQueryset()
@@ -48,7 +51,7 @@ class VirtualMachineViewSet(structure_views.BaseResourceViewSet):
             raise exceptions.APIException(e)
 
         if not rdp_port:
-            raise exceptions.NotFound("This virtual machive doesn't run remote desktop")
+            raise exceptions.NotFound("This virtual machine doesn't run remote desktop")
 
         response = HttpResponse(content_type='application/x-rdp')
         response['Content-Disposition'] = 'attachment; filename="{}.rdp"'.format(backend_vm.name)

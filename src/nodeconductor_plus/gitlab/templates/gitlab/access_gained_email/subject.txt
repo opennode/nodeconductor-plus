@@ -1,1 +1,1 @@
-You have been granted access to GitLab {{ backend_resource_type }}: {{ backend_resource.name }}.
+You have been granted access to GitLab {{ resource_type }}: {{ resource.name }}.

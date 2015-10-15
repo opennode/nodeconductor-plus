@@ -27,6 +27,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields = super(ServiceSerializer, self).get_fields()
         fields['token'].label = 'Private token'
         fields['username'].label = 'Username or email'
+        fields['backend_url'].required = True
         return fields
 
 
