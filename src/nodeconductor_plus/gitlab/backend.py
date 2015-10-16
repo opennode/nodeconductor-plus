@@ -3,8 +3,6 @@ import logging
 import dateutil
 
 from django.conf import settings
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
 from django.utils import six, timezone
 import reversion
 
@@ -113,7 +111,13 @@ class GitLabBaseBackend(ServiceBackend):
         if resource_type is None or resource_type == ResourceType.PROJECT:
             cur_projects = Project.objects.all().values_list('backend_id', flat=True)
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-            for proj in self.get_gitlab_objects(gitlab.Project):
+            try:
+                projects = self.get_gitlab_objects(gitlab.Project)
+            except gitlab.GitlabError as e:
+                projects = []
+                logger.exception("Cannot fetch projects for Gitlab %s", self.settings.backend_url)
+
+            for proj in projects:
                 # Only project from already imported groups are available for import
                 if str(proj.id) not in cur_projects and str(proj.namespace.id) in cur_groups:
                     resources.append({
@@ -126,7 +130,13 @@ class GitLabBaseBackend(ServiceBackend):
 
         if resource_type is None or resource_type == ResourceType.GROUP:
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-            for grp in self.get_gitlab_objects(gitlab.Group):
+            try:
+                groups = self.get_gitlab_objects(gitlab.Group)
+            except gitlab.GitlabError as e:
+                groups = []
+                logger.exception("Cannot fetch groups for Gitlab %s", self.settings.backend_url)
+
+            for grp in groups:
                 if str(grp.id) not in cur_groups:
                     resources.append({
                         'id': grp.id,
@@ -156,16 +166,23 @@ class GitLabRealBackend(GitLabBaseBackend):
 
     def __init__(self, settings):
         self.settings = settings
-        self.manager = gitlab.Gitlab(
-            settings.backend_url,
-            private_token=settings.token,
-            email=settings.username,
-            password=settings.password)
 
-        try:
-            self.manager.auth()
-        except gitlab.GitlabAuthenticationError as e:
-            six.reraise(GitLabBackendError, e)
+    # Lazy init
+    @property
+    def manager(self):
+        if not hasattr(self, '_manager'):
+            self._manager = gitlab.Gitlab(
+                self.settings.backend_url,
+                private_token=self.settings.token,
+                email=self.settings.username,
+                password=self.settings.password)
+
+            try:
+                self._manager.auth()
+            except gitlab.GitlabAuthenticationError as e:
+                six.reraise(GitLabBackendError, e)
+
+        return self._manager
 
     def get_gitlab_objects(self, object_cls, **kwargs):
         """Get GitLab objects iterator.
@@ -208,7 +225,7 @@ class GitLabRealBackend(GitLabBaseBackend):
         group.backend_id = backend_group.id
         group.save()
 
-        for user in group.service_project_link.get_related_users():
+        for user in group.get_related_users():
             self.add_group_member(group, user)
 
     def provision_project(self, project, **kwargs):
@@ -234,7 +251,7 @@ class GitLabRealBackend(GitLabBaseBackend):
         project.visibility_level = backend_project.visibility_level
         project.save()
 
-        for user in project.service_project_link.get_related_users():
+        for user in project.get_related_users():
             self.add_project_member(project, user)
 
     def get_group(self, group_id):
@@ -379,47 +396,34 @@ class GitLabRealBackend(GitLabBaseBackend):
 
             self._send_registration_email(user, password)
             self._cached_users[user.username] = backend_user
-        return backend_user, user.username, password
+        return backend_user
 
     def update_project_statistics(self, project):
         quota = project.quotas.get(name='commit_count')
         last_version = reversion.get_for_date(quota, timezone.now())
         last_update = last_version.revision.date_created
         commit_count = 0
-        for commit in self.get_gitlab_objects(gitlab.ProjectCommit, project_id=project.backend_id):
+        try:
+            commits = self.get_gitlab_objects(gitlab.ProjectCommit, project_id=project.backend_id)
+        except gitlab.GitlabError as e:
+            logger.exception("Cannot fetch comments for Gitlab %s", self.settings.backend_url)
+            return
+
+        for commit in commits:
             if dateutil.parser.parse(commit.created_at) > last_update:
                 commit_count += 1
             else:
                 break
+
         if commit_count:
             project.add_quota_usage('commit_count', commit_count)
 
     def _send_registration_email(self, user, password):
-        context = {
-            'user': user,
-            'password': password,
-            'gitlab_url': self.settings.backend_url,
-        }
-
-        subject = render_to_string('gitlab/registration_email/subject.txt', context)
-        text_message = render_to_string('gitlab/registration_email/message.txt', context)
-        html_message = render_to_string('gitlab/registration_email/message.html', context)
-
-        send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
+        send_task('gitlab', 'send_registration_email')(self.settings.id, user.id, password)
 
     def _send_access_gained_email(self, user, backend_resource):
-        context = {
-            'user': user,
-            'resource': backend_resource,
-            'gitlab_url': self.settings.backend_url,
-            'resource_type': backend_resource.__class__.__name__,
-        }
-
-        subject = render_to_string('gitlab/access_gained_email/subject.txt', context)
-        text_message = render_to_string('gitlab/access_gained_email/message.txt', context)
-        html_message = render_to_string('gitlab/access_gained_email/message.html', context)
-
-        send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
+        send_task('gitlab', 'send_access_gained_email')(
+            self.settings.id, user.id, backend_resource.to_string())
 
 
 class GitLabDummyBackend(GitLabBaseBackend):

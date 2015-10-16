@@ -1,5 +1,6 @@
 from django.db import models
 
+from nodeconductor.core import models as core_models
 from nodeconductor.quotas import models as quotas_models
 from nodeconductor.structure import models as structure_models
 
@@ -13,7 +14,15 @@ class GitLabServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(GitLabService)
 
 
-class Group(structure_models.Resource):
+class GitLabResource(structure_models.Resource, core_models.SerializableAbstractMixin):
+    class Meta(object):
+        abstract = True
+
+    def get_related_users(self):
+        return self.service_project_link.project.get_users()
+
+
+class Group(GitLabResource):
     path = models.CharField(max_length=100, blank=True)
     service_project_link = models.ForeignKey(
         GitLabServiceProjectLink, related_name='groups', on_delete=models.PROTECT)
@@ -25,7 +34,7 @@ class Group(structure_models.Resource):
             self.path) if self.path else None
 
 
-class Project(quotas_models.QuotaModelMixin, structure_models.Resource):
+class Project(quotas_models.QuotaModelMixin, GitLabResource):
     class Levels:
         PRIVATE = 0
         INTERNAL = 10
@@ -47,3 +56,6 @@ class Project(quotas_models.QuotaModelMixin, structure_models.Resource):
     http_url_to_repo = models.CharField(max_length=255, blank=True)
     ssh_url_to_repo = models.CharField(max_length=255, blank=True)
     web_url = models.CharField(max_length=255, blank=True)
+
+    def get_related_users(self):
+        return self.service_project_link.project.get_users()

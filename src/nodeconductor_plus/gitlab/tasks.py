@@ -1,8 +1,13 @@
 from celery import shared_task
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 from nodeconductor.core.tasks import transition
+from nodeconductor.structure.models import ServiceSettings
 
-from .models import Group, Project, GitLabServiceProjectLink
+from .models import GitLabResource, Group, Project, GitLabServiceProjectLink
 
 
 @shared_task(name='nodeconductor.gitlab.provision_group')
@@ -96,3 +101,41 @@ def set_group_erred(group_uuid, transition_entity=None):
 @transition(Project, 'set_erred')
 def set_project_erred(project_uuid, transition_entity=None):
     pass
+
+
+@shared_task(name='nodeconductor.gitlab.send_registration_email')
+def send_registration_email(settings_id, user_id, password):
+    user = get_user_model().objects.get(pk=user_id)
+    service = ServiceSettings.objects.get(pk=settings_id)
+
+    context = {
+        'user': user,
+        'password': password,
+        'gitlab_url': service.backend_url,
+    }
+
+    subject = render_to_string('gitlab/registration_email/subject.txt', context)
+    text_message = render_to_string('gitlab/registration_email/message.txt', context)
+    html_message = render_to_string('gitlab/registration_email/message.html', context)
+
+    send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
+
+
+@shared_task(name='nodeconductor.gitlab.send_access_gained_email')
+def send_access_gained_email(settings_id, user_id, resource_str):
+    user = get_user_model().objects.get(pk=user_id)
+    service = ServiceSettings.objects.get(pk=settings_id)
+    resource = next(GitLabResource.from_string(resource_str))
+
+    context = {
+        'user': user,
+        'resource': resource,
+        'gitlab_url': resource.web_url,
+        'resource_type': resource.__class__.__name__,
+    }
+
+    subject = render_to_string('gitlab/access_gained_email/subject.txt', context)
+    text_message = render_to_string('gitlab/access_gained_email/message.txt', context)
+    html_message = render_to_string('gitlab/access_gained_email/message.html', context)
+
+    send_mail(subject, text_message, settings.DEFAULT_FROM_EMAIL, [user.email], html_message=html_message)
