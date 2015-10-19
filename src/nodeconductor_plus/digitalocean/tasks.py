@@ -3,13 +3,16 @@ from celery import shared_task, chain
 from django.utils import timezone
 
 from nodeconductor.core.tasks import transition, retry_if_false
+from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import Droplet
 
 
 @shared_task(name='nodeconductor.digitalocean.provision')
 def provision(droplet_uuid, **kwargs):
+    droplet = Droplet.objects.get(uuid=droplet_uuid)
     chain(
+        sync_service_project_links.si(droplet.service_project_link.to_string(), initial=True),
         provision_droplet.s(droplet_uuid, **kwargs),
         wait_for_action_complete.s(droplet_uuid),
     ).apply_async(

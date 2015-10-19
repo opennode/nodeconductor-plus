@@ -1,4 +1,4 @@
-from celery import shared_task
+from celery import shared_task, chain
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -6,24 +6,29 @@ from django.template.loader import render_to_string
 
 from nodeconductor.core.tasks import transition
 from nodeconductor.structure.models import ServiceSettings
+from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import GitLabResource, Group, Project, GitLabServiceProjectLink
 
 
 @shared_task(name='nodeconductor.gitlab.provision_group')
 def provision_group(group_uuid, **kwargs):
-    begin_group_provisioning.apply_async(
-        args=(group_uuid,),
-        kwargs=kwargs,
+    group = Group.objects.get(uuid=group_uuid)
+    chain(
+        sync_service_project_links.si(group.service_project_link.to_string(), initial=True),
+        begin_group_provisioning.si(group_uuid, **kwargs),
+    ).apply_async(
         link=set_group_online.si(group_uuid),
         link_error=set_group_erred.si(group_uuid))
 
 
 @shared_task(name='nodeconductor.gitlab.provision_project')
 def provision_project(project_uuid, **kwargs):
-    begin_project_provisioning.apply_async(
-        args=(project_uuid,),
-        kwargs=kwargs,
+    project = Project.objects.get(uuid=project_uuid)
+    chain(
+        sync_service_project_links.si(project.service_project_link.to_string(), initial=True),
+        begin_project_provisioning.si(project_uuid, **kwargs),
+    ).apply_async(
         link=set_project_online.si(project_uuid),
         link_error=set_project_erred.si(project_uuid))
 
@@ -124,7 +129,6 @@ def send_registration_email(settings_id, user_id, password):
 @shared_task(name='nodeconductor.gitlab.send_access_gained_email')
 def send_access_gained_email(settings_id, user_id, resource_str):
     user = get_user_model().objects.get(pk=user_id)
-    service = ServiceSettings.objects.get(pk=settings_id)
     resource = next(GitLabResource.from_string(resource_str))
 
     context = {

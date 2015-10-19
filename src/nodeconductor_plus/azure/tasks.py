@@ -3,6 +3,7 @@ from celery import shared_task, chain
 from django.utils import timezone
 
 from nodeconductor.core.tasks import transition, retry_if_false
+from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import VirtualMachine
 from .backend import AzureBackendError
@@ -10,8 +11,10 @@ from .backend import AzureBackendError
 
 @shared_task(name='nodeconductor.azure.provision')
 def provision(vm_uuid, **kwargs):
+    vm = VirtualMachine.objects.get(uuid=vm_uuid)
     chain(
-        provision_vm.s(vm_uuid, **kwargs),
+        sync_service_project_links.si(vm.service_project_link.to_string(), initial=True),
+        provision_vm.si(vm_uuid, **kwargs),
         wait_for_provision_end.si(vm_uuid),
     ).apply_async(
         link=set_online.si(vm_uuid),
