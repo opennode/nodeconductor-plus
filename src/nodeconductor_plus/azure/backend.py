@@ -193,11 +193,8 @@ class AzureRealBackend(AzureBaseBackend):
         self.pull_images()
 
     def pull_images(self):
-        options = self.settings.options
-        if options and 'images_regex' in options:
-            regex = re.compile(options['images_regex'])
-        else:
-            regex = re.compile(r'.')
+        options = self.settings.options or {}
+        regex = re.compile(options.get('images_regex', r'.'))
 
         images = {}
         for image in self.manager.list_images():
