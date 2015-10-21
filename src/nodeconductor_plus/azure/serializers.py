@@ -36,7 +36,10 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     def get_fields(self):
         fields = super(ServiceSerializer, self).get_fields()
         fields['username'].label = 'Subscription ID'
+        fields['username'].required = True
         fields['certificate'].label = 'Private certificate file'
+        fields['certificate'].required = True
+        fields['certificate'].write_only = True
         return fields
 
 
