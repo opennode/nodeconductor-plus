@@ -116,9 +116,15 @@ class AzureBaseBackend(ServiceBackend):
 
         self.settings = settings
         self.cloud_service_name = cloud_service_name
-        self.manager = azure.AzureNodeDriver(
-            subscription_id=settings.username,
-            key_file=settings.certificate.path if settings.certificate else None)
+
+    # Lazy init
+    @property
+    def manager(self):
+        if not hasattr(self, '_manager'):
+            self._manager = azure.AzureNodeDriver(
+                subscription_id=self.settings.username,
+                key_file=self.settings.certificate.path if settings.certificate else None)
+        return self._manager
 
     def sync(self):
         self.pull_service_properties()
