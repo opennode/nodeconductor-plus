@@ -200,6 +200,9 @@ class GitLabRealBackend(GitLabBaseBackend):
             page += 1
 
     def ping_resource(self, resource):
+        # Passing empty string to GitLab client results in AttributeError
+        if not resource.backend_id:
+            return False
         if isinstance(resource, Group):
             try:
                 self.manager.Group(resource.backend_id)
