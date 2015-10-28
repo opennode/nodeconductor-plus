@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 def check_services():
     for model in Service.get_all_models():
         for service in model.objects.all():
-            check_service_resources.delay(service.to_string())
+            if not service.settings.is_shared:  # resources import from shared services is not available
+                check_service_resources.delay(service.to_string())
             check_service_availability.delay(service.to_string())
             check_service_resources_availability.delay(service.to_string())
 
