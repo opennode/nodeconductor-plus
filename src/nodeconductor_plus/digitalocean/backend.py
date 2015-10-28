@@ -113,7 +113,7 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
             try:
                 self.get_droplet(droplet.backend_id)
             except DigitalOceanBackendError:
-                pass
+                logger.warning('Droplet %s (UUID: %s) is unreachable' % (droplet.name, droplet.uuid.hex))
             else:
                 return True
         return False
