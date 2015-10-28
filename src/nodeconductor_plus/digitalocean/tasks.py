@@ -12,8 +12,8 @@ from .models import Droplet
 def provision(droplet_uuid, **kwargs):
     droplet = Droplet.objects.get(uuid=droplet_uuid)
     chain(
-        sync_service_project_links.si(droplet.service_project_link.to_string(), initial=True),
-        provision_droplet.s(droplet_uuid, **kwargs),
+        sync_service_project_links.s(droplet.service_project_link.to_string(), initial=True),
+        provision_droplet.si(droplet_uuid, **kwargs),
         wait_for_action_complete.s(droplet_uuid),
     ).apply_async(
         link=set_online.si(droplet_uuid),
