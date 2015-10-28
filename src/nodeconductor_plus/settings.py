@@ -34,8 +34,8 @@ NODECONDUCTOR_PLUS_CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(hours=24),
         'args': (),
     },
-    'check-orders': {
-        'task': 'nodeconductor.plans.check_orders',
+    'check-agreements': {
+        'task': 'nodeconductor.plans.check_agreements',
         'schedule': timedelta(minutes=60),
         'args': (),
     },
