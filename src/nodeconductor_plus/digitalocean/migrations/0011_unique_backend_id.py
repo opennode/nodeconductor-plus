@@ -25,6 +25,24 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(delete_duplicates),
+        migrations.AlterField(
+            model_name='image',
+            name='backend_id',
+            field=models.CharField(unique=True, max_length=255),
+            preserve_default=True,
+        ),
+        migrations.AlterField(
+            model_name='region',
+            name='backend_id',
+            field=models.CharField(unique=True, max_length=255),
+            preserve_default=True,
+        ),
+        migrations.AlterField(
+            model_name='size',
+            name='backend_id',
+            field=models.CharField(unique=True, max_length=255),
+            preserve_default=True,
+        ),
         migrations.RemoveField(
             model_name='image',
             name='settings',
@@ -36,23 +54,5 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='size',
             name='settings',
-        ),
-        migrations.AlterField(
-            model_name='image',
-            name='backend_id',
-            field=models.CharField(unique=True, max_length=255, db_index=True),
-            preserve_default=True,
-        ),
-        migrations.AlterField(
-            model_name='region',
-            name='backend_id',
-            field=models.CharField(unique=True, max_length=255, db_index=True),
-            preserve_default=True,
-        ),
-        migrations.AlterField(
-            model_name='size',
-            name='backend_id',
-            field=models.CharField(unique=True, max_length=255, db_index=True),
-            preserve_default=True,
         ),
     ]
