@@ -2,7 +2,6 @@ import gitlab
 import logging
 import dateutil
 
-from django.conf import settings
 from django.utils import six, timezone
 import reversion
 
@@ -113,7 +112,7 @@ class GitLabBaseBackend(ServiceBackend):
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
             try:
                 projects = self.get_gitlab_objects(gitlab.Project)
-            except gitlab.GitlabError as e:
+            except gitlab.GitlabError:
                 projects = []
                 logger.exception("Cannot fetch projects for Gitlab %s", self.settings.backend_url)
 
@@ -132,7 +131,7 @@ class GitLabBaseBackend(ServiceBackend):
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
             try:
                 groups = self.get_gitlab_objects(gitlab.Group)
-            except gitlab.GitlabError as e:
+            except gitlab.GitlabError:
                 groups = []
                 logger.exception("Cannot fetch groups for Gitlab %s", self.settings.backend_url)
 
@@ -387,18 +386,32 @@ class GitLabRealBackend(GitLabBaseBackend):
     def get_or_create_user(self, user):
         backend_user = self.get_user(user)
         if not backend_user:
+            logger.debug('About to create user gitlab user for user "%s"', user.username)
+            if user.email:
+                email = user.email
+            else:
+                email = '%s@example.com' % user.username
+                logger.warning('User "%s" has no email, using generated email "%s" for him.', user.username, email)
             password = pwgen()
-            backend_user = self.manager.User({
-                'email': user.email,
-                'name': user.full_name or user.username,
-                'username': user.username,
-                'password': password,
-                'confirm': 'false',
-            })
-            backend_user.save()
+            try:
+                backend_user = self.manager.User({
+                    'email': email,
+                    'name': user.full_name or user.username,
+                    'username': user.username,
+                    'password': password,
+                    'confirm': 'false',
+                })
+                backend_user.save()
+            except gitlab.GitlabError as e:
+                logger.exception('Cannot create backend user for user "%s"', user.username)
+                six.reraise(GitLabBackendError, e)
 
-            self._send_registration_email(user, password)
+            if user.email:
+                self._send_registration_email(user, password)
+            else:
+                logger.warning('Cannot send registration email to "%s"')
             self._cached_users[user.username] = backend_user
+            logger.info('Successfully created user gitlab user for user "%s"', user.username)
         return backend_user
 
     def update_project_statistics(self, project):
@@ -408,7 +421,7 @@ class GitLabRealBackend(GitLabBaseBackend):
         commit_count = 0
         try:
             commits = self.get_gitlab_objects(gitlab.ProjectCommit, project_id=project.backend_id)
-        except gitlab.GitlabError as e:
+        except gitlab.GitlabError:
             logger.exception("Cannot fetch comments for Gitlab %s", self.settings.backend_url)
             return
 
@@ -422,11 +435,17 @@ class GitLabRealBackend(GitLabBaseBackend):
             project.add_quota_usage('commit_count', commit_count)
 
     def _send_registration_email(self, user, password):
-        send_task('gitlab', 'send_registration_email')(self.settings.id, user.id, password)
+        if user.email:
+            send_task('gitlab', 'send_registration_email')(self.settings.id, user.id, password)
+        else:
+            logger.warning('Cannot send registration email to user without email (username: "%s")', user.username)
 
     def _send_access_gained_email(self, user, backend_resource):
-        send_task('gitlab', 'send_access_gained_email')(
-            self.settings.id, user.id, backend_resource.to_string())
+        if user.email:
+            send_task('gitlab', 'send_access_gained_email')(
+                self.settings.id, user.id, backend_resource.to_string())
+        else:
+            logger.warning('Cannot send access gained email to user without email (username: "%s")', user.username)
 
 
 class GitLabDummyBackend(GitLabBaseBackend):
