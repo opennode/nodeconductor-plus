@@ -32,7 +32,7 @@ class Image(structure_models.GeneralServiceProperty):
         return self.distribution in MANDATORY
 
     def __str__(self):
-        return '{} {} ({}) | {}'.format(self.name, self.distribution, self.type, self.settings)
+        return '{} {} ({})'.format(self.name, self.distribution, self.type)
 
 
 class Size(structure_models.GeneralServiceProperty):

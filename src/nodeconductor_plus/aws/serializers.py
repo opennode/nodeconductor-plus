@@ -75,7 +75,7 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
     image = serializers.HyperlinkedRelatedField(
         view_name='aws-image-detail',
         lookup_field='uuid',
-        queryset=models.Image.objects.all().select_related('settings'),
+        queryset=models.Image.objects.all(),
         write_only=True)
 
     class Meta(structure_serializers.VirtualMachineSerializer.Meta):
