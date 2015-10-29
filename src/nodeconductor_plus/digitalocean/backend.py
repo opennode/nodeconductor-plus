@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import logging
 import digitalocean
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import six
 
 from nodeconductor.core.tasks import send_task
@@ -129,9 +129,14 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         for backend_region in self.manager.get_all_regions():
             if backend_region.available:
                 cur_regions.pop(backend_region.slug, None)
-                models.Region.objects.update_or_create(
-                    backend_id=backend_region.slug,
-                    defaults={'name': backend_region.name})
+                try:
+                    models.Region.objects.update_or_create(
+                        backend_id=backend_region.slug,
+                        defaults={'name': backend_region.name})
+                except IntegrityError:
+                    logger.warning(
+                        'Could not create DigitalOcean region with id %s due to concurrent update',
+                        backend_region.slug)
 
         map(lambda i: i.delete(), cur_regions.values())
 
@@ -140,14 +145,19 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         cur_images = self._get_current_properties(models.Image)
         for backend_image in self.manager.get_all_images():
             cur_images.pop(str(backend_image.id), None)
-            image, _ = models.Image.objects.update_or_create(
-                backend_id=backend_image.id,
-                defaults={
-                    'name': backend_image.name,
-                    'type': backend_image.type,
-                    'distribution': backend_image.distribution,
-                })
-            self._update_entity_regions(image, backend_image)
+            try:
+                image, _ = models.Image.objects.update_or_create(
+                    backend_id=backend_image.id,
+                    defaults={
+                        'name': backend_image.name,
+                        'type': backend_image.type,
+                        'distribution': backend_image.distribution,
+                    })
+                self._update_entity_regions(image, backend_image)
+            except IntegrityError:
+                logger.warning(
+                    'Could not create DigitalOcean image with id %s due to concurrent update',
+                    backend_image.id)
 
         map(lambda i: i.delete(), cur_images.values())
 
@@ -156,15 +166,20 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         cur_sizes = self._get_current_properties(models.Size)
         for backend_size in self.manager.get_all_sizes():
             cur_sizes.pop(backend_size.slug, None)
-            size, _ = models.Size.objects.update_or_create(
-                backend_id=backend_size.slug,
-                defaults={
-                    'name': backend_size.slug,
-                    'cores': backend_size.vcpus,
-                    'ram': backend_size.memory,
-                    'disk': self.gb2mb(backend_size.disk),
-                    'transfer': int(self.tb2mb(backend_size.transfer))})
-            self._update_entity_regions(size, backend_size)
+            try:
+                size, _ = models.Size.objects.update_or_create(
+                    backend_id=backend_size.slug,
+                    defaults={
+                        'name': backend_size.slug,
+                        'cores': backend_size.vcpus,
+                        'ram': backend_size.memory,
+                        'disk': self.gb2mb(backend_size.disk),
+                        'transfer': int(self.tb2mb(backend_size.transfer))})
+                self._update_entity_regions(size, backend_size)
+            except IntegrityError:
+                logger.warning(
+                    'Could not create DigitalOcean size with id %s due to concurrent update',
+                    backend_size.slug)
 
         map(lambda i: i.delete(), cur_sizes.values())
 

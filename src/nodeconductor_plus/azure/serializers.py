@@ -101,7 +101,7 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
     image = serializers.HyperlinkedRelatedField(
         view_name='azure-image-detail',
         lookup_field='uuid',
-        queryset=models.Image.objects.all().select_related('settings'),
+        queryset=models.Image.objects.all(),
         write_only=True)
 
     size = serializers.HyperlinkedRelatedField(

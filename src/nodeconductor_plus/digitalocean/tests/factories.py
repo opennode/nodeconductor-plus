@@ -39,7 +39,6 @@ class RegionFactory(factory.DjangoModelFactory):
         model = models.Region
 
     name = factory.Sequence(lambda n: 'region%s' % n)
-    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
 
 
 class ImageFactory(factory.DjangoModelFactory):
@@ -47,7 +46,6 @@ class ImageFactory(factory.DjangoModelFactory):
         model = models.Image
 
     name = factory.Sequence(lambda n: 'image%s' % n)
-    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
     backend_id = factory.Sequence(lambda n: 'image-id%s' % n)
 
     @classmethod
@@ -59,3 +57,16 @@ class ImageFactory(factory.DjangoModelFactory):
     @classmethod
     def get_list_url(cls):
         return 'http://testserver' + reverse('digitalocean-image-list')
+
+
+class SizeFactory(factory.DjangoModelFactory):
+    class Meta(object):
+        model = models.Size
+
+    name = factory.Sequence(lambda n: 'size%s' % n)
+    backend_id = factory.Sequence(lambda n: 'size-id%s' % n)
+
+    cores = 2
+    ram = 2 * 1024
+    disk = 10 * 1024
+    transfer = 10 * 1024 * 1024

@@ -22,7 +22,7 @@ class AWSServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(AWSService)
 
 
-class Image(structure_models.ServiceProperty):
+class Image(structure_models.GeneralServiceProperty):
     pass
 
 

@@ -3,6 +3,7 @@ import time
 import logging
 import collections
 
+from django.db import IntegrityError
 from django.utils import six
 from libcloud.common.types import LibcloudError
 from libcloud.compute.base import NodeAuthPassword
@@ -213,11 +214,16 @@ class AzureRealBackend(AzureBaseBackend):
             if not regex.match(backend_image.name):
                 continue
             cur_images.pop(backend_image.id, None)
-            models.Image.objects.update_or_create(
-                backend_id=backend_image.id,
-                defaults={
-                    'name': backend_image.name,
-                })
+            try:
+                models.Image.objects.update_or_create(
+                    backend_id=backend_image.id,
+                    defaults={
+                        'name': backend_image.name,
+                    })
+            except IntegrityError:
+                logger.warning(
+                    'Could not create Azure image with id %s due to concurrent update',
+                    backend_image.id)
 
         map(lambda i: i.delete(), cur_images.values())
 
