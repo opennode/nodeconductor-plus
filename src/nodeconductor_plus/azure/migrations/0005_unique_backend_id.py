@@ -11,14 +11,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='image',
-            name='settings',
-        ),
         migrations.AlterField(
             model_name='image',
             name='backend_id',
-            field=models.CharField(unique=True, max_length=255, db_index=True),
+            field=models.CharField(unique=True, max_length=255),
             preserve_default=True,
+        ),
+        migrations.RemoveField(
+            model_name='image',
+            name='settings',
         ),
     ]
