@@ -15,12 +15,12 @@ class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(DigitalOceanService)
 
 
-class Region(structure_models.ServiceProperty):
+class Region(structure_models.GeneralServiceProperty):
     pass
 
 
 @python_2_unicode_compatible
-class Image(structure_models.ServiceProperty):
+class Image(structure_models.GeneralServiceProperty):
     regions = models.ManyToManyField(Region)
     distribution = models.CharField(max_length=100)
     type = models.CharField(max_length=100)
@@ -35,7 +35,7 @@ class Image(structure_models.ServiceProperty):
         return '{} {} ({}) | {}'.format(self.name, self.distribution, self.type, self.settings)
 
 
-class Size(structure_models.ServiceProperty):
+class Size(structure_models.GeneralServiceProperty):
     regions = models.ManyToManyField(Region)
 
     cores = models.PositiveSmallIntegerField(help_text='Number of cores in a VM')

@@ -26,7 +26,7 @@ class AzureServiceProjectLink(structure_models.ServiceProjectLink):
             cloud_service_name=self.cloud_service_name)
 
 
-class Image(structure_models.ServiceProperty):
+class Image(structure_models.GeneralServiceProperty):
     pass
 
 
