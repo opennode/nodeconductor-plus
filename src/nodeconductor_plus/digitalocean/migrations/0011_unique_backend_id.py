@@ -5,6 +5,7 @@ from django.db import models, migrations
 
 
 def delete_duplicates(apps, schema_editor):
+    # Ensure uniqueness of DigitalOcean service properties
     for model in ('Image', 'Size', 'Region'):
         cls = apps.get_model('digitalocean', model)
         ids = set()
