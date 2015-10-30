@@ -3,6 +3,7 @@ import re
 from rest_framework import serializers
 
 from nodeconductor.core.fields import MappedChoiceField
+from nodeconductor.quotas import serializers as quotas_serializers
 from nodeconductor.structure import SupportedServices, serializers as structure_serializers, models as structure_models
 
 from . import ResourceType, models
@@ -115,13 +116,15 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
     issues_enabled = serializers.BooleanField(write_only=True, required=False)
     snippets_enabled = serializers.BooleanField(write_only=True, required=False)
     merge_requests_enabled = serializers.BooleanField(write_only=True, required=False)
+    quotas = quotas_serializers.QuotaSerializer(many=True, read_only=True)
 
     class Meta(structure_serializers.BaseResourceSerializer.Meta):
         model = models.Project
         view_name = 'gitlab-project-detail'
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
             'group', 'web_url', 'http_url_to_repo', 'ssh_url_to_repo', 'visibility_level',
-            'wiki_enabled', 'issues_enabled', 'snippets_enabled', 'merge_requests_enabled'
+            'wiki_enabled', 'issues_enabled', 'snippets_enabled', 'merge_requests_enabled',
+            'quotas'
         )
         read_only_fields = structure_serializers.BaseResourceSerializer.Meta.read_only_fields + (
             'web_url', 'http_url_to_repo', 'ssh_url_to_repo',
