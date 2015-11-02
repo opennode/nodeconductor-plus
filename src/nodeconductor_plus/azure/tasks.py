@@ -15,7 +15,7 @@ def provision(vm_uuid, **kwargs):
     chain(
         sync_service_project_links.si(vm.service_project_link.to_string(), initial=True),
         provision_vm.si(vm_uuid, **kwargs),
-        wait_for_provision_end.si(vm_uuid),
+        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
     ).apply_async(
         link=set_online.si(vm_uuid),
         link_error=set_erred.si(vm_uuid))
@@ -39,7 +39,7 @@ def destroy(vm_uuid, transition_entity=None):
 def start(vm_uuid):
     chain(
         begin_starting.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'Started'),
+        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
     ).apply_async(
         link=set_online.si(vm_uuid),
         link_error=set_erred.si(vm_uuid))
@@ -49,7 +49,7 @@ def start(vm_uuid):
 def stop(vm_uuid):
     chain(
         begin_stopping.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'Stopped'),
+        wait_for_vm_state.si(vm_uuid, 'STOPPED'),
     ).apply_async(
         link=set_offline.si(vm_uuid),
         link_error=set_erred.si(vm_uuid))
@@ -59,35 +59,22 @@ def stop(vm_uuid):
 def restart(vm_uuid):
     chain(
         begin_restarting.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'Started'),
+        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
     ).apply_async(
         link=set_online.si(vm_uuid),
         link_error=set_erred.si(vm_uuid))
-
-
-# XXX: azure instance turns online few times during provisioning
-#      hence give it at least 10 min before first try
-# XXX: it's still fragile and could trigger before provisioning is over
-#      seems like the only possible solution is to increment minimum time again
-@shared_task(max_retries=4, default_retry_delay=600)
-@retry_if_false
-def wait_for_provision_end(vm_uuid):
-    vm = VirtualMachine.objects.get(uuid=vm_uuid)
-    try:
-        backend = vm.get_backend()
-        backend_vm = backend.get_vm(vm.backend_id)
-    except AzureBackendError:
-        return False
-    return backend_vm.extra['power_state'] == 'Started'
 
 
 @shared_task(max_retries=300, default_retry_delay=3)
 @retry_if_false
 def wait_for_vm_state(vm_uuid, state=''):
     vm = VirtualMachine.objects.get(uuid=vm_uuid)
-    backend = vm.get_backend()
-    backend_vm = backend.get_vm(vm.backend_id)
-    return backend_vm.extra['power_state'] == state
+    try:
+        backend = vm.get_backend()
+        backend_vm = backend.get_vm(vm.backend_id)
+    except AzureBackendError:
+        return False
+    return backend_vm.state == backend.State.fromstring(state)
 
 
 @shared_task(is_heavy_task=True)

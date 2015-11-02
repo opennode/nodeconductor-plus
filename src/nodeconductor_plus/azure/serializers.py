@@ -177,6 +177,6 @@ class VirtualMachineImportSerializer(structure_serializers.BaseResourceImportSer
         validated_data['external_ips'] = vm.public_ips[0]
         validated_data['internal_ips'] = vm.private_ips[0]
         validated_data['state'] = models.VirtualMachine.States.ONLINE \
-            if vm.extra['power_state'] == 'Started' else models.VirtualMachine.States.OFFLINE
+            if vm.state == backend.State.RUNNING else models.VirtualMachine.States.OFFLINE
 
         return super(VirtualMachineImportSerializer, self).create(validated_data)
