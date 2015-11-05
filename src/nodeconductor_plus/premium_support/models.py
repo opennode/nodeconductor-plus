@@ -6,14 +6,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
 from nodeconductor.core.models import UuidMixin, NameMixin, DescribableMixin
-from nodeconductor.structure.models import Project, Resource
+from nodeconductor.logging.log import LoggableMixin
+from nodeconductor.structure.models import Project
 
 
-def get_resource_models():
-    return [m for m in models.get_models() if issubclass(m, Resource)]
-
-
-class Plan(UuidMixin, NameMixin, DescribableMixin):
+class Plan(UuidMixin, NameMixin, DescribableMixin, LoggableMixin):
     base_rate = models.DecimalField(decimal_places=2, max_digits=10)
     hour_rate = models.DecimalField(decimal_places=2, max_digits=10)
     terms = models.TextField()
@@ -22,7 +19,7 @@ class Plan(UuidMixin, NameMixin, DescribableMixin):
         return self.name
 
 
-class Contract(UuidMixin):
+class Contract(UuidMixin, LoggableMixin):
 
     class Permissions(object):
         customer_path = 'project__customer'
@@ -49,6 +46,9 @@ class Contract(UuidMixin):
     @transition(field=state, source=States.REQUESTED, target=States.APPROVED)
     def approve(self):
         pass
+
+    def get_log_fields(self):
+        return ('uuid', 'project', 'plan')
 
 
 class SupportCase(UuidMixin, NameMixin, DescribableMixin, TimeStampedModel):
