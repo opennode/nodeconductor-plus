@@ -67,7 +67,7 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SupportCaseSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSerializer):
-    resource = GenericRelatedField(related_models=models.get_resource_models(), required=False)
+    resource = GenericRelatedField(related_models=structure_models.Resource.get_all_models(), required=False)
 
     class Meta:
         model = models.SupportCase

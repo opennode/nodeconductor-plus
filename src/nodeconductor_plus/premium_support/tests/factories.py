@@ -2,6 +2,7 @@ import factory
 import factory.fuzzy
 from django.core.urlresolvers import reverse
 
+from nodeconductor.structure.tests.factories import ProjectFactory
 from nodeconductor_plus.premium_support import models
 
 
@@ -28,6 +29,9 @@ class PlanFactory(factory.DjangoModelFactory):
 class ContractFactory(factory.DjangoModelFactory):
     class Meta(object):
         model = models.Contract
+
+    project = factory.SubFactory(ProjectFactory)
+    plan = factory.SubFactory(PlanFactory)
 
     @classmethod
     def get_url(self, contract, action=None):

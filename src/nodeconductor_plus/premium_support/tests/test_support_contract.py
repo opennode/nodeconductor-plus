@@ -1,3 +1,5 @@
+import mock
+
 from rest_framework import status, test
 
 from nodeconductor.structure.tests import factories as structure_factories
@@ -158,3 +160,19 @@ class SupportContractStateTransitionTest(test.APITransactionTestCase):
         self.client.force_authenticate(self.support_admin)
         response = self.client.post(support_factories.ContractFactory.get_url(self.contract, action='approve'))
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+
+class SupportContractLoggingTest(test.APITransactionTestCase):
+    def test_when_contract_approved_event_is_logged(self):
+        contract = support_factories.ContractFactory()
+        self.assertEqual(contract.state, support_models.Contract.States.REQUESTED)
+
+        with mock.patch('nodeconductor_plus.premium_support.handlers.event_logger') as mocked_event_logger:
+            contract.approve()
+            self.assertEqual(contract.state, support_models.Contract.States.APPROVED)
+
+            mocked_event_logger.premium_support.info.assert_called_once_with(
+                'Premium support contract for project {project_name} and plan {plan_name} has been approved.',
+                event_context={'contract': contract},
+                event_type='contract_approved'
+            )
