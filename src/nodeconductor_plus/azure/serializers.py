@@ -1,6 +1,8 @@
 import re
 
 from django.utils import six, timezone
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -41,6 +43,15 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields['certificate'].required = True
         fields['certificate'].write_only = True
         return fields
+
+    def validate_certificate(self, value):
+        if value:
+            try:
+                x509.load_pem_x509_certificate(value.read(), default_backend())
+            except ValueError:
+                raise serializers.ValidationError("Valid X509 certificate in .PEM format is expected")
+
+        return value
 
 
 class ImageSerializer(structure_serializers.BasePropertySerializer):
