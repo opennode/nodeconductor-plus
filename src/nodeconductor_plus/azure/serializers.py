@@ -19,7 +19,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     SERVICE_TYPE = SupportedServices.Types.Azure
     SERVICE_ACCOUNT_FIELDS = {
         'username': 'In the format of GUID',
-        'certificate': '',
+        'certificate': 'X509 certificate in .PEM format',
     }
     SERVICE_ACCOUNT_EXTRA_FIELDS = {
         'location': '',
@@ -42,6 +42,7 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields['certificate'].label = 'Private certificate file'
         fields['certificate'].required = True
         fields['certificate'].write_only = True
+        fields['location'].help_text = 'Azure region where to provision resources'
         return fields
 
     def validate_certificate(self, value):
