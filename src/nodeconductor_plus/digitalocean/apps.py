@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 
+from nodeconductor.cost_tracking import CostTrackingRegister
 from nodeconductor.structure import SupportedServices
 
 
@@ -11,4 +12,6 @@ class DigitalOceanConfig(AppConfig):
         DigitalOceanService = self.get_model('DigitalOceanService')
 
         from .backend import DigitalOceanBackend
+        from .cost_tracking import DigitalOceanCostTrackingBackend
         SupportedServices.register_backend(DigitalOceanService, DigitalOceanBackend)
+        CostTrackingRegister.register(self.label, DigitalOceanCostTrackingBackend)
