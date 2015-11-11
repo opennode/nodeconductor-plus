@@ -204,7 +204,14 @@ class AzureRealBackend(AzureBaseBackend):
 
     def pull_images(self):
         options = self.settings.options or {}
-        regex = re.compile(options.get('images_regex', r'.'))
+        regex = None
+        if 'images_regex' in options:
+            try:
+                regex = re.compile(options['images_regex'])
+            except re.error:
+                logger.warning(
+                    'Invalid images regexp supplied for service settins %s: %s',
+                    self.settings.uuid, options['images_regex'])
 
         images = {}
         for image in self.manager.list_images():
@@ -214,7 +221,7 @@ class AzureRealBackend(AzureBaseBackend):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
         for backend_images in images.values():
             backend_image = sorted(backend_images)[-1]  # get last image with same name (perhaps newest one)
-            if not regex.match(backend_image.name):
+            if regex and not regex.match(backend_image.name):
                 continue
             cur_images.pop(backend_image.id, None)
             try:
@@ -273,7 +280,7 @@ class AzureRealBackend(AzureBaseBackend):
                 if storage.storage_service_properties.status == 'Created':  # ResolvingDns otherwise
                     break
                 time.sleep(30)
-            logger.info('Successfully created new azure cloud for SPL %s', service_project_link.pk)
+            logger.info('Successfully created new azure storage for SPL %s', service_project_link.pk)
         else:
             logger.debug(
                 'Skipped azure storage creation for SPL %s - such cloud already exists', service_project_link.pk)
