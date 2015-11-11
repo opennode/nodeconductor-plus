@@ -6,6 +6,9 @@ from nodeconductor_plus.insights.tasks import check_service_resources
 from nodeconductor_plus.insights.log import alert_logger
 
 
+# XXX: This handlers should be moved to applications configurations and should be supported by quota application.
+# Issue: NC-920
+
 def check_unmanaged_resources(sender, instance, created=False, **kwargs):
     if created:
         check_service_resources.delay(instance.to_string())
@@ -55,6 +58,11 @@ def init_managed_projects_alert(sender, instance, created=False, **kwargs):
 
 def check_customer_quota_exceeded(sender, instance, **kwargs):
     # XXX: it's partialy duplicates 'quota_usage_is_over_threshold' alert
+
+    # XXX: Hotfix: do not execute signal if quota scope is None.
+    if instance.scope is None:
+        return
+
     AFFECTED_QUOTAS = ('nc_project_count', 'nc_resource_count', 'nc_service_count')
 
     customer_content_type = ContentType.objects.get_for_model(Customer)
@@ -69,6 +77,8 @@ def check_customer_quota_exceeded(sender, instance, **kwargs):
         else:
             alert_logger.quota_check.close(scope=instance.scope, alert_type=alert_type)
 
+        # XXX: This functions will never be executed, because kwarg "created"
+        #      is always False for <init_managed_..._alert>
         if instance.name == 'nc_service_count' and instance.usage == 0:
             init_managed_services_alert(None, instance.scope)
 
