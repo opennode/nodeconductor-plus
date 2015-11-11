@@ -280,7 +280,7 @@ class AzureRealBackend(AzureBaseBackend):
                 if storage.storage_service_properties.status == 'Created':  # ResolvingDns otherwise
                     break
                 time.sleep(30)
-            logger.info('Successfully created new azure cloud for SPL %s', service_project_link.pk)
+            logger.info('Successfully created new azure storage for SPL %s', service_project_link.pk)
         else:
             logger.debug(
                 'Skipped azure storage creation for SPL %s - such cloud already exists', service_project_link.pk)
