@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from django.utils import dateparse
-
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
@@ -106,12 +104,12 @@ class InstanceImportSerializer(structure_serializers.BaseResourceImportSerialize
             raise serializers.ValidationError(
                 {'backend_id': "Can't find instance with ID %s" % validated_data['backend_id']})
 
-        validated_data['name'] = instance.name
-        validated_data['external_ips'] = instance.public_ips[0]
-        validated_data['cores'] = instance.size['cores']
-        validated_data['ram'] = instance.size['ram']
-        validated_data['disk'] = backend.gb2mb(instance.size['disk'])
-        validated_data['created'] = dateparse.parse_datetime(instance.extra['launch_time'])
+        validated_data['name'] = instance['name']
+        validated_data['external_ips'] = instance['external_ips']
+        validated_data['cores'] = instance['cores']
+        validated_data['ram'] = instance['ram']
+        validated_data['disk'] = instance['disk']
+        validated_data['created'] = instance['created']
         validated_data['state'] = models.Instance.States.ONLINE
 
         return super(InstanceImportSerializer, self).create(validated_data)

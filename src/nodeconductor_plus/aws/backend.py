@@ -1,7 +1,7 @@
 import logging
 
 from django.db import IntegrityError
-from django.utils import six
+from django.utils import six, dateparse
 from libcloud.common.types import LibcloudError
 from libcloud.compute.drivers.ec2 import EC2NodeDriver
 
@@ -109,28 +109,30 @@ class AWSRealBackend(AWSBaseBackend):
 
         # libcloud is a funny buggy thing, put all required info here
         instance_type = next(s for s in self.manager.list_sizes() if s.id == instance.extra['instance_type'])
-        instance.size = {
-            'disk': sum(volumes.values()),
+
+        return {
+            'id': instance.id,
+            'name': instance.name or instance.uuid,
+            'cores': instance_type.extra.get('cpu', 1),
             'ram': instance_type.ram,
-            'cores': instance_type.extra.get('cpu', 0),
+            'disk': self.gb2mb(sum(volumes.values())),
+            'external_ips': instance.public_ips[0],
+            'created': dateparse.parse_datetime(instance.extra['launch_time'])
         }
 
-        return instance
-
     def get_resources_for_import(self):
-        cur_instances = models.Instance.objects.all().values_list('backend_id', flat=True)
         try:
             instances = self.manager.list_nodes()
         except LibcloudError as e:
             six.reraise(AWSBackendError, e)
-        return [{
-            'id': instance.id,
-            'name': instance.name or instance.uuid,
-            'created_at': instance.extra['launch_time'],
-            'size': instance.extra['instance_type'],
-        } for instance in instances
+        cur_instances = models.Instance.objects.all().values_list('backend_id', flat=True)
+
+        return [
+            self.get_instance(instance.id)
+            for instance in instances
             if instance.id not in cur_instances and
-            instance.state == self.manager.NODE_STATE_MAP['running']]
+            instance.state == self.manager.NODE_STATE_MAP['running']
+        ]
 
 
 class AWSDummyBackend(AWSBaseBackend):
