@@ -204,7 +204,14 @@ class AzureRealBackend(AzureBaseBackend):
 
     def pull_images(self):
         options = self.settings.options or {}
-        regex = re.compile(options.get('images_regex', r'.'))
+        regex = None
+        if 'images_regex' in options:
+            try:
+                regex = re.compile(options['images_regex'])
+            except re.error:
+                logger.warning(
+                    'Invalid images regexp supplied for service settins %s: %s',
+                    self.settings.uuid, options['images_regex'])
 
         images = {}
         for image in self.manager.list_images():
@@ -214,7 +221,7 @@ class AzureRealBackend(AzureBaseBackend):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
         for backend_images in images.values():
             backend_image = sorted(backend_images)[-1]  # get last image with same name (perhaps newest one)
-            if not regex.match(backend_image.name):
+            if regex and not regex.match(backend_image.name):
                 continue
             cur_images.pop(backend_image.id, None)
             try:
