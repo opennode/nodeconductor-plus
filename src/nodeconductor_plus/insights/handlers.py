@@ -31,29 +31,41 @@ def check_managed_projects(sender, instance, created=False, **kwargs):
 
 def init_managed_services_alert(sender, instance, created=False, **kwargs):
     if created:
-        alert_logger.customer_state.warning(
-            'Customer {customer_name} has zero services configured.',
-            scope=instance,
-            alert_type='customer_has_zero_services',
-            alert_context={'customer': instance})
+        log_managed_services_alert(instance)
 
 
 def init_managed_resources_alert(sender, instance, created=False, **kwargs):
     if created:
-        alert_logger.customer_state.warning(
-            'Customer {customer_name} does not have any resources.',
-            scope=instance,
-            alert_type='customer_has_zero_resources',
-            alert_context={'customer': instance})
+        log_managed_resources_alert(instance)
 
 
 def init_managed_projects_alert(sender, instance, created=False, **kwargs):
     if created:
-        alert_logger.customer_state.warning(
-            'Customer {customer_name} does not have any projects.',
-            scope=instance,
-            alert_type='customer_has_zero_projects',
-            alert_context={'customer': instance})
+        log_managed_projects_alert(instance)
+
+
+def log_managed_services_alert(customer):
+    alert_logger.customer_state.warning(
+        'Customer {customer_name} has zero services configured.',
+        scope=customer,
+        alert_type='customer_has_zero_services',
+        alert_context={'customer': customer})
+
+
+def log_managed_resources_alert(customer):
+    alert_logger.customer_state.warning(
+        'Customer {customer_name} does not have any resources.',
+        scope=customer,
+        alert_type='customer_has_zero_resources',
+        alert_context={'customer': customer})
+
+
+def log_managed_projects_alert(customer):
+    alert_logger.customer_state.warning(
+        'Customer {customer_name} does not have any projects.',
+        scope=customer,
+        alert_type='customer_has_zero_projects',
+        alert_context={'customer': customer})
 
 
 def check_customer_quota_exceeded(sender, instance, **kwargs):
@@ -77,13 +89,11 @@ def check_customer_quota_exceeded(sender, instance, **kwargs):
         else:
             alert_logger.quota_check.close(scope=instance.scope, alert_type=alert_type)
 
-        # XXX: This functions will never be executed, because kwarg "created"
-        #      is always False for <init_managed_..._alert>
         if instance.name == 'nc_service_count' and instance.usage == 0:
-            init_managed_services_alert(None, instance.scope)
+            log_managed_services_alert(instance.scope)
 
         if instance.name == 'nc_resource_count' and instance.usage == 0:
-            init_managed_resources_alert(None, instance.scope)
+            log_managed_resources_alert(instance.scope)
 
         if instance.name == 'nc_project_count' and instance.usage == 0:
-            init_managed_projects_alert(None, instance.scope)
+            log_managed_projects_alert(instance.scope)

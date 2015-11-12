@@ -3,6 +3,7 @@ import datetime
 
 from celery import shared_task
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 
 from nodeconductor.core.tasks import throttle
 from nodeconductor.structure import SupportedServices, ServiceBackendError, ServiceBackendNotImplemented
@@ -32,7 +33,11 @@ def check_customers():
 
 @shared_task(is_heavy_task=True)
 def check_service_resources(service_str):
-    service = next(Service.from_string(service_str))
+    try:
+        service = next(Service.from_string(service_str))
+    except ObjectDoesNotExist:
+        logger.warning('Missing service %s.', service_str)
+        return
 
     try:
         with throttle(key="{}{}".format(service.settings.type, service.settings.backend_url)):
@@ -51,7 +56,12 @@ def check_service_resources(service_str):
 
 @shared_task
 def check_service_availability(service_str):
-    service = next(Service.from_string(service_str))
+    try:
+        service = next(Service.from_string(service_str))
+    except ObjectDoesNotExist:
+        logger.warning('Missing service %s.', service_str)
+        return
+
     backend = service.get_backend()
 
     try:
@@ -74,11 +84,16 @@ def check_service_availability(service_str):
 
 @shared_task
 def check_service_resources_availability(service_str):
-    service = next(Service.from_string(service_str))
+    try:
+        service = next(Service.from_string(service_str))
+    except ObjectDoesNotExist:
+        logger.warning('Missing service %s.', service_str)
+        return
+
     backend = service.get_backend()
 
     for resource_model in SupportedServices.get_related_models(service)['resources']:
-        for resource in resource_model.objects.all():
+        for resource in resource_model.objects.exclude(backend_id=''):
             try:
                 available = backend.ping_resource(resource)
             except ServiceBackendNotImplemented:
@@ -99,7 +114,11 @@ def check_service_resources_availability(service_str):
 
 @shared_task
 def check_customer_costs(customer_uuid):
-    customer = Customer.objects.get(uuid=customer_uuid)
+    try:
+        customer = Customer.objects.get(uuid=customer_uuid)
+    except Customer.DoesNotExist:
+        logger.warning('Customer does not exist %s.', customer_uuid)
+        return
 
     try:
         dt_now = datetime.datetime.now()
