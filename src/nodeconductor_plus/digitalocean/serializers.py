@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 import re
 
 from django.utils import dateparse
-
 from rest_framework import serializers
 
 from nodeconductor.structure import SupportedServices
@@ -129,7 +128,7 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
         image = attrs['image']
         size = attrs['size']
 
-        if not re.match(r'[a-zA-Z0-9.-]+', attrs['name']):
+        if not re.match(r'[a-zA-Z0-9.-]+$', attrs['name']):
             raise serializers.ValidationError(
                 "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
 

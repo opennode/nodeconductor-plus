@@ -44,7 +44,7 @@ class DigitalOceanBaseBackend(ServiceBackend):
         droplet.cores = size.cores
         droplet.ram = size.ram
         droplet.disk = size.disk
-        droplet.transfer = self.tb2mb(size.transfer)
+        droplet.transfer = size.transfer
         droplet.save()
 
         send_task('digitalocean', 'provision')(
