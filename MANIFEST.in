@@ -1,2 +1,3 @@
 include *.md *.rst
-recursive-include src/ncplus/templates *.html
+recursive-include src/nodeconductor_plus/templates *.html
+recursive-include src/nodeconductor_plus/gitlab/templates/ *.html
