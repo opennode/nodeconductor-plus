@@ -241,10 +241,6 @@ class GitLabRealBackend(GitLabBaseBackend):
                     "Cannot fetch namespaces list for Gitlab %s", self.settings.backend_url)
 
         try:
-            # default features for the created projects
-            kwargs['wiki_enabled'] = True
-            kwargs['issues_enabled'] = True
-            kwargs['merge_requests_enabled'] = True
             backend_project = self.manager.Project(kwargs)
             backend_project.save()
         except gitlab.GitlabCreateError as e:
