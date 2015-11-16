@@ -27,7 +27,27 @@ class GitLabServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkView
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class GroupViewSet(structure_views.BaseResourceViewSet):
+class BaseGitLabResourceViewSet(structure_views.BaseResourceViewSet):
+    def check_destroy(self, resource):
+        pass
+
+    @structure_views.safe_operation()
+    def destroy(self, request, resource, uuid=None):
+        self.check_destroy(resource)
+
+        if resource.backend_id:
+            # Resource must be online in order to schedule_delition transition success
+            # Forcely switch it offline since it's irrelevant for this type of service
+            resource.state = resource.States.OFFLINE
+            resource.save()
+
+            backend = resource.get_backend()
+            backend.destroy(resource)
+        else:
+            self.perform_destroy(resource)
+
+
+class GroupViewSet(BaseGitLabResourceViewSet):
     queryset = models.Group.objects.all()
     serializer_class = serializers.GroupSerializer
 
@@ -38,19 +58,13 @@ class GroupViewSet(structure_views.BaseResourceViewSet):
             resource,
             path=serializer.validated_data['path'])
 
-    def perform_destroy(self, resource):
+    def check_destroy(self, resource):
         if resource.projects.count():
             raise core_exceptions.IncorrectStateException(
                 "This group contains projects. Only empty group can be deleted.")
 
-        # Resource must be online in order to schedule_delition transition success
-        # Forcely switch it offline since it's irrelevant for this type of service
-        resource.state = resource.States.OFFLINE
-        resource.save()
-        super(GroupViewSet, self).perform_destroy(resource)
 
-
-class ProjectViewSet(structure_views.BaseResourceViewSet):
+class ProjectViewSet(BaseGitLabResourceViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
 
@@ -63,10 +77,3 @@ class ProjectViewSet(structure_views.BaseResourceViewSet):
             issues_enabled=serializer.validated_data.get('issues_enabled', False),
             snippets_enabled=serializer.validated_data.get('snippets_enabled', False),
             merge_requests_enabled=serializer.validated_data.get('merge_requests_enabled', False))
-
-    def perform_destroy(self, resource):
-        # Resource must be online in order to schedule_delition transition success
-        # Forcely switch it offline since it's irrelevant for this type of service
-        resource.state = resource.States.OFFLINE
-        resource.save()
-        super(ProjectViewSet, self).perform_destroy(resource)
