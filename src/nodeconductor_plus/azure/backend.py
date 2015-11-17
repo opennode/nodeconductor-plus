@@ -288,7 +288,7 @@ class AzureRealBackend(AzureBaseBackend):
 
     def require_exclusive_access(func):
         """
-        Ensure that operations in current deployment are executed sequentially.
+        Ensure that operations in current deployment are not executed concurrently.
 
         Otherwise the following error is thrown:
         Windows Azure is currently performing an operation
