@@ -1,4 +1,3 @@
-import functools
 import re
 import time
 import logging
@@ -11,7 +10,7 @@ from libcloud.compute.types import NodeState, InvalidCredsError
 from libcloud.compute.base import NodeAuthPassword
 from libcloud.compute.drivers import azure
 
-from nodeconductor.core.tasks import send_task, throttle
+from nodeconductor.core.tasks import send_task
 from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError, ServiceBackendNotImplemented
 
@@ -286,29 +285,12 @@ class AzureRealBackend(AzureBaseBackend):
             logger.debug(
                 'Skipped azure storage creation for SPL %s - such cloud already exists', service_project_link.pk)
 
-    def require_exclusive_access(func):
-        """
-        Ensure that operations in current deployment are not executed concurrently.
-
-        Otherwise the following error is thrown:
-        Windows Azure is currently performing an operation
-        on this deployment that requires exclusive access.
-        """
-        @functools.wraps(func)
-        def wrapped(self, *args, **kwargs):
-            key = "{}{}{}".format(self.settings.username, self.cloud_service_name, self.deployment)
-            with throttle(key=key):
-                return func(self, *args, **kwargs)
-        return wrapped
-
-    @require_exclusive_access
     def reboot_vm(self, vm):
         self.manager.reboot_node(
             self.get_vm(vm.backend_id),
             ex_cloud_service_name=self.cloud_service_name,
             ex_deployment_slot=self.deployment)
 
-    @require_exclusive_access
     def stop_vm(self, vm):
         deployment_name = self.manager._get_deployment(
             service_name=self.cloud_service_name,
@@ -328,7 +310,6 @@ class AzureRealBackend(AzureBaseBackend):
         except Exception as e:
             six.reraise(AzureBackendError, e)
 
-    @require_exclusive_access
     def start_vm(self, vm):
         deployment_name = self.manager._get_deployment(
             service_name=self.cloud_service_name,
@@ -348,14 +329,12 @@ class AzureRealBackend(AzureBaseBackend):
         except Exception as e:
             six.reraise(AzureBackendError, e)
 
-    @require_exclusive_access
     def destroy_vm(self, vm):
         self.manager.destroy_node(
             self.get_vm(vm.backend_id),
             ex_cloud_service_name=self.cloud_service_name,
             ex_deployment_slot=self.deployment)
 
-    @require_exclusive_access
     def provision_vm(self, vm, backend_image_id=None, backend_size_id=None,
                      username=None, password=None):
         try:
