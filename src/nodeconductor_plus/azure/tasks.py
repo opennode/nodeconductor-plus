@@ -2,7 +2,7 @@ from celery import shared_task, chain
 
 from django.utils import timezone
 
-from nodeconductor.core.tasks import transition, retry_if_false
+from nodeconductor.core.tasks import throttle, transition, retry_if_false
 from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import VirtualMachine
@@ -12,57 +12,65 @@ from .backend import AzureBackendError
 @shared_task(name='nodeconductor.azure.provision')
 def provision(vm_uuid, **kwargs):
     vm = VirtualMachine.objects.get(uuid=vm_uuid)
-    chain(
-        sync_service_project_links.si(vm.service_project_link.to_string(), initial=True),
-        provision_vm.si(vm_uuid, **kwargs),
-        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
-    ).apply_async(
-        link=set_online.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+    with throttle(key=vm.service_project_link.to_string()):
+        chain(
+            sync_service_project_links.si(vm.service_project_link.to_string(), initial=True),
+            provision_vm.si(vm_uuid, **kwargs),
+            wait_for_vm_state.si(vm_uuid, 'RUNNING'),
+        ).apply_async(
+            link=set_online.si(vm_uuid),
+            link_error=set_erred.si(vm_uuid))
 
 
 @shared_task(name='nodeconductor.azure.destroy')
 @transition(VirtualMachine, 'begin_deleting')
 def destroy(vm_uuid, transition_entity=None):
     vm = transition_entity
-    try:
-        backend = vm.get_backend()
-        backend.destroy_vm(vm)
-    except:
-        set_erred(vm_uuid)
-        raise
-    else:
-        vm.delete()
+    with throttle(key=vm.service_project_link.to_string()):
+        try:
+            backend = vm.get_backend()
+            backend.destroy_vm(vm)
+        except:
+            set_erred(vm_uuid)
+            raise
+        else:
+            vm.delete()
 
 
 @shared_task(name='nodeconductor.azure.start')
 def start(vm_uuid):
-    chain(
-        begin_starting.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
-    ).apply_async(
-        link=set_online.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+    vm = VirtualMachine.objects.get(uuid=vm_uuid)
+    with throttle(key=vm.service_project_link.to_string()):
+        chain(
+            begin_starting.s(vm_uuid),
+            wait_for_vm_state.si(vm_uuid, 'RUNNING'),
+        ).apply_async(
+            link=set_online.si(vm_uuid),
+            link_error=set_erred.si(vm_uuid))
 
 
 @shared_task(name='nodeconductor.azure.stop')
 def stop(vm_uuid):
-    chain(
-        begin_stopping.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'STOPPED'),
-    ).apply_async(
-        link=set_offline.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+    vm = VirtualMachine.objects.get(uuid=vm_uuid)
+    with throttle(key=vm.service_project_link.to_string()):
+        chain(
+            begin_stopping.s(vm_uuid),
+            wait_for_vm_state.si(vm_uuid, 'STOPPED'),
+        ).apply_async(
+            link=set_offline.si(vm_uuid),
+            link_error=set_erred.si(vm_uuid))
 
 
 @shared_task(name='nodeconductor.azure.restart')
 def restart(vm_uuid):
-    chain(
-        begin_restarting.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
-    ).apply_async(
-        link=set_online.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+    vm = VirtualMachine.objects.get(uuid=vm_uuid)
+    with throttle(key=vm.service_project_link.to_string()):
+        chain(
+            begin_restarting.s(vm_uuid),
+            wait_for_vm_state.si(vm_uuid, 'RUNNING'),
+        ).apply_async(
+            link=set_online.si(vm_uuid),
+            link_error=set_erred.si(vm_uuid))
 
 
 @shared_task(max_retries=300, default_retry_delay=3)
