@@ -1,16 +1,15 @@
 import logging
 
 from django.conf import settings
-from django.db import models, transaction, IntegrityError
-from django.utils import timezone
+from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import FSMField, transition
 from model_utils.models import TimeStampedModel
 from rest_framework.reverse import reverse
 
-from nodeconductor.billing.backend import BillingBackend
 from nodeconductor.core.models import UuidMixin
 from nodeconductor.structure import models as structure_models
+from nodeconductor_paypal.backend import PaypalBackend
 from nodeconductor_plus.plans.settings import DEFAULT_PLAN
 
 
@@ -31,7 +30,7 @@ class Plan(UuidMixin, models.Model):
         return_url = base_url + 'approve/'
         cancel_url = base_url + 'cancel/'
 
-        backend = BillingBackend()
+        backend = PaypalBackend()
         backend_id = backend.create_plan(amount=self.price,
                                          name=self.name,
                                          description=self.name,

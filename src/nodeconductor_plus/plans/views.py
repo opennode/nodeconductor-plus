@@ -6,9 +6,9 @@ from rest_framework import viewsets, permissions, mixins, exceptions, status, fi
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
 
-from nodeconductor.billing.backend import BillingBackend
 from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import models as structure_models
+from nodeconductor_paypal.backend import PaypalBackend
 from nodeconductor_plus.plans.models import Plan, Agreement
 from nodeconductor_plus.plans.serializers import PlanSerializer, AgreementSerializer
 
@@ -103,7 +103,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
-        return redirect(BillingBackend().return_url)
+        return redirect(PaypalBackend().return_url)
 
     @list_route()
     def cancel(self, request):
@@ -119,10 +119,10 @@ class AgreementViewSet(mixins.CreateModelMixin,
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
-        return redirect(BillingBackend().return_url)
+        return redirect(PaypalBackend().return_url)
 
     @detail_route()
     def transactions(self, request, uuid):
         agreement = self.get_object()
-        txs = BillingBackend().get_agreement_transactions(agreement.backend_id, agreement.created)
+        txs = PaypalBackend().get_agreement_transactions(agreement.backend_id, agreement.created)
         return Response(txs, status=status.HTTP_200_OK)

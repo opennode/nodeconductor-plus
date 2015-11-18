@@ -141,7 +141,7 @@ class AgreementCallbackViewsTest(test.APITransactionTestCase):
 class AgreementBillingTasksTest(test.APITransactionTestCase):
     def test_cancel_agreement_task_calls_billing(self):
         agreement = factories.AgreementFactory(state=models.Agreement.States.ACTIVE)
-        with patch('nodeconductor_plus.plans.tasks.BillingBackend') as mocked_billing:
+        with patch('nodeconductor_plus.plans.tasks.PaypalBackend') as mocked_billing:
             tasks.cancel_agreement(agreement)
             mocked_billing().cancel_agreement.assert_called_with(agreement.backend_id)
 
@@ -150,7 +150,7 @@ class AgreementBillingTasksTest(test.APITransactionTestCase):
 
     def test_activate_agreement_task_calls_billing(self):
         agreement = factories.AgreementFactory(state=models.Agreement.States.APPROVED)
-        with patch('nodeconductor_plus.plans.tasks.BillingBackend') as mocked_billing:
+        with patch('nodeconductor_plus.plans.tasks.PaypalBackend') as mocked_billing:
 
             mocked_billing().execute_agreement.return_value = 'VALID_ID'
             tasks.activate_agreement(agreement.pk)
