@@ -269,6 +269,13 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
         } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
 
+    def get_imported_resources(self):
+        try:
+            ids = [droplet.id for droplet in self.get_all_droplets()]
+            return models.Droplet.objects.filter(backend_id__in=ids)
+        except DigitalOceanBackendError:
+            return []
+
     def get_all_droplets(self):
         try:
             return self.manager.get_all_droplets()

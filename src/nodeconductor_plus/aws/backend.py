@@ -134,6 +134,13 @@ class AWSRealBackend(AWSBaseBackend):
             instance.state == self.manager.NODE_STATE_MAP['running']
         ]
 
+    def get_imported_resources(self):
+        try:
+            ids = [instance.id for instance in self.manager.list_nodes()]
+            return models.Instance.objects.filter(backend_id__in=ids)
+        except LibcloudError as e:
+            return []
+
 
 class AWSDummyBackend(AWSBaseBackend):
     pass

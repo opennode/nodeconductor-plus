@@ -110,11 +110,8 @@ class GitLabBaseBackend(ServiceBackend):
         if resource_type is None or resource_type == ResourceType.PROJECT:
             cur_projects = Project.objects.all().values_list('backend_id', flat=True)
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-            try:
-                projects = self.get_gitlab_objects(gitlab.Project)
-            except gitlab.GitlabError:
-                projects = []
-                logger.exception("Cannot fetch projects for Gitlab %s", self.settings.backend_url)
+
+            projects = self.get_projects()
 
             for proj in projects:
                 # Only project from already imported groups are available for import
@@ -129,11 +126,7 @@ class GitLabBaseBackend(ServiceBackend):
 
         if resource_type is None or resource_type == ResourceType.GROUP:
             cur_groups = Group.objects.all().values_list('backend_id', flat=True)
-            try:
-                groups = self.get_gitlab_objects(gitlab.Group)
-            except gitlab.GitlabError:
-                groups = []
-                logger.exception("Cannot fetch groups for Gitlab %s", self.settings.backend_url)
+            groups = self.get_groups()
 
             for grp in groups:
                 if str(grp.id) not in cur_groups:
@@ -144,6 +137,28 @@ class GitLabBaseBackend(ServiceBackend):
                     })
 
         return resources
+
+    def get_imported_resources(self):
+        backend_projects = [six.text_type(project.id) for project in self.get_projects()]
+        nc_projects = Project.objects.filter(backend_id__in=backend_projects)
+
+        backend_groups = [six.text_type(group.id) for group in self.get_groups()]
+        nc_groups = Group.objects.filter(backend_id__in=backend_groups)
+        return list(nc_projects) + list(nc_groups)
+
+    def get_projects(self):
+        try:
+            return self.get_gitlab_objects(gitlab.Project)
+        except gitlab.GitlabError:
+            logger.exception("Cannot fetch projects for Gitlab %s", self.settings.backend_url)
+            return []
+
+    def get_groups(self):
+        try:
+            return self.get_gitlab_objects(gitlab.Group)
+        except gitlab.GitlabError:
+            logger.exception("Cannot fetch groups for Gitlab %s", self.settings.backend_url)
+            return []
 
     def update_statistics(self):
         for project in Project.objects.all():
