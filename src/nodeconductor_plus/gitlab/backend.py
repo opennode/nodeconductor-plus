@@ -138,7 +138,7 @@ class GitLabBaseBackend(ServiceBackend):
 
         return resources
 
-    def get_imported_resources(self):
+    def get_managed_resources(self):
         backend_projects = [six.text_type(project.id) for project in self.get_projects()]
         nc_projects = Project.objects.filter(backend_id__in=backend_projects)
 
