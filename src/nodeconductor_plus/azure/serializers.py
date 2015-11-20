@@ -156,7 +156,11 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
             raise serializers.ValidationError({
                 'password': "The supplied password must be 6-72 characters long "
                 "and contain 3 of the following: a lowercase character, "
-                "an uppercase character, a number, a special character"})
+                "an uppercase character, a number, a special character."})
+
+        if re.match(r'Administrator|Admin', attrs['username'], re.I):
+            raise serializers.ValidationError({
+                'username': "Invalid Windows administrator username."})
 
         return attrs
 
