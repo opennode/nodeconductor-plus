@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-from nodeconductor.core.tasks import transition
+from nodeconductor.core.tasks import save_error_message, transition
 from nodeconductor.structure.models import ServiceSettings
 from nodeconductor.structure.tasks import sync_service_project_links
 
@@ -35,6 +35,7 @@ def provision_project(project_uuid, **kwargs):
 
 @shared_task(name='nodeconductor.gitlab.destroy_group')
 @transition(Group, 'begin_deleting')
+@save_error_message
 def destroy_group(group_uuid, transition_entity=None):
     group = transition_entity
     try:
@@ -49,6 +50,7 @@ def destroy_group(group_uuid, transition_entity=None):
 
 @shared_task(name='nodeconductor.gitlab.destroy_project')
 @transition(Project, 'begin_deleting')
+@save_error_message
 def destroy_project(project_uuid, transition_entity=None):
     project = transition_entity
     try:
@@ -70,6 +72,7 @@ def update_statistics():
 
 @shared_task
 @transition(Group, 'begin_provisioning')
+@save_error_message
 def begin_group_provisioning(group_uuid, transition_entity=None, **kwargs):
     group = transition_entity
     backend = group.get_backend()
@@ -78,6 +81,7 @@ def begin_group_provisioning(group_uuid, transition_entity=None, **kwargs):
 
 @shared_task
 @transition(Project, 'begin_provisioning')
+@save_error_message
 def begin_project_provisioning(project_uuid, transition_entity=None, **kwargs):
     project = transition_entity
     backend = project.get_backend()

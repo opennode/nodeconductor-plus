@@ -2,7 +2,7 @@ from celery import shared_task, chain
 
 from django.utils import timezone
 
-from nodeconductor.core.tasks import throttle, transition, retry_if_false
+from nodeconductor.core.tasks import save_error_message, throttle, transition, retry_if_false
 from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import VirtualMachine
@@ -24,6 +24,7 @@ def provision(vm_uuid, **kwargs):
 
 @shared_task(name='nodeconductor.azure.destroy')
 @transition(VirtualMachine, 'begin_deleting')
+@save_error_message
 def destroy(vm_uuid, transition_entity=None):
     vm = transition_entity
     with throttle(key=vm.service_project_link.to_string()):
@@ -87,6 +88,7 @@ def wait_for_vm_state(vm_uuid, state=''):
 
 @shared_task(is_heavy_task=True)
 @transition(VirtualMachine, 'begin_provisioning')
+@save_error_message
 def provision_vm(vm_uuid, transition_entity=None, **kwargs):
     vm = transition_entity
     backend = vm.get_backend()
@@ -95,6 +97,7 @@ def provision_vm(vm_uuid, transition_entity=None, **kwargs):
 
 @shared_task
 @transition(VirtualMachine, 'begin_starting')
+@save_error_message
 def begin_starting(vm_uuid, transition_entity=None):
     vm = transition_entity
     backend = vm.get_backend()
@@ -103,6 +106,7 @@ def begin_starting(vm_uuid, transition_entity=None):
 
 @shared_task
 @transition(VirtualMachine, 'begin_stopping')
+@save_error_message
 def begin_stopping(vm_uuid, transition_entity=None):
     vm = transition_entity
     backend = vm.get_backend()
@@ -111,6 +115,7 @@ def begin_stopping(vm_uuid, transition_entity=None):
 
 @shared_task
 @transition(VirtualMachine, 'begin_restarting')
+@save_error_message
 def begin_restarting(vm_uuid, transition_entity=None):
     vm = transition_entity
     backend = vm.get_backend()
