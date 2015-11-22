@@ -2,7 +2,7 @@ from celery import shared_task, chain
 
 from django.utils import timezone
 
-from nodeconductor.core.tasks import transition, retry_if_false
+from nodeconductor.core.tasks import save_error_message, transition, retry_if_false
 from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import Droplet
@@ -22,6 +22,7 @@ def provision(droplet_uuid, **kwargs):
 
 @shared_task(name='nodeconductor.digitalocean.destroy')
 @transition(Droplet, 'begin_deleting')
+@save_error_message
 def destroy(droplet_uuid, transition_entity=None):
     droplet = transition_entity
     try:
@@ -76,6 +77,7 @@ def wait_for_action_complete(action_id, droplet_uuid):
 
 @shared_task(is_heavy_task=True)
 @transition(Droplet, 'begin_provisioning')
+@save_error_message
 def provision_droplet(droplet_uuid, transition_entity=None, **kwargs):
     droplet = transition_entity
     backend = droplet.get_backend()
@@ -85,6 +87,7 @@ def provision_droplet(droplet_uuid, transition_entity=None, **kwargs):
 
 @shared_task
 @transition(Droplet, 'begin_starting')
+@save_error_message
 def begin_starting(droplet_uuid, transition_entity=None):
     droplet = transition_entity
     backend = droplet.get_backend()
@@ -95,6 +98,7 @@ def begin_starting(droplet_uuid, transition_entity=None):
 
 @shared_task
 @transition(Droplet, 'begin_stopping')
+@save_error_message
 def begin_stopping(droplet_uuid, transition_entity=None):
     droplet = transition_entity
     backend = droplet.get_backend()
@@ -105,6 +109,7 @@ def begin_stopping(droplet_uuid, transition_entity=None):
 
 @shared_task
 @transition(Droplet, 'begin_restarting')
+@save_error_message
 def begin_restarting(droplet_uuid, transition_entity=None):
     droplet = transition_entity
     backend = droplet.get_backend()

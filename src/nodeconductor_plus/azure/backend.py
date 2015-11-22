@@ -15,6 +15,7 @@ from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError, ServiceBackendNotImplemented
 
 from . import models
+from .driver import AzureNodeDriver
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ azure.WINDOWS_SERVER_REGEX = re.compile(
 )
 
 # there's a hope libcloud will implement this method in further releases
-azure.AzureNodeDriver.ex_list_storage_services = lambda self: \
+AzureNodeDriver.ex_list_storage_services = lambda self: \
     self._perform_get(self._get_path('services', 'storageservices'), StorageServices)
 
 
@@ -125,7 +126,7 @@ class AzureBaseBackend(ServiceBackend):
     @property
     def manager(self):
         if not hasattr(self, '_manager'):
-            self._manager = azure.AzureNodeDriver(
+            self._manager = AzureNodeDriver(
                 subscription_id=self.settings.username,
                 key_file=self.settings.certificate.path if self.settings.certificate else None)
         return self._manager
