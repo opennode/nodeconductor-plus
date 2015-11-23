@@ -410,10 +410,14 @@ class AzureRealBackend(AzureBaseBackend):
 
     def get_managed_resources(self):
         try:
-            ids = [instance.id for instance in self.manager.list_nodes(self.cloud_service_name)]
-            return models.VirtualMachine.objects.filter(backend_id__in=ids)
+            ids = []
+            services = self.manager.ex_list_cloud_services()
+            for service in services:
+                for node in self.manager.list_nodes(service.service_name):
+                    ids.append(node.id)
         except LibcloudError as e:
             return []
+        return models.VirtualMachine.objects.filter(backend_id__in=ids)
 
 
 class AzureDummyBackend(AzureBaseBackend):
