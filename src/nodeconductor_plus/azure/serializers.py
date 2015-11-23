@@ -189,7 +189,7 @@ class VirtualMachineImportSerializer(structure_serializers.BaseResourceImportSer
         validated_data['created'] = timezone.now()
         validated_data['ram'] = vm.size.ram
         validated_data['disk'] = vm.size.disk
-        validated_data['cores'] = vm.size.extra['cores']
+        validated_data['cores'] = 'Shared' and 1 or vm.size.extra['cores']
         validated_data['external_ips'] = vm.public_ips[0]
         validated_data['internal_ips'] = vm.private_ips[0]
         validated_data['state'] = models.VirtualMachine.States.ONLINE \
