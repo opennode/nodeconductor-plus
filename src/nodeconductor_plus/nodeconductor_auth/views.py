@@ -124,14 +124,13 @@ class FacebookView(views.APIView):
 
         # Step 1. Exchange authorization code for access token.
         r = requests.get(access_token_url, params=params)
+        self.check_response(r)
         access_token = dict(parse_qsl(r.text))
 
         # Step 2. Retrieve information about the current user.
         r = requests.get(graph_api_url, params=access_token)
-        response_data = json.loads(r.text)
-
-        if 'error' in response_data:
-            raise FacebookException(response_data['error'])
+        self.check_response(r)
+        response_data = r.json()
 
         # Step 3. Create a new user or get existing one.
         try:
@@ -151,6 +150,16 @@ class FacebookView(views.APIView):
             user.auth_profile.save()
             token = Token.objects.get(user=user)
             return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
+
+    def check_response(self, r, valid_response=requests.codes.ok):
+        if r.status_code != valid_response:
+            try:
+                data = r.json()
+                error_message = data['error']
+            except:
+                values = (r.reason, r.status_code)
+                error_message = 'Message: %s, status code: %s' % values
+            raise FacebookException(error_message)
 
 
 class RegistrationView(generics.CreateAPIView):
