@@ -31,12 +31,19 @@ class AWSBackend(object):
 class AWSBaseBackend(ServiceBackend):
 
     def __init__(self, settings):
-        region = 'us-east-1'
-        if settings.options and 'region' in settings.options:
-            region = settings.options['region']
-
         self.settings = settings
-        self.manager = EC2NodeDriver(settings.username, settings.token, region=region)
+
+    # Lazy init
+    @property
+    def manager(self):
+        if not hasattr(self, '_manager'):
+            region = 'us-east-1'
+            if self.settings.options and 'region' in self.settings.options:
+                region = self.settings.options['region']
+
+            self._manager = EC2NodeDriver(
+                self.settings.username, self.settings.token, region=region)
+        return self._manager
 
     def sync(self):
         self.pull_service_properties()
