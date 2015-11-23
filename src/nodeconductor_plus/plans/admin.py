@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from nodeconductor.billing.backend import BillingBackendError
+from nodeconductor_paypal.backend import PayPalError
 from .models import PlanQuota, Plan, Agreement
 
 
@@ -24,7 +24,7 @@ class PlanAdmin(admin.ModelAdmin):
         for plan in queryset:
             try:
                 plan.push_to_backend(request)
-            except BillingBackendError:
+            except PayPalError:
                 erred_plans.append(plan)
         if not erred_plans:
             message = 'All billing plans have been pushed to backend successfully'

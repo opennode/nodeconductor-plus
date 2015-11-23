@@ -1,8 +1,7 @@
-import datetime
 import logging
 
 from celery import shared_task
-from nodeconductor.billing.backend import BillingBackend, BillingBackendError
+from nodeconductor_paypal.backend import PaypalBackend, PayPalError
 from nodeconductor_plus.plans.models import Agreement
 
 
@@ -21,7 +20,7 @@ def check_agreement(agreement_id):
     Check if agreement has been cancelled in backend and then apply default quotas for customer
     """
     agreement = Agreement.objects.get(pk=agreement_id)
-    backend = BillingBackend()
+    backend = PaypalBackend()
 
     try:
         backend_agreement = backend.get_agreement(agreement.backend_id)
@@ -29,7 +28,7 @@ def check_agreement(agreement_id):
             agreement.set_cancelled()
             agreement.save()
             Agreement.apply_default_plan(agreement.customer)
-    except BillingBackendError:
+    except PayPalError:
         agreement.set_erred()
         agreement.save()
         logger.warning('Unable to fetch agreement from backend %s', agreement.backend_id)
@@ -39,7 +38,7 @@ def push_agreement(agreement):
     """
     Push billing agreement to backend
     """
-    backend = BillingBackend()
+    backend = PaypalBackend()
 
     try:
         approval_url, token = backend.create_agreement(agreement.plan.backend_id, agreement.plan.name)
@@ -49,7 +48,7 @@ def push_agreement(agreement):
         message = 'Agreement for plan %s and customer %s has been pushed to backend'
         logger.info(message, agreement.plan.name, agreement.customer.name)
 
-    except BillingBackendError:
+    except PayPalError:
         agreement.set_erred()
         agreement.save()
 
@@ -63,14 +62,14 @@ def activate_agreement(agreement_id):
     Apply quotas for customer according to plan and cancel other active agreement
     """
     agreement = Agreement.objects.get(pk=agreement_id)
-    backend = BillingBackend()
+    backend = PaypalBackend()
 
     try:
         agreement.backend_id = backend.execute_agreement(agreement.token)
         message = 'Agreement for plan %s and customer %s has been activated'
         logger.info(message, agreement.plan.name, agreement.customer.name)
 
-    except BillingBackendError:
+    except PayPalError:
         agreement.set_erred()
         agreement.save()
 
@@ -97,7 +96,7 @@ def cancel_agreement(agreement):
     """
     Cancel active agreement
     """
-    backend = BillingBackend()
+    backend = PaypalBackend()
 
     try:
         backend.cancel_agreement(agreement.backend_id)
@@ -107,7 +106,7 @@ def cancel_agreement(agreement):
         message = 'Agreement for plan %s and customer %s has been cancelled'
         logger.info(message, agreement.plan.name, agreement.customer.name)
 
-    except BillingBackendError:
+    except PayPalError:
         agreement.set_erred()
         agreement.save()
 
