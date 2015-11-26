@@ -52,7 +52,6 @@ class GitLabBaseBackend(ServiceBackend):
             raise NotImplementedError
 
     def destroy(self, resource):
-        resource.state = resource.States.OFFLINE
         resource.schedule_deletion()
         resource.save()
 
