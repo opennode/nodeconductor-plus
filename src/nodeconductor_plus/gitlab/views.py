@@ -27,24 +27,14 @@ class GitLabServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkView
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class BaseGitLabResourceViewSet(structure_views.BaseResourceViewSet):
+class BaseGitLabResourceViewSet(structure_views.BaseOnlineResourceViewSet):
+
     def check_destroy(self, resource):
         pass
 
-    @structure_views.safe_operation()
-    def destroy(self, request, resource, uuid=None):
+    def perform_managed_resource_destroy(self, resource):
         self.check_destroy(resource)
-
-        if resource.backend_id:
-            # Resource must be online in order to schedule_delition transition success
-            # Forcely switch it offline since it's irrelevant for this type of service
-            resource.state = resource.States.OFFLINE
-            resource.save()
-
-            backend = resource.get_backend()
-            backend.destroy(resource)
-        else:
-            self.perform_destroy(resource)
+        super(BaseGitLabResourceViewSet, self).perform_managed_resource_destroy(resource)
 
 
 class GroupViewSet(BaseGitLabResourceViewSet):
