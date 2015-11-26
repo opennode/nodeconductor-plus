@@ -7,7 +7,6 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 
 from nodeconductor.core import serializers as core_serializers
-from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
@@ -16,7 +15,6 @@ from .backend import AzureBackendError, SizeQueryset
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.Azure
     SERVICE_ACCOUNT_FIELDS = {
         'username': 'In the format of GUID',
         'certificate': 'X509 certificate in .PEM format',
@@ -57,8 +55,6 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
 class ImageSerializer(structure_serializers.BasePropertySerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.Azure
-
     class Meta(object):
         model = models.Image
         view_name = 'azure-image-detail'
@@ -70,8 +66,6 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
 
 class SizeSerializer(six.with_metaclass(structure_serializers.PropertySerializerMetaclass,
                                         serializers.Serializer)):
-
-    SERVICE_TYPE = SupportedServices.Types.Azure
 
     uuid = serializers.ReadOnlyField()
     url = serializers.SerializerMethodField()

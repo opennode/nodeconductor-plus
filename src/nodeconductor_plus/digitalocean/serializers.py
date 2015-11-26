@@ -5,7 +5,6 @@ import re
 from django.utils import dateparse
 from rest_framework import serializers
 
-from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
@@ -14,7 +13,6 @@ from .backend import DigitalOceanBackendError
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
     SERVICE_ACCOUNT_FIELDS = {
         'token': '',
     }
@@ -31,8 +29,6 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
 class RegionSerializer(structure_serializers.BasePropertySerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
-
     class Meta(object):
         model = models.Region
         view_name = 'digitalocean-region-detail'
@@ -43,8 +39,6 @@ class RegionSerializer(structure_serializers.BasePropertySerializer):
 
 
 class ImageSerializer(structure_serializers.BasePropertySerializer):
-
-    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
 
     class Meta(object):
         model = models.Image
@@ -58,8 +52,6 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
 
 
 class SizeSerializer(structure_serializers.BasePropertySerializer):
-
-    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
 
     class Meta(object):
         model = models.Size

@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
@@ -9,7 +8,6 @@ from .backend import AWSBackendError
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.Amazon
     SERVICE_ACCOUNT_FIELDS = {
         'username': '',
         'token': '',
@@ -35,8 +33,6 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
 
 class ImageSerializer(structure_serializers.BasePropertySerializer):
-
-    SERVICE_TYPE = SupportedServices.Types.Amazon
 
     class Meta(object):
         model = models.Image
