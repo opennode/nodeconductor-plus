@@ -39,19 +39,26 @@ def check_service_resources(service_str):
         logger.warning('Missing service %s.', service_str)
         return
 
-    try:
-        with throttle(key="{}{}".format(service.settings.type, service.settings.backend_url)):
-            resources = service.get_backend().get_resources_for_import()
-            if len(resources) > 0:
-                alert_logger.service_state.warning(
-                    'Service {service_name} has unmanaged resources',
-                    scope=service,
-                    alert_type='service_has_unmanaged_resources',
-                    alert_context={'service': service})
-            else:
-                alert_logger.service_state.close(scope=service, alert_type='service_has_unmanaged_resources')
-    except (ServiceBackendError, ServiceBackendNotImplemented):
-        logger.warning('Unable to get resources for import')
+    erred = False
+    with throttle(key="{}{}".format(service.settings.type, service.settings.backend_url)):
+        for service_project_link in service.get_service_project_links():
+            try:
+                resources = service_project_link.get_backend().get_resources_for_import()
+                if len(resources) > 0:
+                    alert_logger.service_state.warning(
+                        'Service {service_name} has unmanaged resources',
+                        scope=service,
+                        alert_type='service_has_unmanaged_resources',
+                        alert_context={'service': service})
+                    return
+            except (ServiceBackendError, ServiceBackendNotImplemented) as exception:
+                logger.warning(
+                    'Unable to check unmanaged resources for service project link %s: %s',
+                    service_project_link.to_string(),
+                    exception)
+                erred = True
+    if not erred:
+        alert_logger.service_state.close(scope=service, alert_type='service_has_unmanaged_resources')
 
 
 @shared_task
@@ -90,17 +97,17 @@ def check_service_resources_availability(service_str):
         logger.warning('Missing service %s.', service_str)
         return
 
-    backend = service.get_backend()
-
-    for resource_model in SupportedServices.get_related_models(service)['resources']:
-        for resource in resource_model.objects.exclude(backend_id=''):
+    for resource_model in SupportedServices.get_service_resources(service):
+        for resource in resource_model.objects.filter(
+            service_project_link__service=service).exclude(backend_id=''):
             try:
-                available = backend.ping_resource(resource)
+                available = resource.get_backend().ping_resource(resource)
             except ServiceBackendNotImplemented:
                 logger.error("Method ping_resource() is not implemented for %s" % backend.__class__.__name__)
                 available = True
-            except ServiceBackendError:
+            except ServiceBackendError as exception:
                 available = False
+                logger.warning('Unable to ping resource %s: %s', resource.to_string(), exception)
 
             if not available:
                 alert_logger.resource_state.warning(
