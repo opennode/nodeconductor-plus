@@ -31,6 +31,13 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields['backend_url'].required = True
         return fields
 
+    def validate(self, attrs):
+        has_credentials = (attrs.get('username') and attrs.get('password')) or attrs.get('token')
+        if not has_credentials:
+            raise serializers.ValidationError(
+                'Either token or username and password should be specified')
+        return super(ServiceSerializer, self).validate(attrs)
+
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
 

@@ -38,9 +38,14 @@ class GitLabBaseBackend(ServiceBackend):
     def __init__(self, settings):
         self.settings = settings
 
+    def sync(self):
+        self.ping()
+
     def ping(self):
-        # Session validation occurs on class creation so assume it's active
-        return True
+        try:
+            return self.manager.auth()
+        except gitlab.GitlabError:
+            raise GitLabBackendError('Please check backend URL and credentials')
 
     def provision(self, resource, **kwargs):
         kwargs.update({'name': resource.name, 'description': resource.description})
@@ -193,8 +198,8 @@ class GitLabRealBackend(GitLabBaseBackend):
 
             try:
                 self._manager.auth()
-            except gitlab.GitlabAuthenticationError as e:
-                six.reraise(GitLabBackendError, e)
+            except gitlab.GitlabError:
+                raise GitLabBackendError('Please check backend URL and credentials')
 
         return self._manager
 
