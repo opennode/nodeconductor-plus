@@ -18,16 +18,6 @@ class AWSBackendError(ServiceBackendError):
     pass
 
 
-class AWSBackend(object):
-
-    def __init__(self, settings):
-        backend_class = AWSDummyBackend if settings.dummy else AWSRealBackend
-        self.backend = backend_class(settings)
-
-    def __getattr__(self, name):
-        return getattr(self.backend, name)
-
-
 class AWSBaseBackend(ServiceBackend):
 
     def __init__(self, settings):
@@ -49,7 +39,7 @@ class AWSBaseBackend(ServiceBackend):
         self.pull_service_properties()
 
 
-class AWSRealBackend(AWSBaseBackend):
+class AWSBackend(AWSBaseBackend):
     """ NodeConductor interface to AWS EC2 API.
         https://libcloud.apache.org/
     """
@@ -145,9 +135,5 @@ class AWSRealBackend(AWSBaseBackend):
         try:
             ids = [instance.id for instance in self.manager.list_nodes()]
             return models.Instance.objects.filter(backend_id__in=ids)
-        except LibcloudError as e:
+        except LibcloudError:
             return []
-
-
-class AWSDummyBackend(AWSBaseBackend):
-    pass

@@ -23,16 +23,6 @@ class GitLabBackendError(ServiceBackendError):
     pass
 
 
-class GitLabBackend(object):
-
-    def __init__(self, settings):
-        backend_class = GitLabDummyBackend if settings.dummy else GitLabRealBackend
-        self.backend = backend_class(settings)
-
-    def __getattr__(self, name):
-        return getattr(self.backend, name)
-
-
 class GitLabBaseBackend(ServiceBackend):
 
     def __init__(self, settings):
@@ -173,7 +163,7 @@ class GitLabBaseBackend(ServiceBackend):
                 logger.warning('Failed to update statistics for project %s. Exception: %s.', project.name, str(e))
 
 
-class GitLabRealBackend(GitLabBaseBackend):
+class GitLabBackend(GitLabBaseBackend):
     """NodeConductor interface to GitLab API.
 
     http://doc.gitlab.com/ce/api/README.html
@@ -182,9 +172,6 @@ class GitLabRealBackend(GitLabBaseBackend):
 
     class Namespace(gitlab.GitlabObject):
         _url = '/namespaces'
-
-    def __init__(self, settings):
-        self.settings = settings
 
     # Lazy init
     @property
@@ -466,7 +453,3 @@ class GitLabRealBackend(GitLabBaseBackend):
                 self.settings.id, user.id, backend_resource.to_string())
         else:
             logger.warning('Cannot send access gained email to user without email (username: "%s")', user.username)
-
-
-class GitLabDummyBackend(GitLabBaseBackend):
-    pass
