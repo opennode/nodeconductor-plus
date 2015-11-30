@@ -28,7 +28,12 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     def get_fields(self):
         fields = super(ServiceSerializer, self).get_fields()
         fields['username'].label = 'Access key ID'
+        fields['username'].required = True
+
         fields['token'].label = 'Secret access key'
+        fields['token'].required = True
+
+        fields['region'].help_text = '(default: "us-east-1")'
         return fields
 
 

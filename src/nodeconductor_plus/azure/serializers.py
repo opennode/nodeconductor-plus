@@ -21,6 +21,8 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     }
     SERVICE_ACCOUNT_EXTRA_FIELDS = {
         'location': '',
+        'cloud_service_name': '',
+        'images_regex': ''
     }
 
     location = serializers.ChoiceField(
@@ -37,10 +39,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields = super(ServiceSerializer, self).get_fields()
         fields['username'].label = 'Subscription ID'
         fields['username'].required = True
+
         fields['certificate'].label = 'Private certificate file'
         fields['certificate'].required = True
         fields['certificate'].write_only = True
-        fields['location'].help_text = 'Azure region where to provision resources'
+
+        fields['location'].help_text = 'Azure region where to provision resources (default: "Central US")'
+        fields['cloud_service_name'].help_text = 'If defined all connected SPLs will operate in the defined cloud service group'
+        fields['images_regex'].help_text = 'Regular expression to limit images list'
         return fields
 
     def validate_certificate(self, value):
