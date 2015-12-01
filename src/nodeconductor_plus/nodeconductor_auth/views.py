@@ -13,7 +13,7 @@ from rest_framework.authtoken.models import Token
 
 from nodeconductor.core.tasks import send_task
 from .models import AuthProfile
-from .serializers import RegistrationSerializer, ActivationSerializer
+from .serializers import RegistrationSerializer, ActivationSerializer, FacebookAuthSerializer
 
 
 nc_plus_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
@@ -115,11 +115,18 @@ class FacebookView(views.APIView):
         access_token_url = 'https://graph.facebook.com/oauth/access_token'
         graph_api_url = 'https://graph.facebook.com/me'
 
+        serializer = FacebookAuthSerializer(data={
+            'client_id': request.data.get('clientId'),
+            'redirect_uri': request.data.get('redirectUri'),
+            'code': request.data.get('code')
+        })
+        serializer.is_valid(raise_exception=True)
+
         params = {
-            'client_id': request.DATA['clientId'],
-            'redirect_uri': request.DATA['redirectUri'],
+            'client_id': serializer.validated_data['client_id'],
+            'redirect_uri': serializer.validated_data['redirect_uri'],
             'client_secret': FACEBOOK_SECRET,
-            'code': request.DATA['code']
+            'code': serializer.validated_data['code']
         }
 
         # Step 1. Exchange authorization code for access token.
