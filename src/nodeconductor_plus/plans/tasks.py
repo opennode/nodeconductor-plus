@@ -2,7 +2,7 @@ import logging
 
 from celery import shared_task
 from nodeconductor_paypal.backend import PaypalBackend, PayPalError
-from nodeconductor_plus.plans.models import Agreement
+from nodeconductor_plus.plans.models import Agreement, Invoice
 
 
 logger = logging.getLogger(__name__)
@@ -112,3 +112,30 @@ def cancel_agreement(agreement):
 
         message = 'Unable to cancel agreement for plan %s and customer %s because of backend error'
         logger.warning(message, agreement.plan.name, agreement.customer.name)
+
+
+@shared_task(name='nodeconductor.plans.sync_invoices')
+def sync_invoices(agreement_id):
+    try:
+        agreement = Agreement.objects.get(pk=agreement_id)
+    except Agreement.DoesNotExist:
+        logger.debug('Missing agreement with id %s', agreement.id)
+        return
+
+    try:
+        txs = PaypalBackend().get_agreement_transactions(
+            agreement.backend_id, agreement.created)
+    except PayPalError as e:
+        message = "Unable to fetch transactions for billing plan agreement with id %s: "
+        logger.warning(message, agreement.id, e)
+        return
+
+    ids = Invoice.objects.filter(agreement=agreement).values_list('backend_id')
+    for tx in txs:
+        backend_id = tx['transaction_id']
+        if backend_id in ids:
+            continue
+        invoice = Invoice.objects.create(agreement=agreement,
+                                         date=tx['time_stamp'],
+                                         amount=tx['amount'],
+                                         payer_email=tx['payer_email'])

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from nodeconductor.core import serializers as core_serializers
 from nodeconductor.structure.serializers import CustomerSerializer
 from . import models
 
@@ -64,3 +65,24 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
         except AttributeError:
             raise AttributeError('AgreementSerializer have to be initialized with `request` in context')
         return super(AgreementSerializer, self).create(validated_data)
+
+
+class InvoiceSerializer(core_serializers.AugmentedSerializerMixin,
+                        serializers.HyperlinkedModelSerializer):
+
+    year = serializers.DateField(format='%Y', source='date')
+    month = serializers.DateField(format='%m', source='date')
+    customer_name = serializers.ReadOnlyField(source='agreement.customer.name')
+    customer_uuid = serializers.ReadOnlyField(source='agreement.customer.uuid')
+    # pdf = serializers.HyperlinkedIdentityField(view_name='plan-invoice-pdf', lookup_field='uuid')
+
+    class Meta(object):
+        model = models.Invoice
+        fields = (
+            'url', 'uuid', 'year', 'month', 'amount', 'pdf', 'date',
+            'customer_name', 'customer_uuid'
+        )
+        related_paths = ('customer',)
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid', 'view_name': 'plan-invoice-detail'},
+        }

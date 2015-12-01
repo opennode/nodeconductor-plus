@@ -1,5 +1,7 @@
 from django.contrib import admin
+from django.utils.translation import ungettext
 
+from nodeconductor.core.tasks import send_task
 from nodeconductor_paypal.backend import PayPalError
 from .models import PlanQuota, Plan, Agreement
 
@@ -38,6 +40,27 @@ class PlanAdmin(admin.ModelAdmin):
 
 class AgreementAdmin(admin.ModelAdmin):
     list_display = ['customer', 'plan', 'state']
+    actions = ['sync_invoices']
+
+    def sync_invoices(self, request, queryset):
+        tasks_scheduled = 0
+
+        for agreement in queryset.iterator():
+            send_task('plans', 'sync_invoices')(agreement.id)
+            tasks_scheduled += 1
+
+        message = ungettext(
+            'One agreement scheduled for invoices sync.',
+            '%(tasks_scheduled)d agreements scheduled for invoices sync.',
+            tasks_scheduled
+        )
+        message = message % {
+            'tasks_scheduled': tasks_scheduled,
+        }
+
+        self.message_user(request, message)
+
+    sync_invoices.short_description = "Sync agreement invoices"
 
 
 admin.site.register(Plan, PlanAdmin)

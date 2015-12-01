@@ -1,5 +1,8 @@
 import logging
+
+from django.conf import settings
 from django.shortcuts import redirect
+from django.views.static import serve
 import django_filters
 from django_fsm import TransitionNotAllowed
 from rest_framework import viewsets, permissions, mixins, exceptions, status, filters
@@ -9,8 +12,8 @@ from rest_framework.response import Response
 from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
-from nodeconductor_plus.plans.models import Plan, Agreement
-from nodeconductor_plus.plans.serializers import PlanSerializer, AgreementSerializer
+from nodeconductor_plus.plans.models import Plan, Agreement, Invoice
+from nodeconductor_plus.plans.serializers import PlanSerializer, AgreementSerializer, InvoiceSerializer
 
 from . import tasks
 
@@ -126,3 +129,25 @@ class AgreementViewSet(mixins.CreateModelMixin,
         agreement = self.get_object()
         txs = PaypalBackend().get_agreement_transactions(agreement.backend_id, agreement.created)
         return Response(txs, status=status.HTTP_200_OK)
+
+
+class InvoicesViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Invoice.objects.all()
+    serializer_class = InvoiceSerializer
+    lookup_field = 'uuid'
+
+    def _serve_pdf(self, request, pdf):
+        if not pdf:
+            raise exceptions.NotFound("There's no PDF for this invoice")
+
+        response = serve(request, pdf.name, document_root=settings.MEDIA_ROOT)
+        if request.query_params.get('download'):
+            filename = pdf.name.split('/')[-1]
+            response['Content-Type'] = 'application/pdf'
+            response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+
+        return response
+
+    @detail_route()
+    def pdf(self, request, uuid=None):
+        return self._serve_pdf(request, self.get_object().pdf)
