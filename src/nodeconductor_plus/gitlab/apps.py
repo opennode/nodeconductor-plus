@@ -8,13 +8,13 @@ from nodeconductor.structure import SupportedServices
 class GitLabConfig(AppConfig):
     name = 'nodeconductor_plus.gitlab'
     verbose_name = "NodeConductor GitLab"
+    service_name = 'GitLab'
 
     def ready(self):
-        GitLabService = self.get_model('GitLabService')
         Project = self.get_model('Project')
 
         from .backend import GitLabBackend
-        SupportedServices.register_backend(GitLabService, GitLabBackend)
+        SupportedServices.register_backend(GitLabBackend)
 
         signals.post_save.connect(
             quotas_handlers.add_quotas_to_scope,

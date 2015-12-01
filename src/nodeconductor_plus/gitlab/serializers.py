@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from nodeconductor.core.fields import MappedChoiceField
 from nodeconductor.quotas import serializers as quotas_serializers
-from nodeconductor.structure import SupportedServices, serializers as structure_serializers, models as structure_models
+from nodeconductor.structure import serializers as structure_serializers, models as structure_models
 
 from . import ResourceType, models
 from .backend import GitLabBackendError
@@ -12,7 +12,6 @@ from .backend import GitLabBackendError
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.GitLab
     SERVICE_ACCOUNT_FIELDS = {
         'backend_url': 'Host (e.g. http://git.example.com/)',
         'username': '',

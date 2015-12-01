@@ -7,7 +7,6 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 
 from nodeconductor.core import serializers as core_serializers
-from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
@@ -16,13 +15,14 @@ from .backend import AzureBackendError, SizeQueryset
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.Azure
     SERVICE_ACCOUNT_FIELDS = {
         'username': 'In the format of GUID',
         'certificate': 'X509 certificate in .PEM format',
     }
     SERVICE_ACCOUNT_EXTRA_FIELDS = {
         'location': '',
+        'cloud_service_name': '',
+        'images_regex': ''
     }
 
     location = serializers.ChoiceField(
@@ -39,10 +39,14 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         fields = super(ServiceSerializer, self).get_fields()
         fields['username'].label = 'Subscription ID'
         fields['username'].required = True
+
         fields['certificate'].label = 'Private certificate file'
         fields['certificate'].required = True
         fields['certificate'].write_only = True
-        fields['location'].help_text = 'Azure region where to provision resources'
+
+        fields['location'].help_text = 'Azure region where to provision resources (default: "Central US")'
+        fields['cloud_service_name'].help_text = 'If defined all connected SPLs will operate in the defined cloud service group'
+        fields['images_regex'].help_text = 'Regular expression to limit images list'
         return fields
 
     def validate_certificate(self, value):
@@ -57,8 +61,6 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
 class ImageSerializer(structure_serializers.BasePropertySerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.Azure
-
     class Meta(object):
         model = models.Image
         view_name = 'azure-image-detail'
@@ -70,8 +72,6 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
 
 class SizeSerializer(six.with_metaclass(structure_serializers.PropertySerializerMetaclass,
                                         serializers.Serializer)):
-
-    SERVICE_TYPE = SupportedServices.Types.Azure
 
     uuid = serializers.ReadOnlyField()
     url = serializers.SerializerMethodField()

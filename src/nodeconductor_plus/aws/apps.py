@@ -7,11 +7,10 @@ from nodeconductor.structure import SupportedServices
 class AWSConfig(AppConfig):
     name = 'nodeconductor_plus.aws'
     verbose_name = "NodeConductor AWS EC2"
+    service_name = 'Amazon'
 
     def ready(self):
-        AWSService = self.get_model('AWSService')
-
         from .backend import AWSBackend
         from .cost_tracking import AWSCostTrackingBackend
-        SupportedServices.register_backend(AWSService, AWSBackend)
+        SupportedServices.register_backend(AWSBackend)
         CostTrackingRegister.register(self.label, AWSCostTrackingBackend)

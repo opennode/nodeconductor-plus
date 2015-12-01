@@ -7,11 +7,10 @@ from nodeconductor.structure import SupportedServices
 class DigitalOceanConfig(AppConfig):
     name = 'nodeconductor_plus.digitalocean'
     verbose_name = "NodeConductor DigitalOcean"
+    service_name = 'DigitalOcean'
 
     def ready(self):
-        DigitalOceanService = self.get_model('DigitalOceanService')
-
         from .backend import DigitalOceanBackend
         from .cost_tracking import DigitalOceanCostTrackingBackend
-        SupportedServices.register_backend(DigitalOceanService, DigitalOceanBackend)
+        SupportedServices.register_backend(DigitalOceanBackend)
         CostTrackingRegister.register(self.label, DigitalOceanCostTrackingBackend)

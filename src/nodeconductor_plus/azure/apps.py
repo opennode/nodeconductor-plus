@@ -7,11 +7,10 @@ from nodeconductor.structure import SupportedServices
 class AzureConfig(AppConfig):
     name = 'nodeconductor_plus.azure'
     verbose_name = "NodeConductor Azure"
+    service_name = 'Azure'
 
     def ready(self):
-        AzureService = self.get_model('AzureService')
-
         from .backend import AzureBackend
         from .cost_tracking import AzureCostTrackingBackend
-        SupportedServices.register_backend(AzureService, AzureBackend)
+        SupportedServices.register_backend(AzureBackend)
         CostTrackingRegister.register(self.label, AzureCostTrackingBackend)
