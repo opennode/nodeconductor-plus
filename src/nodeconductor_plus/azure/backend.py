@@ -99,19 +99,9 @@ class AzureBackendError(ServiceBackendError):
     pass
 
 
-class AzureBackend(object):
+class AzureBaseBackend(ServiceBackend):
 
     State = NodeState
-
-    def __init__(self, settings, **kwargs):
-        backend_class = AzureDummyBackend if settings.dummy else AzureRealBackend
-        self.backend = backend_class(settings, **kwargs)
-
-    def __getattr__(self, name):
-        return getattr(self.backend, name)
-
-
-class AzureBaseBackend(ServiceBackend):
 
     def __init__(self, settings, cloud_service_name=None):
         self.deployment = 'production'
@@ -175,7 +165,7 @@ class AzureBaseBackend(ServiceBackend):
         send_task('azure', 'restart')(vm.uuid.hex)
 
 
-class AzureRealBackend(AzureBaseBackend):
+class AzureBackend(AzureBaseBackend):
     """ NodeConductor interface to Azure API.
         http://libcloud.readthedocs.org/en/latest/compute/drivers/azure.html
     """
@@ -415,10 +405,6 @@ class AzureRealBackend(AzureBaseBackend):
             for service in services:
                 for node in self.manager.list_nodes(service.service_name):
                     ids.append(node.id)
-        except LibcloudError as e:
+        except LibcloudError:
             return []
         return models.VirtualMachine.objects.filter(backend_id__in=ids)
-
-
-class AzureDummyBackend(AzureBaseBackend):
-    pass

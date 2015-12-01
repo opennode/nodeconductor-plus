@@ -20,16 +20,6 @@ class DigitalOceanBackendError(ServiceBackendError):
     pass
 
 
-class DigitalOceanBackend(object):
-
-    def __init__(self, settings):
-        backend_class = DigitalOceanDummyBackend if settings.dummy else DigitalOceanRealBackend
-        self.backend = backend_class(settings)
-
-    def __getattr__(self, name):
-        return getattr(self.backend, name)
-
-
 class DigitalOceanBaseBackend(ServiceBackend):
 
     def __init__(self, settings):
@@ -90,7 +80,7 @@ class DigitalOceanBaseBackend(ServiceBackend):
             six.reraise(DigitalOceanBackendError, e)
 
 
-class DigitalOceanRealBackend(DigitalOceanBaseBackend):
+class DigitalOceanBackend(DigitalOceanBaseBackend):
     """ NodeConductor interface to Digital Ocean API.
         https://developers.digitalocean.com/documentation/v2/
         https://github.com/koalalorenzo/python-digitalocean
@@ -316,7 +306,3 @@ class DigitalOceanRealBackend(DigitalOceanBaseBackend):
 
         entity.regions.add(*(actual_regions - all_regions))
         entity.regions.remove(*(all_regions - actual_regions))
-
-
-class DigitalOceanDummyBackend(DigitalOceanBaseBackend):
-    pass
