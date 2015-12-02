@@ -14,11 +14,4 @@ PERMISSION_LOGICS = (
         },
         any_permission=True,
     )),
-    ('plans.Invoice', FilteredCollaboratorsPermissionLogic(
-        collaborators_query='agreement__customer__roles__permission_group__user',
-        collaborators_filter={
-            'agreement__customer__roles__role_type': structure_models.CustomerRole.OWNER,
-        },
-        any_permission=True,
-    ))
 )

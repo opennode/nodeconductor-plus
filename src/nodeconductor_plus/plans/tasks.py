@@ -2,7 +2,8 @@ import logging
 
 from celery import shared_task
 from nodeconductor_paypal.backend import PaypalBackend, PayPalError
-from nodeconductor_plus.plans.models import Agreement, Invoice
+from nodeconductor_paypal.models import Invoice, InvoiceItem
+from nodeconductor_plus.plans.models import Agreement
 
 
 logger = logging.getLogger(__name__)
@@ -114,8 +115,8 @@ def cancel_agreement(agreement):
         logger.warning(message, agreement.plan.name, agreement.customer.name)
 
 
-@shared_task(name='nodeconductor.plans.sync_invoices')
-def sync_invoices(agreement_id):
+@shared_task(name='nodeconductor.plans.sync_agreement_transactions')
+def sync_agreement_transactions(agreement_id):
     try:
         agreement = Agreement.objects.get(pk=agreement_id)
     except Agreement.DoesNotExist:
@@ -126,16 +127,23 @@ def sync_invoices(agreement_id):
         txs = PaypalBackend().get_agreement_transactions(
             agreement.backend_id, agreement.created)
     except PayPalError as e:
-        message = "Unable to fetch transactions for billing plan agreement with id %s: "
+        message = 'Unable to fetch transactions for billing plan agreement with id %s: %s'
         logger.warning(message, agreement.id, e)
         return
 
-    ids = Invoice.objects.filter(agreement=agreement).values_list('backend_id')
+    invoice = Invoice.get_for_customer(customer=agreement.customer)
+    nc_items = set(invoice.items.exclude(backend_id__isnull=True).values_list('backend_id', flat=True))
     for tx in txs:
         backend_id = tx['transaction_id']
-        if backend_id in ids:
+        # Skip transactions which are already stored in database
+        if backend_id in nc_items:
             continue
-        invoice = Invoice.objects.create(agreement=agreement,
-                                         date=tx['time_stamp'],
-                                         amount=tx['amount'],
-                                         payer_email=tx['payer_email'])
+        description = 'Monthly fee for %s plan' % agreement.plan.name
+        InvoiceItem.objects.create(invoice=invoice,
+                                   created_at=tx['time_stamp'],
+                                   amount=tx['amount'],
+                                   backend_id=backend_id,
+                                   description=description)
+
+    invoice.update_total_amount()
+    invoice.save(update_fields=['total_amount'])

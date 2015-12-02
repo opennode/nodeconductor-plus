@@ -40,18 +40,16 @@ class PlanAdmin(admin.ModelAdmin):
 
 class AgreementAdmin(admin.ModelAdmin):
     list_display = ['customer', 'plan', 'state']
-    actions = ['sync_invoices']
+    actions = ['sync_transactions']
 
-    def sync_invoices(self, request, queryset):
-        tasks_scheduled = 0
-
+    def sync_transactions(self, request, queryset):
         for agreement in queryset.iterator():
-            send_task('plans', 'sync_invoices')(agreement.id)
-            tasks_scheduled += 1
+            send_task('plans', 'sync_agreement_transactions')(agreement.id)
 
+        tasks_scheduled = queryset.count()
         message = ungettext(
-            'One agreement scheduled for invoices sync.',
-            '%(tasks_scheduled)d agreements scheduled for invoices sync.',
+            'One agreement scheduled for translations sync.',
+            '%(tasks_scheduled)d agreements scheduled for translations sync.',
             tasks_scheduled
         )
         message = message % {
@@ -60,7 +58,7 @@ class AgreementAdmin(admin.ModelAdmin):
 
         self.message_user(request, message)
 
-    sync_invoices.short_description = "Sync agreement invoices"
+    sync_transactions.short_description = "Sync agreement translations"
 
 
 admin.site.register(Plan, PlanAdmin)

@@ -1,18 +1,13 @@
 import logging
-import StringIO
 
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.db import models
-from django.template.loader import render_to_string
 from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import FSMField, transition
 from model_utils.models import TimeStampedModel
 from rest_framework.reverse import reverse
-import xhtml2pdf.pisa as pisa
 
 from nodeconductor.core.models import UuidMixin
-from nodeconductor.logging.log import LoggableMixin
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
 from nodeconductor_plus.plans.settings import DEFAULT_PLAN
@@ -137,46 +132,3 @@ class Agreement(UuidMixin, TimeStampedModel):
             logger.info('Default plan for customer %s has been applied', customer.name)
         except Plan.DoesNotExist:
             logger.warning('Default plan does not exist')
-
-
-class Invoice(LoggableMixin, UuidMixin):
-    """
-    Invoice corresponds to billing agreement transaction
-    """
-
-    class Permissions(object):
-        customer_path = 'agreement__customer'
-
-    agreement = models.ForeignKey(Agreement)
-    amount = models.DecimalField(max_digits=9, decimal_places=2)
-    date = models.DateField()
-    pdf = models.FileField(upload_to='plan-invoices', blank=True, null=True)
-    backend_id = models.CharField(max_length=255)
-    payer_email = models.EmailField()
-
-    def generate_invoice_file_name(self):
-        return '{}-invoice-{}.pdf'.format(self.date.strftime('%Y-%m-%d'), self.pk)
-
-    def generate_pdf(self):
-        # cleanup if pdf already existed
-        if self.pdf is not None:
-            self.pdf.delete()
-
-        html = render_to_string('plans/invoice.html', {
-            'plan': self.agreement.plan,
-            'customer': self.agreement.customer,
-            'amount': self.amount,
-            'date': self.date,
-            'backend_id': self.backend_id,
-            'payer_email': self.payer_email,
-            'invoice_id': self.id,
-            'curency': settings.NODECONDUCTOR_PAYPAL['currency_name']
-        })
-
-        result = StringIO.StringIO()
-        pdf = pisa.pisaDocument(StringIO.StringIO(html), result)
-        self.pdf.save(self.generate_invoice_file_name(), ContentFile(result.getvalue()))
-        if pdf.err:
-            logger.error('Unable to save PDF to file: %s', pdf.err)
-        else:
-            self.save(update_fields=['pdf'])
