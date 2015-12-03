@@ -86,11 +86,11 @@ class Agreement(UuidMixin, TimeStampedModel):
     customer = models.ForeignKey(structure_models.Customer)
 
     # These values are fetched from backend
-    backend_id = models.CharField(max_length=255, null=True)
+    backend_id = models.CharField(max_length=255, blank=True, null=True)
 
     # Token is used as temporary identifier of billing agreement
-    token = models.CharField(max_length=120, null=True)
-    approval_url = models.URLField(null=True)
+    token = models.CharField(max_length=120, blank=True, null=True)
+    approval_url = models.URLField(blank=True, null=True)
 
     state = FSMField(default=States.CREATED,
                      max_length=20,

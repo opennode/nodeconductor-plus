@@ -16,6 +16,7 @@ class PlanQuotaInline(admin.TabularInline):
 class PlanAdmin(admin.ModelAdmin):
     fields = ['name', 'price']
     list_display = ['name', 'price', 'backend_id']
+    readonly_fields = ['backend_id']
     search_fields = ['name']
     inlines = [PlanQuotaInline]
     actions = ['push_to_backend']
@@ -39,17 +40,18 @@ class PlanAdmin(admin.ModelAdmin):
 
 
 class AgreementAdmin(admin.ModelAdmin):
-    list_display = ['customer', 'plan', 'state']
-    actions = ['sync_transactions']
+    list_display = ['customer', 'plan', 'state', 'backend_id']
+    actions = ['sync_agreement', 'generate_invoices']
+    readonly_fields = ['approval_url', 'backend_id', 'token']
 
-    def sync_transactions(self, request, queryset):
+    def sync_agreement(self, request, queryset):
         for agreement in queryset.iterator():
-            send_task('plans', 'sync_agreement_transactions')(agreement.id)
+            send_task('plans', 'sync_agreement')(agreement.id)
 
         tasks_scheduled = queryset.count()
         message = ungettext(
-            'One agreement scheduled for translations sync.',
-            '%(tasks_scheduled)d agreements scheduled for translations sync.',
+            'One agreement scheduled for push.',
+            '%(tasks_scheduled)d agreements scheduled for push.',
             tasks_scheduled
         )
         message = message % {
@@ -58,7 +60,25 @@ class AgreementAdmin(admin.ModelAdmin):
 
         self.message_user(request, message)
 
-    sync_transactions.short_description = "Sync agreement translations"
+    sync_agreement.short_description = "Push agreement to backend"
+
+    def generate_invoices(self, request, queryset):
+        for agreement in queryset.iterator():
+            send_task('plans', 'generate_agreement_invoices')(agreement.id)
+
+        tasks_scheduled = queryset.count()
+        message = ungettext(
+            'One agreement scheduled for invoices generation.',
+            '%(tasks_scheduled)d agreements scheduled for invoices generation.',
+            tasks_scheduled
+        )
+        message = message % {
+            'tasks_scheduled': tasks_scheduled,
+        }
+
+        self.message_user(request, message)
+
+    generate_invoices.short_description = "Generate agreement invoices"
 
 
 admin.site.register(Plan, PlanAdmin)
