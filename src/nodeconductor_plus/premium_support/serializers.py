@@ -7,14 +7,29 @@ from nodeconductor_plus.premium_support import models
 
 
 def get_plan_for_project(serializer, project):
-    contract = models.Contract.objects.filter(project=project, state=models.Contract.States.APPROVED).first()
-    if contract:
-        serializer = BasicPlanSerializer(instance=contract.plan, context=serializer.context)
+    if 'plans' not in serializer.context:
+        contracts = models.Contract.objects\
+            .filter(state=models.Contract.States.APPROVED)
+        if isinstance(serializer.instance, list):
+            contracts = contracts.filter(project__in=serializer.instance)
+        else:
+            contracts = contracts.filter(project=serializer.instance)
+        serializer.context['plans'] = {
+            contract.project_id: contract.plan for contract in list(contracts)
+        }
+    plan = serializer.context['plans'].get(project.id)
+    if plan:
+        serializer = BasicPlanSerializer(instance=plan, context=serializer.context)
         return serializer.data
 
 
 def get_pending_contracts_for_project(serializer, project):
-    return models.Contract.objects.filter(project=project, state=models.Contract.States.REQUESTED).exists()
+    if 'has_pending_contracts' not in serializer.context:
+        contracts = models.Contract.objects.filter(state=models.Contract.States.REQUESTED)
+        serializer.context['has_pending_contracts'] = set(
+            contract.project_id for contract in contracts
+        )
+    return project.id in serializer.context['has_pending_contracts']
 
 
 ProjectSerializer.add_field('plan', serializers.SerializerMethodField)

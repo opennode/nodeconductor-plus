@@ -5,10 +5,20 @@ from . import models
 
 
 def get_plan_for_customer(serializer, customer):
-    agreement = models.Agreement.objects.filter(
-        customer=customer, state=models.Agreement.States.ACTIVE).order_by('modified').last()
-    if agreement:
-        serializer = PlanSerializer(instance=agreement.plan, context=serializer.context)
+    if 'plans' not in serializer.context:
+        agreements = models.Agreement.objects\
+            .filter(state=models.Agreement.States.ACTIVE)\
+            .order_by('modified')
+        if isinstance(serializer.instance, list):
+            agreements = agreements.filter(customer__in=serializer.instance)
+        else:
+            agreements = agreements.filter(customer=serializer.instance)
+        serializer.context['plans'] = {
+            agreement.customer_id: agreement.plan for agreement in agreements
+        }
+    plan = serializer.context['plans'].get(customer.id)
+    if plan:
+        serializer = PlanSerializer(instance=plan, context=serializer.context)
         return serializer.data
 
 
