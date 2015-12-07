@@ -127,7 +127,7 @@ def generate_agreement_invoices(agreement_id):
     try:
         agreement = Agreement.objects.get(pk=agreement_id)
     except Agreement.DoesNotExist:
-        logger.debug('Missing agreement with id %s', agreement.id)
+        logger.warning('Missing agreement with id %s', agreement.id)
         return
 
     try:
