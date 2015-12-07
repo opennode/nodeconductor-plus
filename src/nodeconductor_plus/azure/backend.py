@@ -144,7 +144,11 @@ class AzureBaseBackend(ServiceBackend):
             username=username,
             password=password)
 
-    def destroy(self, vm):
+    def destroy(self, vm, force=False):
+        if force:
+            vm.delete()
+            return
+
         vm.schedule_deletion()
         vm.save()
         send_task('azure', 'destroy')(vm.uuid.hex)

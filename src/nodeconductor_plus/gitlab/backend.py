@@ -46,7 +46,11 @@ class GitLabBaseBackend(ServiceBackend):
         else:
             raise NotImplementedError
 
-    def destroy(self, resource):
+    def destroy(self, resource, force=False):
+        if force:
+            resource.delete()
+            return
+
         resource.schedule_deletion()
         resource.save()
 
