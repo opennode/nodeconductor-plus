@@ -9,7 +9,7 @@ from nodeconductor_plus.premium_support import models
 def get_plan_for_project(serializer, project):
     if 'plans' not in serializer.context:
         contracts = models.Contract.objects\
-            .filter(state=models.Contract.States.APPROVED)
+            .filter(state=models.Contract.States.APPROVED).select_related('plan')
         if isinstance(serializer.instance, list):
             contracts = contracts.filter(project__in=serializer.instance)
         else:
