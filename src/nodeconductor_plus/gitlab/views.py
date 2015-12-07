@@ -32,9 +32,9 @@ class BaseGitLabResourceViewSet(structure_views.BaseOnlineResourceViewSet):
     def check_destroy(self, resource):
         pass
 
-    def perform_managed_resource_destroy(self, resource):
+    def perform_managed_resource_destroy(self, resource, force=False):
         self.check_destroy(resource)
-        super(BaseGitLabResourceViewSet, self).perform_managed_resource_destroy(resource)
+        super(BaseGitLabResourceViewSet, self).perform_managed_resource_destroy(resource, force=force)
 
 
 class GroupViewSet(BaseGitLabResourceViewSet):
