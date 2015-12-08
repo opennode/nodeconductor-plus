@@ -6,6 +6,12 @@ from rest_framework import serializers
 User = get_user_model()
 
 
+class FacebookAuthSerializer(serializers.Serializer):
+    client_id = serializers.CharField()
+    redirect_uri = serializers.CharField()
+    code = serializers.CharField()
+
+
 class RegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
