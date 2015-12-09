@@ -8,14 +8,16 @@ def get_plan_for_customer(serializer, customer):
     if 'plans' not in serializer.context:
         agreements = models.Agreement.objects\
             .filter(state=models.Agreement.States.ACTIVE)\
-            .order_by('modified')
+            .select_related('plan')
         if isinstance(serializer.instance, list):
             agreements = agreements.filter(customer__in=serializer.instance)
         else:
             agreements = agreements.filter(customer=serializer.instance)
-        serializer.context['plans'] = {
-            agreement.customer_id: agreement.plan for agreement in agreements
-        }
+        plans = {}
+        for agreement in agreements:
+            plans[agreement.customer_id] = agreement.plan
+        serializer.context['plans'] = plans
+
     plan = serializer.context['plans'].get(customer.id)
     if plan:
         serializer = PlanSerializer(instance=plan, context=serializer.context)
