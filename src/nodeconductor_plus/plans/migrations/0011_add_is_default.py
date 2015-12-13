@@ -15,7 +15,7 @@ def mark_default_plan_from_settings_as_default(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('plans', '0009_allow_blank'),
+        ('plans', '0010_extend_planquota_choices'),
     ]
 
     operations = [
@@ -23,12 +23,6 @@ class Migration(migrations.Migration):
             model_name='plan',
             name='is_default',
             field=models.BooleanField(default=False),
-            preserve_default=True,
-        ),
-        migrations.AlterField(
-            model_name='planquota',
-            name='name',
-            field=models.CharField(max_length=50, choices=[('nc_project_count', 'nc_project_count'), ('nc_resource_count', 'nc_resource_count'), ('nc_app_count', 'nc_app_count'), ('nc_vm_count', 'nc_vm_count'), ('nc_user_count', 'nc_user_count'), ('nc_service_project_link_count', 'nc_service_project_link_count'), ('nc_service_count', 'nc_service_count')]),
             preserve_default=True,
         ),
         migrations.RunPython(mark_default_plan_from_settings_as_default),
