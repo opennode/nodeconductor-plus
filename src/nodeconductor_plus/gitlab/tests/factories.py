@@ -16,7 +16,7 @@ class GitLabServiceFactory(factory.DjangoModelFactory):
     customer = factory.SubFactory(structure_factories.CustomerFactory)
 
     @classmethod
-    def get_url(self, service=None):
+    def get_url(cls, service=None):
         if service is None:
             service = GitLabServiceFactory()
         return 'http://testserver' + reverse('gitlab-detail', kwargs={'uuid': service.uuid})
@@ -33,6 +33,12 @@ class GitLabServiceProjectLinkFactory(factory.DjangoModelFactory):
     service = factory.SubFactory(GitLabServiceFactory)
     project = factory.SubFactory(structure_factories.ProjectFactory)
 
+    @classmethod
+    def get_url(cls, spl=None):
+        if spl is None:
+            spl = GitLabServiceProjectLinkFactory()
+        return 'http://testserver' + reverse('gitlab-spl-detail', kwargs={'pk': spl.pk})
+
 
 class BaseGitLabResourceFactory(factory.DjangoModelFactory):
     service_project_link = factory.SubFactory(GitLabServiceProjectLinkFactory)
@@ -47,7 +53,7 @@ class GitLabProjectFactory(BaseGitLabResourceFactory):
     visibility_level = models.Project.Levels.PRIVATE
 
     @classmethod
-    def get_url(self, project=None):
+    def get_url(cls, project=None):
         if project is None:
             project = GitLabProjectFactory()
         return 'http://testserver' + reverse('gitlab-project-detail', kwargs={'uuid': project.uuid})

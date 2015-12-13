@@ -13,9 +13,9 @@ from .backend import GitLabBackendError
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
     SERVICE_ACCOUNT_FIELDS = {
-        'backend_url': 'Host (e.g. http://git.example.com/)',
-        'username': '',
-        'password': '',
+        'backend_url': 'Host (e.g. http://gitlab.example.com/)',
+        'username': 'admin',
+        'password': 'passw0rd',
         'token': 'Used instead of username/password if supplied',
     }
 
@@ -85,11 +85,11 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
     def validate(self, attrs):
         if not re.match(r'[a-zA-Z0-9_.\s-]+', attrs['name']):
             raise serializers.ValidationError(
-                {'name': "Name can contain only letters, digits, '_', '.', dash and space."})
+                {'name': "Name can only contain letters, digits, '_', '.', dash and space."})
 
         if not re.match(r'[a-zA-Z0-9_.\s-]+', attrs['path']):
             raise serializers.ValidationError(
-                {'path': "Path can contain only letters, digits, '_', '.', dash and space."})
+                {'path': "Path can only contain letters, digits, '_', '.', dash and space."})
 
         if attrs['path'].startswith('-') or attrs['path'].endswith('.'):
             raise serializers.ValidationError(
