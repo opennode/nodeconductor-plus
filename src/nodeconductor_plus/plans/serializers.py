@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from nodeconductor.structure.serializers import CustomerSerializer
 from . import models
+from nodeconductor.structure.serializers import CustomerSerializer
 
 
 def get_plan_for_customer(serializer, customer):

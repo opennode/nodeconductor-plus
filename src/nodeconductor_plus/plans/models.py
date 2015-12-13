@@ -10,7 +10,6 @@ from rest_framework.reverse import reverse
 from nodeconductor.core.models import UuidMixin
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
-from nodeconductor_plus.plans.settings import DEFAULT_PLAN
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +20,7 @@ class Plan(UuidMixin, models.Model):
     name = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=12, decimal_places=2)
     backend_id = models.CharField(max_length=255, null=True)
+    is_default = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -38,15 +38,6 @@ class Plan(UuidMixin, models.Model):
                                          cancel_url=cancel_url)
         self.backend_id = backend_id
         self.save()
-
-    @staticmethod
-    def get_or_create_default_plan():
-        default_plan, created = Plan.objects.get_or_create(
-            name=DEFAULT_PLAN['name'], price=DEFAULT_PLAN['price'])
-        if created:
-            for quota_name, quota_value in DEFAULT_PLAN['quotas']:
-                PlanQuota.objects.get_or_create(name=quota_name, value=quota_value, plan=default_plan)
-        return default_plan
 
 
 class PlanQuota(models.Model):
@@ -124,11 +115,11 @@ class Agreement(UuidMixin, TimeStampedModel):
 
     @staticmethod
     def apply_default_plan(customer):
-        try:
-            default_plan = Plan.objects.get(name=DEFAULT_PLAN['name'])
+        default_plan = Plan.objects.filter(is_default=True).first()
+        if default_plan is not None:
             agreement = Agreement.objects.create(
                 plan=default_plan, customer=customer, state=Agreement.States.ACTIVE)
             agreement.apply_quotas()
             logger.info('Default plan for customer %s has been applied', customer.name)
-        except Plan.DoesNotExist:
+        else:
             logger.warning('Default plan does not exist')

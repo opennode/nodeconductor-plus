@@ -72,7 +72,7 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
 
     def validate_project(self, project):
         if models.Contract.objects.filter(
-            project=project, state=models.Contract.States.APPROVED).exists():
+                project=project, state=models.Contract.States.APPROVED).exists():
             raise serializers.ValidationError('Contract for this project already exists')
 
         return project
