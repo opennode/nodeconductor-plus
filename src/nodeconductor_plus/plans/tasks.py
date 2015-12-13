@@ -1,7 +1,8 @@
 import logging
+from dateutil.relativedelta import relativedelta
 
 from celery import shared_task
-from dateutil.relativedelta import relativedelta
+
 from nodeconductor_paypal.backend import PaypalBackend, PayPalError
 from nodeconductor_paypal.models import Invoice, InvoiceItem
 from nodeconductor_plus.plans.models import Agreement
