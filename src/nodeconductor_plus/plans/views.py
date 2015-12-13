@@ -7,13 +7,12 @@ from rest_framework import viewsets, permissions, mixins, exceptions, status, fi
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
 
+from . import tasks
 from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
 from nodeconductor_plus.plans.models import Plan, Agreement
 from nodeconductor_plus.plans.serializers import PlanSerializer, AgreementSerializer
-
-from . import tasks
 
 
 logger = logging.getLogger(__name__)
