@@ -27,6 +27,9 @@ class Group(GitLabResource):
     service_project_link = models.ForeignKey(
         GitLabServiceProjectLink, related_name='groups', on_delete=models.PROTECT)
 
+    class Meta(object):
+        unique_together = ('path', 'service_project_link')
+
     @property
     def web_url(self):
         return "{}groups/{}".format(
