@@ -114,7 +114,8 @@ class AWSBackend(AWSBaseBackend):
             'ram': instance_type.ram,
             'disk': self.gb2mb(sum(volumes.values())),
             'external_ips': instance.public_ips[0],
-            'created': dateparse.parse_datetime(instance.extra['launch_time'])
+            'created': dateparse.parse_datetime(instance.extra['launch_time']),
+            'flavor_name': instance.extra.get('instance_type')
         }
 
     def get_resources_for_import(self):
