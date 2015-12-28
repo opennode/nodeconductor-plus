@@ -1,7 +1,6 @@
 from rest_framework import viewsets
 
 from nodeconductor.structure import views as structure_views
-from nodeconductor_plus.aws.backend import SizeQueryset
 
 from . import models, serializers
 
@@ -17,6 +16,12 @@ class AmazonServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkView
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
+class RegionViewSet(structure_views.BaseServicePropertyViewSet):
+    queryset = models.Region.objects.all()
+    serializer_class = serializers.RegionSerializer
+    lookup_field = 'uuid'
+
+
 class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
@@ -24,7 +29,7 @@ class ImageViewSet(structure_views.BaseServicePropertyViewSet):
 
 
 class SizeViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SizeQueryset()
+    queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
     lookup_field = 'uuid'
 
@@ -38,6 +43,7 @@ class InstanceViewSet(structure_views.BaseResourceViewSet):
         backend = resource.get_backend()
         backend.provision(
             resource,
+            region=serializer.validated_data['region'],
             image=serializer.validated_data['image'],
             size=serializer.validated_data['size'],
             ssh_key=serializer.validated_data.get('ssh_public_key'))

@@ -1,11 +1,10 @@
 import collections
-import hashlib
 import logging
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
 from libcloud.common.types import LibcloudError
-from libcloud.compute.drivers.ec2 import EC2NodeDriver, INSTANCE_TYPES
+from libcloud.compute.drivers.ec2 import EC2NodeDriver, INSTANCE_TYPES, REGION_DETAILS
 from libcloud.compute.types import NodeState
 
 from nodeconductor.core.models import SshPublicKey
@@ -16,40 +15,6 @@ from nodeconductor.structure import ServiceBackend, ServiceBackendError
 from . import models
 
 logger = logging.getLogger(__name__)
-
-
-class SizeQueryset(object):
-    def __init__(self):
-        self.items = []
-        for val in INSTANCE_TYPES.values():
-            self.items.append(SizeQueryset.Size(uuid=hashlib.sha1(val['id']).hexdigest(),
-                                                pk=val['id'],
-                                                name=val['name'],
-                                                cores=isinstance(val.get('cores'), int) and val['cores'] or 1,
-                                                ram=val['ram'],
-                                                disk=ServiceBackend.gb2mb(val['disk']),
-                                                price=float(val.get('price', 0))))
-
-        self.items = list(sorted(self.items, key=lambda s: (s.cores, s.ram)))
-
-    def __len__(self):
-        return len(self.items)
-
-    def __getitem__(self, key):
-        return self.items[key]
-
-    def all(self):
-        return self.items
-
-    def get(self, uuid):
-        for item in self.items:
-            if item.uuid == uuid:
-                return item
-        raise ValueError
-
-    class Size(collections.namedtuple('Size', ('uuid', 'pk', 'name', 'cores', 'ram', 'disk', 'price'))):
-        def __str__(self):
-            return self.name
 
 
 class ExtendedEC2NodeDriver(EC2NodeDriver):
@@ -89,29 +54,40 @@ class AWSBackendError(ServiceBackendError):
 class AWSBaseBackend(ServiceBackend):
     State = NodeState
 
-    def __init__(self, settings):
+    Regions = (('us-east-1', 'US East (N. Virginia)'),
+               ('us-west-2', 'US West (Oregon)'),
+               ('us-west-1', 'US West (N. California)'),
+               ('eu-west-1', 'EU (Ireland)'),
+               ('eu-central-1', 'EU (Frankfurt)'),
+               ('ap-southeast-1', 'Asia Pacific (Singapore)'),
+               ('ap-southeast-2', 'Asia Pacific (Sydney)'),
+               ('ap-northeast-1', 'Asia Pacific (Tokyo)'),
+               ('sa-east-1', 'South America (Sao Paulo)'))
+
+    def __init__(self, settings, region='us-east-1'):
         super(AWSBaseBackend, self).__init__(settings)
         self.settings = settings
+        self.region = region
 
     # Lazy init
     @property
     def manager(self):
         if not hasattr(self, '_manager'):
-            region = 'us-east-1'
-            if self.settings.options and 'region' in self.settings.options:
-                region = self.settings.options['region']
-
-            self._manager = ExtendedEC2NodeDriver(
-                self.settings.username, self.settings.token, region=region)
+            self._manager = self._get_api(self.region)
         return self._manager
+
+    def _get_api(self, region):
+        return ExtendedEC2NodeDriver(
+            self.settings.username, self.settings.token, region=region)
 
     def sync(self):
         self.pull_service_properties()
 
-    def provision(self, vm, image=None, size=None, ssh_key=None):
+    def provision(self, vm, region=None, image=None, size=None, ssh_key=None):
         vm.ram = size.ram
         vm.disk = size.disk
         vm.cores = size.cores
+        vm.region = region
         vm.save()
 
         send_task('aws', 'provision')(
@@ -167,25 +143,72 @@ class AWSBackend(AWSBaseBackend):
             return True
 
     def pull_service_properties(self):
+        self.pull_regions()
+        self.pull_sizes()
         self.pull_images()
+
+    def pull_regions(self):
+        # Populate regions once because it does not depend on settings
+        if models.Region.objects.count() == len(self.Regions):
+            return
+
+        for backend_id, name in self.Regions:
+            models.Region.objects.create(backend_id=backend_id, name=name)
+
+    def pull_sizes(self):
+        # Populate size once because it does not depend on settings
+        if models.Size.objects.count() == len(INSTANCE_TYPES):
+            return
+
+        # Reverse mapping region->sizes
+        size_regions = collections.defaultdict(list)
+        for region, val in REGION_DETAILS.items():
+            for size in val['instance_types']:
+                size_regions[size].append(region)
+
+        for val in INSTANCE_TYPES.values():
+            size, _ = models.Size.objects.update_or_create(
+                backend_id=val['id'],
+                defaults={
+                    'name': val['name'],
+                    'cores': isinstance(val.get('cores'), int) and val['cores'] or 1,
+                    'ram': val['ram'],
+                    'disk': ServiceBackend.gb2mb(val['disk'])
+                })
+            regions = size_regions[size.backend_id]
+            if regions:
+                size.regions.add(*models.Region.objects.filter(backend_id__in=regions))
 
     def pull_images(self):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
-        for backend_image in self.manager.list_images(ex_owner='amazon'):
-            cur_images.pop(backend_image.id, None)
-            if backend_image.name:
-                try:
-                    models.Image.objects.update_or_create(
-                        backend_id=backend_image.id,
-                        defaults={
-                            'name': backend_image.name,
-                        })
-                except IntegrityError:
-                    logger.warning(
-                        'Could not create AWS image with id %s due to concurrent update',
-                        backend_image.id)
 
-        map(lambda i: i.delete(), cur_images.values())
+        for region, backend_image in self.get_all_images():
+            cur_images.pop(backend_image.id, None)
+            try:
+                models.Image.objects.update_or_create(
+                    backend_id=backend_image.id,
+                    defaults={
+                        'name': backend_image.name,
+                        'region': region
+                    })
+            except IntegrityError:
+                logger.warning(
+                    'Could not create AWS image with id %s due to concurrent update',
+                    backend_image.id)
+
+        # Remove stale images using one SQL query
+        models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
+
+    def get_all_images(self):
+        """
+        Fetch images from all regions
+        """
+        for region in models.Region.objects.all():
+            manager = self._get_api(region.backend_id)
+            for image in manager.list_images(ex_owner='amazon'):
+                # Skip images without name
+                if image.name:
+                    yield region, image
 
     def provision_vm(self, vm, backend_image_id=None, backend_size_id=None, ssh_key_uuid=None):
         if ssh_key_uuid:
@@ -197,12 +220,13 @@ class AWSBackend(AWSBaseBackend):
                 six.reraise(AWSBackendError, e)
 
         try:
-            backend_vm = self.manager.create_node(
-                    name=vm.name,
-                    image=self.get_image(backend_image_id),
-                    size=self.get_size(backend_size_id),
-                    ex_keyname=backend_ssh_key['keyName'],
-                    ex_custom_data=vm.user_data)
+            manager = self._get_api(vm.region.backend_id)
+            backend_vm = manager.create_node(
+                name=vm.name,
+                image=self.get_image(backend_image_id),
+                size=self.get_size(backend_size_id),
+                ex_keyname=backend_ssh_key['keyName'],
+                ex_custom_data=vm.user_data)
         except LibcloudError as e:
             logger.exception('Failed to provision virtual machine %s', vm.name)
             six.reraise(AWSBackendError, e)

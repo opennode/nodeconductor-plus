@@ -1,11 +1,9 @@
-from django.utils import six
 from rest_framework import serializers
-from rest_framework.reverse import reverse
 
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
-from .backend import AWSBackendError, SizeQueryset
+from .backend import AWSBackendError
 
 
 class ServiceSerializer(structure_serializers.BaseServiceSerializer):
@@ -14,14 +12,6 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         'username': '',
         'token': '',
     }
-    SERVICE_ACCOUNT_EXTRA_FIELDS = {
-        'region': '',
-    }
-
-    region = serializers.ChoiceField(choices=models.AWSService.Regions,
-                                     write_only=True,
-                                     required=False,
-                                     allow_blank=True)
 
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.AWSService
@@ -34,38 +24,41 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
         fields['token'].label = 'Secret access key'
         fields['token'].required = True
-
-        fields['region'].required = True
-        fields['region'].initial = 'us-east-1'
         return fields
+
+
+class RegionSerializer(structure_serializers.BasePropertySerializer):
+
+    class Meta(object):
+        model = models.Region
+        fields = ('url', 'uuid', 'name')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid', 'view_name': 'aws-region-detail'}
+        }
 
 
 class ImageSerializer(structure_serializers.BasePropertySerializer):
 
     class Meta(object):
         model = models.Image
-        view_name = 'aws-image-detail'
-        fields = ('url', 'uuid', 'name')
+        fields = ('url', 'uuid', 'name', 'region')
         extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
+            'url': {'lookup_field': 'uuid', 'view_name': 'aws-image-detail'}
         }
 
+    region = RegionSerializer(read_only=True)
 
-class SizeSerializer(six.with_metaclass(structure_serializers.PropertySerializerMetaclass,
-                                        serializers.Serializer)):
 
-    uuid = serializers.ReadOnlyField()
-    url = serializers.SerializerMethodField()
-    name = serializers.ReadOnlyField()
-    cores = serializers.ReadOnlyField()
-    ram = serializers.ReadOnlyField()
-    disk = serializers.ReadOnlyField()
+class SizeSerializer(structure_serializers.BasePropertySerializer):
 
     class Meta(object):
         model = models.Size
+        fields = ('url', 'uuid', 'name', 'cores', 'ram', 'disk', 'regions')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid', 'view_name': 'aws-size-detail'}
+        }
 
-    def get_url(self, size):
-        return reverse('aws-size-detail', kwargs={'uuid': size.uuid}, request=self.context.get('request'))
+    regions = RegionSerializer(many=True, read_only=True)
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
@@ -91,6 +84,12 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
         queryset=models.AWSServiceProjectLink.objects.all(),
         write_only=True)
 
+    region = serializers.HyperlinkedRelatedField(
+        view_name='aws-region-detail',
+        lookup_field='uuid',
+        queryset=models.Region.objects.all(),
+        write_only=True)
+
     image = serializers.HyperlinkedRelatedField(
         view_name='aws-image-detail',
         lookup_field='uuid',
@@ -100,18 +99,31 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
     size = serializers.HyperlinkedRelatedField(
         view_name='aws-size-detail',
         lookup_field='uuid',
-        queryset=SizeQueryset(),
+        queryset=models.Size.objects.all(),
         write_only=True)
 
     class Meta(structure_serializers.VirtualMachineSerializer.Meta):
         model = models.Instance
         view_name = 'aws-instance-detail'
         fields = structure_serializers.VirtualMachineSerializer.Meta.fields + (
-            'image', 'size'
+            'region', 'image', 'size'
         )
         protected_fields = structure_serializers.VirtualMachineSerializer.Meta.protected_fields + (
-            'image', 'size'
+            'region', 'image', 'size'
         )
+
+    def validate(self, attrs):
+        region = attrs['region']
+        image = attrs['image']
+        size = attrs['size']
+
+        if not image.region != region:
+            raise serializers.ValidationError("Image is missed in region %s" % region.name)
+
+        if not size.regions.filter(pk=region.pk).exists():
+            raise serializers.ValidationError("Size is missed in region %s" % region.name)
+
+        return attrs
 
 
 class InstanceImportSerializer(structure_serializers.BaseResourceImportSerializer):
