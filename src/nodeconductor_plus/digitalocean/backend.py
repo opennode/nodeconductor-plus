@@ -259,6 +259,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
             'cores': droplet.vcpus,
             'ram': droplet.memory,
             'disk': self.gb2mb(droplet.disk),
+            'flavor_name': droplet.size_slug
         } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
 

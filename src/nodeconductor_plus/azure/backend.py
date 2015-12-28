@@ -400,6 +400,7 @@ class AzureBackend(AzureBaseBackend):
         return [{
             'id': vm.id,
             'name': vm.name,
+            'flavor_name': vm.extra.get('instance_size')
         } for vm in vms if vm.id not in cur_vms]
 
     def get_managed_resources(self):
