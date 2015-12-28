@@ -123,7 +123,12 @@ def begin_restarting(droplet_uuid, transition_entity=None):
 def set_online(droplet_uuid, transition_entity=None):
     droplet = transition_entity
     droplet.start_time = timezone.now()
-    droplet.save(update_fields=['start_time'])
+
+    backend = droplet.get_backend()
+    backend_droplet = backend.get_droplet(droplet.backend_id)
+    droplet.ip_address = backend_droplet.ip_address
+
+    droplet.save(update_fields=['start_time', 'ip_address'])
 
 
 @shared_task
