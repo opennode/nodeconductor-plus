@@ -185,7 +185,6 @@ To get a list of instances available for import issue a GET to **/api/aws/<servi
         {
             "name": "docker-build-host",
             "created": "2015-11-12T11:03:41Z",
-            "region": "3dc5a04442eb4a94aa0d6b91442bb450",
             "ram": 3840,
             "cores": 1,
             "disk": 10240,
@@ -193,7 +192,7 @@ To get a list of instances available for import issue a GET to **/api/aws/<servi
         }
     ]
 
-To import instance issue POST against the same endpoint with project URL, instance id and region id.
+To import instance issue POST against the same endpoint with project URL, instance backend id.
 
 .. code-block:: http
 
@@ -204,7 +203,6 @@ To import instance issue POST against the same endpoint with project URL, instan
     Host: example.com
 
     {
-        "project": "http://example.com/api/projects/e5f973af2eb14d2d8c38d62bcbaccb33/",
         "backend_id": "i-b32a05de",
-        "region": "3dc5a04442eb4a94aa0d6b91442bb450"
+        "project": "http://example.com/api/projects/e5f973af2eb14d2d8c38d62bcbaccb33/"
     }
