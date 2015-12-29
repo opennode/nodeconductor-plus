@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
-                'ordering': ['name']
+                'ordering': ['cores', 'ram']
             },
             bases=(models.Model,),
         ),

@@ -26,7 +26,7 @@ class Image(structure_models.GeneralServiceProperty):
 
 class Size(structure_models.GeneralServiceProperty):
     class Meta:
-        ordering = ['name']
+        ordering = ['cores', 'ram']
 
     regions = models.ManyToManyField(Region)
     cores = models.PositiveSmallIntegerField(help_text='Number of cores in a VM')
