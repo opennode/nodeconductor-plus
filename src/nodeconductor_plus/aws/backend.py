@@ -148,18 +148,17 @@ class AWSBackend(AWSBaseBackend):
         self.pull_images()
 
     def pull_regions(self):
-        # Populate regions once because it does not depend on settings
-        if models.Region.objects.count() == len(self.Regions):
-            return
-
+        nc_regions = set(models.Region.objects.values_list('backend_id', flat=True))
         for backend_id, name in self.Regions:
-            models.Region.objects.create(backend_id=backend_id, name=name)
+            if backend_id in nc_regions:
+                continue
+            try:
+                models.Region.objects.create(backend_id=backend_id, name=name)
+            except IntegrityError:
+                message = 'Could not create AWS region with name %s due to concurrent update'
+                logger.warning(message, name)
 
     def pull_sizes(self):
-        # Populate size once because it does not depend on settings
-        if models.Size.objects.count() == len(INSTANCE_TYPES):
-            return
-
         # Reverse mapping region->sizes
         size_regions = collections.defaultdict(list)
         for region, val in REGION_DETAILS.items():
@@ -175,9 +174,13 @@ class AWSBackend(AWSBaseBackend):
                     'ram': val['ram'],
                     'disk': ServiceBackend.gb2mb(val['disk'])
                 })
-            regions = size_regions[size.backend_id]
-            if regions:
-                size.regions.add(*models.Region.objects.filter(backend_id__in=regions))
+
+            actual_regions = set(models.Region.objects.filter(backend_id__in=size_regions[size.backend_id]))
+            current_regions = set(size.regions.all())
+
+            size.regions.add(*(actual_regions - current_regions))
+            size.regions.remove(*(current_regions - actual_regions))
+
 
     def pull_images(self):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}

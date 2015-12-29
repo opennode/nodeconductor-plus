@@ -1,5 +1,5 @@
-AWS service properties
-----------------------
+AWS regions
+-----------
 
 To get a list of regions, run GET against **/api/aws-regions/** as authenticated user.
 Example rendering of the region object:
@@ -11,6 +11,9 @@ Example rendering of the region object:
         "uuid": "f14e1801d34d47b094f8917055bc4d2a",
         "name": "Asia Pacific (Singapore)"
     }
+
+AWS sizes
+---------
 
 To get a list of sizes, run GET against **/api/aws-sizes/** as authenticated user.
 Example rendering of the size object:
@@ -73,6 +76,11 @@ Example rendering of the size object:
         ]
     }
 
+In order to filter sizes by region, pass UUID of region as `region` parameter in GET request.
+
+AWS images
+----------
+
 To get a list of images, run GET against **/api/aws-images/** as authenticated user.
 Example rendering of the image object:
 
@@ -89,9 +97,11 @@ Example rendering of the image object:
         }
     }
 
+In order to filter images by region, pass UUID of region as `region` parameter in GET request.
 
-AWS instance provisioning
--------------------------
+
+AWS instances
+-------------
 
 To provision new instance in AWS EC2, issue a POST to **/api/aws-instances/** as a customer owner.
 

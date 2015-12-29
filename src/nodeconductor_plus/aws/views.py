@@ -2,7 +2,7 @@ from rest_framework import viewsets
 
 from nodeconductor.structure import views as structure_views
 
-from . import models, serializers
+from . import filters, models, serializers
 
 
 class AmazonServiceViewSet(structure_views.BaseServiceViewSet):
@@ -25,12 +25,14 @@ class RegionViewSet(structure_views.BaseServicePropertyViewSet):
 class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
+    filter_class = filters.ImageFilter
     lookup_field = 'uuid'
 
 
 class SizeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
+    filter_class = filters.SizeFilter
     lookup_field = 'uuid'
 
 
