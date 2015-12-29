@@ -167,3 +167,42 @@ Example rendering of AWS instance object.
         "external_ips": [],
         "internal_ips": []
     }
+
+Import instances
+^^^^^^^^^^^^^^^^
+
+To get a list of instances available for import issue a GET to **/api/aws/<service-uuid>/link/** as a customer owner.
+
+.. code-block:: http
+
+    GET /api/aws/93a689d7e1f740238bbbf71dd1c1599f/link/ HTTP/1.1
+    Content-Type: application/json
+    Accept: application/json
+    Authorization: Token c84d653b9ec92c6cbac41c706593e66f567a7fa4
+    Host: example.com
+
+    [
+        {
+            "name": "docker-build-host",
+            "created": "2015-11-12T11:03:41Z",
+            "ram": 3840,
+            "cores": 1,
+            "disk": 10240,
+            "id": "i-b32a05de"
+        }
+    ]
+
+To import instance issue POST against the same endpoint with project URL, instance backend id.
+
+.. code-block:: http
+
+    POST /api/aws/93a689d7e1f740238bbbf71dd1c1599f/link/ HTTP/1.1
+    Content-Type: application/json
+    Accept: application/json
+    Authorization: Token c84d653b9ec92c6cbac41c706593e66f567a7fa4
+    Host: example.com
+
+    {
+        "backend_id": "i-b32a05de",
+        "project": "http://example.com/api/projects/e5f973af2eb14d2d8c38d62bcbaccb33/"
+    }

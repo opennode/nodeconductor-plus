@@ -135,7 +135,7 @@ class InstanceImportSerializer(structure_serializers.BaseResourceImportSerialize
     def create(self, validated_data):
         backend = self.context['service'].get_backend()
         try:
-            instance = backend.get_instance(validated_data['backend_id'])
+            region, instance = backend.find_instance(validated_data['backend_id'])
         except AWSBackendError:
             raise serializers.ValidationError(
                 {'backend_id': "Can't find instance with ID %s" % validated_data['backend_id']})
@@ -146,6 +146,7 @@ class InstanceImportSerializer(structure_serializers.BaseResourceImportSerialize
         validated_data['ram'] = instance['ram']
         validated_data['disk'] = instance['disk']
         validated_data['created'] = instance['created']
-        validated_data['state'] = models.Instance.States.ONLINE
+        validated_data['state'] = instance['state']
+        validated_data['region'] = region
 
         return super(InstanceImportSerializer, self).create(validated_data)

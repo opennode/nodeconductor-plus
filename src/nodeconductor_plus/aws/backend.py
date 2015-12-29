@@ -46,6 +46,19 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
         res = self.connection.request(self.path, params=params).object
         return self._get_state_boolean(res)
 
+    def get_node(self, node_id):
+        """
+        Get a node based on an node_id
+
+        :param node_id: Node identifier
+        :type node_id: ``str``
+
+        :return: A Node object
+        :rtype: :class:`Node`
+        """
+
+        return self.list_nodes(ex_node_ids=[node_id])[0]
+
 
 class AWSBackendError(ServiceBackendError):
     pass
@@ -64,19 +77,11 @@ class AWSBaseBackend(ServiceBackend):
                ('ap-northeast-1', 'Asia Pacific (Tokyo)'),
                ('sa-east-1', 'South America (Sao Paulo)'))
 
-    def __init__(self, settings, region='us-east-1'):
+    def __init__(self, settings):
         super(AWSBaseBackend, self).__init__(settings)
         self.settings = settings
-        self.region = region
 
-    # Lazy init
-    @property
-    def manager(self):
-        if not hasattr(self, '_manager'):
-            self._manager = self._get_api(self.region)
-        return self._manager
-
-    def _get_api(self, region):
+    def _get_api(self, region='us-east-1'):
         return ExtendedEC2NodeDriver(
             self.settings.username, self.settings.token, region=region)
 
@@ -128,7 +133,7 @@ class AWSBackend(AWSBaseBackend):
 
     def ping(self):
         try:
-            self.manager.list_images(ex_owner='self')
+            self._get_api().list_key_pairs()
         except:
             return False
         else:
@@ -136,7 +141,8 @@ class AWSBackend(AWSBaseBackend):
 
     def ping_resource(self, instance):
         try:
-            self.manager.list_nodes(ex_node_ids=[instance.backend_id])
+            manager = self.get_manager(instance)
+            manager.get_node(instance.backend_id)
         except:
             return False
         else:
@@ -181,7 +187,6 @@ class AWSBackend(AWSBaseBackend):
             size.regions.add(*(actual_regions - current_regions))
             size.regions.remove(*(current_regions - actual_regions))
 
-
     def pull_images(self):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
 
@@ -213,21 +218,34 @@ class AWSBackend(AWSBaseBackend):
                 if image.name:
                     yield region, image
 
+    def get_all_nodes(self):
+        """
+        Fetch nodes from all regions
+        """
+        try:
+            for region in models.Region.objects.all():
+                manager = self._get_api(region.backend_id)
+                for node in manager.list_nodes():
+                    yield region, node
+        except LibcloudError as e:
+            six.reraise(AWSBackendError, e)
+
     def provision_vm(self, vm, backend_image_id=None, backend_size_id=None, ssh_key_uuid=None):
+        manager = self.get_manager(vm)
+
         if ssh_key_uuid:
             ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
             try:
-                backend_ssh_key = self.get_or_create_ssh_key(ssh_key)
+                backend_ssh_key = self.get_or_create_ssh_key(ssh_key, manager)
             except LibcloudError as e:
                 logger.exception('Unable to provision SSH key %s', ssh_key_uuid)
                 six.reraise(AWSBackendError, e)
 
         try:
-            manager = self._get_api(vm.region.backend_id)
             backend_vm = manager.create_node(
                 name=vm.name,
-                image=self.get_image(backend_image_id),
-                size=self.get_size(backend_size_id),
+                image=self.get_image(backend_image_id, manager),
+                size=self.get_size(backend_size_id, manager),
                 ex_keyname=backend_ssh_key['keyName'],
                 ex_custom_data=vm.user_data)
         except LibcloudError as e:
@@ -244,47 +262,52 @@ class AWSBackend(AWSBaseBackend):
 
     def reboot_vm(self, vm):
         try:
-            self.manager.ex_reboot_node(self.get_vm(vm.backend_id))
+            manager = self.get_manager(vm)
+            manager.ex_reboot_node(manager.get_node(vm.backend_id))
         except Exception as e:
             logger.exception('Unable to reboot Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
     def stop_vm(self, vm):
         try:
-            self.manager.ex_stop_node(self.get_vm(vm.backend_id))
+            manager = self.get_manager(vm)
+            manager.ex_stop_node(manager.get_node(vm.backend_id))
             logger.exception('Unable to stop Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
             six.reraise(AWSBackendError, six.text_type(e))
 
     def start_vm(self, vm):
         try:
-            self.manager.ex_start_node(self.get_vm(vm.backend_id))
+            manager = self.get_manager(vm)
+            manager.ex_start_node(manager.get_node(vm.backend_id))
             logger.exception('Unable to start Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
             six.reraise(AWSBackendError, six.text_type(e))
 
     def destroy_vm(self, vm):
         try:
-            self.manager.ex_terminate_node(self.get_vm(vm.backend_id))
+            manager = self.get_manager(vm)
+            manager.ex_terminate_node(manager.get_node(vm.backend_id))
             logger.exception('Unable to destroy Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
             six.reraise(AWSBackendError, six.text_type(e))
 
     def get_monthly_cost_estimate(self, instance):
+        manager = self.get_manager(instance)
         try:
-            instance = (self.manager.list_nodes(ex_node_ids=[instance.backend_id]))[0]
+            backend_instance = manager.get_node(instance.backend_id)
         except Exception as e:
             six.reraise(AWSBackendError, e)
 
-        size = self.get_size(instance.extra['instance_type'])
+        size = self.get_size(backend_instance.extra['instance_type'], manager)
 
         # calculate a price for current month based on hourly rate
         return size.price * hours_in_month()
 
-    def get_instance(self, instance_id):
+    def to_instance(self, instance, region):
+        manager = self._get_api(region.backend_id)
         try:
-            instance = self.get_vm(instance_id)
-            volumes = {v.id: v.size for v in self.manager.list_volumes(instance)}
+            volumes = {v.id: v.size for v in manager.list_volumes(instance)}
         except Exception as e:
             six.reraise(AWSBackendError, e)
 
@@ -294,7 +317,8 @@ class AWSBackend(AWSBaseBackend):
                 device['ebs']['volume_size'] = volumes[vid]
 
         # libcloud is a funny buggy thing, put all required info here
-        instance_type = self.get_size(instance.extra['instance_type'])
+        instance_type = self.get_size(instance.extra['instance_type'], manager)
+        external_ips = instance.public_ips and instance.public_ips[0] or None
 
         return {
             'id': instance.id,
@@ -302,57 +326,74 @@ class AWSBackend(AWSBaseBackend):
             'cores': instance_type.extra.get('cpu', 1),
             'ram': instance_type.ram,
             'disk': self.gb2mb(sum(volumes.values())),
-            'external_ips': instance.public_ips[0],
             'created': dateparse.parse_datetime(instance.extra['launch_time']),
+            'region': region.uuid.hex,
+            'state': self._get_instance_state(instance.state),
+            'external_ips': external_ips,
             'flavor_name': instance.extra.get('instance_type')
         }
 
-    def get_vm(self, vm_id):
-        return self.manager.list_nodes(ex_node_ids=[vm_id])[0]
+    def _get_instance_state(self, state):
+        aws_to_nodeconductor = {
+            NodeState.RUNNING: models.Instance.States.ONLINE,
+            NodeState.REBOOTING: models.Instance.States.RESTARTING,
+            NodeState.TERMINATED: models.Instance.States.OFFLINE,
+            NodeState.PENDING: models.Instance.States.PROVISIONING,
+            NodeState.STOPPED: models.Instance.States.OFFLINE,
+            NodeState.SUSPENDED: models.Instance.States.OFFLINE,
+            NodeState.PAUSED: models.Instance.States.OFFLINE,
+            NodeState.ERROR: models.Instance.States.ERRED
+        }
 
-    def get_size(self, size_id):
+        return aws_to_nodeconductor.get(state, models.Instance.States.ERRED)
+
+    def get_manager(self, instance):
+        return self._get_api(instance.region.backend_id)
+
+    def get_size(self, size_id, manager):
         try:
-            return next(s for s in self.manager.list_sizes() if s.id == size_id)
+            return next(s for s in manager.list_sizes() if s.id == size_id)
         except (StopIteration, LibcloudError) as e:
             logger.exception("Size %s doesn't exist", size_id)
             six.reraise(AWSBackendError, e)
 
-    def get_image(self, image_id):
+    def get_image(self, image_id, manager):
         try:
-            return next(s for s in self.manager.list_images() if s.id == image_id)
+            return manager.get_image(image_id)
         except (StopIteration, LibcloudError) as e:
             logger.exception("Image %s doesn't exist", image_id)
             six.reraise(AWSBackendError, e)
 
-    def get_or_create_ssh_key(self, ssh_key):
+    def get_or_create_ssh_key(self, ssh_key, manager):
         try:
-            return self.pull_ssh_key(ssh_key)
+            return manager.ex_describe_keypair(ssh_key.name)
         except LibcloudError:
-            return self.push_ssh_key(ssh_key)
-
-    def pull_ssh_key(self, ssh_key):
-        return self.manager.ex_describe_keypair(ssh_key.name)
-
-    def push_ssh_key(self, ssh_key):
-        return self.manager.ex_import_keypair_from_string(ssh_key.name, ssh_key.public_key)
+            return manager.ex_import_keypair_from_string(ssh_key.name, ssh_key.public_key)
 
     def get_resources_for_import(self):
-        try:
-            instances = self.manager.list_nodes()
-        except LibcloudError as e:
-            six.reraise(AWSBackendError, e)
         cur_instances = models.Instance.objects.all().values_list('backend_id', flat=True)
 
         return [
-            self.get_instance(instance.id)
-            for instance in instances
-            if instance.id not in cur_instances and
-            instance.state == self.manager.NODE_STATE_MAP['running']
+            self.to_instance(instance, region)
+            for region, instance in self.get_all_nodes()
+            if instance.id not in cur_instances
         ]
+
+    def find_instance(self, instance_id):
+        for region in models.Region.objects.all():
+            manager = self._get_api(region.backend_id)
+            try:
+                instance = manager.get_node(instance_id)
+            except:
+                # Instance not found
+                pass
+            else:
+                return region, self.to_instance(instance, region)
+        raise AWSBaseBackend("Instance with id %s is not found", instance_id)
 
     def get_managed_resources(self):
         try:
-            ids = [instance.id for instance in self.manager.list_nodes()]
+            ids = [instance.id for region, instance in self.get_all_nodes()]
             return models.Instance.objects.filter(backend_id__in=ids)
         except LibcloudError:
             return []
