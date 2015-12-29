@@ -329,7 +329,8 @@ class AWSBackend(AWSBaseBackend):
             'created': dateparse.parse_datetime(instance.extra['launch_time']),
             'region': region.uuid.hex,
             'state': self._get_instance_state(instance.state),
-            'external_ips': external_ips
+            'external_ips': external_ips,
+            'flavor_name': instance.extra.get('instance_type')
         }
 
     def _get_instance_state(self, state):

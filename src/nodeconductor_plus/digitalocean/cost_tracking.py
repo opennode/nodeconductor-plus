@@ -28,7 +28,7 @@ class DigitalOceanCostTrackingBackend(CostTrackingBackend):
         for name, price in sizes.items():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
-                item_type='size',
+                item_type='flavor',
                 key=name,
                 value=price)
 

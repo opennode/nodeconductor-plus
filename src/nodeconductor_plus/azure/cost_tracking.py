@@ -12,13 +12,13 @@ class AzureCostTrackingBackend(CostTrackingBackend):
     @classmethod
     def get_default_price_list_items(cls):
         ct = ContentType.objects.get_for_model(models.VirtualMachine)
-        sizes = {s.uuid.lower(): s.price for s in SizeQueryset()}
+        sizes = {s.name: s.price for s in SizeQueryset()}
 
         # instances
         for name, price in sizes.items():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
-                item_type='instance',
+                item_type='flavor',
                 key=name,
                 value=price)
 
