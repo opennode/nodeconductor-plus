@@ -41,6 +41,3 @@ class Instance(structure_models.VirtualMachineMixin, structure_models.Resource):
     region = models.ForeignKey(Region)
     external_ips = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
     internal_ips = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
-
-    def get_backend(self):
-        return super(Instance, self).get_backend(region=self.region.backend_id)
