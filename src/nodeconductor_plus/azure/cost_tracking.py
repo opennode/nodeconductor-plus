@@ -18,7 +18,7 @@ class AzureCostTrackingBackend(CostTrackingBackend):
         for name, price in sizes.items():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
-                item_type='instance',
+                item_type='flavor',
                 key=name,
                 value=price)
 
