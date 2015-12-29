@@ -117,11 +117,11 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
         image = attrs['image']
         size = attrs['size']
 
-        if not image.region != region:
-            raise serializers.ValidationError("Image is missed in region %s" % region.name)
+        if image.region != region:
+            raise serializers.ValidationError("Image is missing in region %s" % region.name)
 
         if not size.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Size is missed in region %s" % region.name)
+            raise serializers.ValidationError("Size is missing in region %s" % region.name)
 
         return attrs
 

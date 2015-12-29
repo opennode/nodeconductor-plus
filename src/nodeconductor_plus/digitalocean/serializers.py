@@ -128,10 +128,10 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
             raise serializers.ValidationError("SSH public key is required for this image")
 
         if not image.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Image is missed in region %s" % region)
+            raise serializers.ValidationError("Image is missing in region %s" % region)
 
         if not size.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Size is missed in region %s" % region)
+            raise serializers.ValidationError("Size is missing in region %s" % region)
 
         return attrs
 
