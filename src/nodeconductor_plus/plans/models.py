@@ -42,7 +42,8 @@ class Plan(UuidMixin, models.Model):
 
 class PlanQuota(models.Model):
     plan = models.ForeignKey(Plan, related_name='quotas')
-    name = models.CharField(max_length=50, choices=[(q, q) for q in structure_models.Customer.QUOTAS_NAMES])
+    name = models.CharField(max_length=50, choices=[
+        (f.name, f.name) for f in structure_models.Customer.get_quotas_fields()])
     value = models.FloatField()
 
     class Meta:
