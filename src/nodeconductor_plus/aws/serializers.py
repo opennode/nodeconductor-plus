@@ -53,11 +53,14 @@ class SizeSerializer(structure_serializers.BasePropertySerializer):
 
     class Meta(object):
         model = models.Size
-        fields = ('url', 'uuid', 'name', 'cores', 'ram', 'disk', 'regions')
+        fields = ('url', 'uuid', 'name', 'cores', 'ram', 'disk', 'regions', 'description')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid', 'view_name': 'aws-size-detail'}
         }
 
+    # AWS expose a more technical backend_id as a name. AWS's short codes are more popular
+    name = serializers.ReadOnlyField(source='backend_id')
+    description = serializers.ReadOnlyField(source='name')
     regions = RegionSerializer(many=True, read_only=True)
 
 
