@@ -9,7 +9,7 @@ def log_read_only_token_alert(sender, instance, **kwargs):
         settings.error_message = instance.error_message
         settings.save(update_fields=['state', 'error_message'])
 
-        alert_logger.digital_ocean_token.warning(
+        alert_logger.digital_ocean.warning(
             'DigitalOcean token for {settings_name} is read-only.',
             scope=settings,
             alert_type='token_is_read_only',
