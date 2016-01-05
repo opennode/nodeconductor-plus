@@ -278,9 +278,10 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
-            backend_ssh_key = self.push_ssh_key(ssh_key)
-        except digitalocean.DataReadError:
             backend_ssh_key = self.pull_ssh_key(ssh_key)
+        except digitalocean.DataReadError, exception:
+            if six.text_type(exception) == 'The resource you were accessing could not be found.':
+                backend_ssh_key = self.push_ssh_key(ssh_key)
         return backend_ssh_key
 
     def push_ssh_key(self, ssh_key):
