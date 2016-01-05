@@ -98,7 +98,7 @@ class AWSBaseBackend(ServiceBackend):
         send_task('aws', 'provision')(
                 vm.uuid.hex,
                 backend_image_id=image.backend_id,
-                backend_size_id=size.pk,
+                backend_size_id=size.backend_id,
                 ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
 
     def destroy(self, vm, force=False):
@@ -233,6 +233,11 @@ class AWSBackend(AWSBaseBackend):
     def provision_vm(self, vm, backend_image_id=None, backend_size_id=None, ssh_key_uuid=None):
         manager = self.get_manager(vm)
 
+        params = dict(name=vm.name,
+                      image=self.get_image(backend_image_id, manager),
+                      size=self.get_size(backend_size_id, manager),
+                      ex_custom_data=vm.user_data)
+
         if ssh_key_uuid:
             ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
             try:
@@ -241,13 +246,10 @@ class AWSBackend(AWSBaseBackend):
                 logger.exception('Unable to provision SSH key %s', ssh_key_uuid)
                 six.reraise(AWSBackendError, e)
 
+            params['ex_keyname'] = backend_ssh_key['keyName']
+
         try:
-            backend_vm = manager.create_node(
-                name=vm.name,
-                image=self.get_image(backend_image_id, manager),
-                size=self.get_size(backend_size_id, manager),
-                ex_keyname=backend_ssh_key['keyName'],
-                ex_custom_data=vm.user_data)
+            backend_vm = manager.create_node(**params)
         except LibcloudError as e:
             logger.exception('Failed to provision virtual machine %s', vm.name)
             six.reraise(AWSBackendError, e)
