@@ -14,3 +14,4 @@ class DigitalOceanConfig(AppConfig):
         from .cost_tracking import DigitalOceanCostTrackingBackend
         SupportedServices.register_backend(DigitalOceanBackend)
         CostTrackingRegister.register(self.label, DigitalOceanCostTrackingBackend)
+

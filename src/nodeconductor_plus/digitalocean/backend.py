@@ -1,8 +1,10 @@
 from __future__ import unicode_literals
 
+import functools
 import logging
-import digitalocean
+import sys
 
+import digitalocean
 from django.db import IntegrityError, transaction
 from django.utils import six
 
@@ -10,7 +12,7 @@ from nodeconductor.core.tasks import send_task
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
-from . import models
+from . import handlers, models
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,34 @@ logger = logging.getLogger(__name__)
 
 class DigitalOceanBackendError(ServiceBackendError):
     pass
+
+
+class TokenScopeError(DigitalOceanBackendError):
+    pass
+
+
+class NotFoundError(DigitalOceanBackendError):
+    pass
+
+
+def digitalocean_error_handler(func):
+    """
+    Convert DigitalOcean exception to specific classes based on text message.
+    It shoud be applied to functions which directly call `manager`.
+    """
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except digitalocean.DataReadError, e:
+            message = six.text_type(e)
+            if message == 'You do not have access for the attempted action.':
+                six.reraise(TokenScopeError, e)
+            elif message == 'The resource you were accessing could not be found.':
+                six.reraise(NotFoundError, e)
+            else:
+                six.reraise(DigitalOceanBackendError, e)
+    return wrapped
 
 
 class DigitalOceanBaseBackend(ServiceBackend):
@@ -68,20 +98,30 @@ class DigitalOceanBaseBackend(ServiceBackend):
         droplet.save()
         send_task('digitalocean', 'restart')(droplet.uuid.hex)
 
-    def add_ssh_key(self, ssh_key, service_project_link=None):
+    def add_ssh_key(self, ssh_key, service_project_link):
         try:
             self.push_ssh_key(ssh_key)
-        except digitalocean.DataReadError as e:
+        except TokenScopeError:
+            handlers.open_token_scope_alert(service_project_link)
+            six.reraise(*sys.exc_info())
+        except DigitalOceanBackendError:
             logger.exception('Failed to propagate ssh public key %s to backend', ssh_key.name)
-            six.reraise(DigitalOceanBackendError, e)
+            six.reraise(*sys.exc_info())
+        else:
+            handlers.close_token_scope_alert(service_project_link)
 
-    def remove_ssh_key(self, ssh_key, service_project_link=None):
+    def remove_ssh_key(self, ssh_key, service_project_link):
         try:
             backend_ssh_key = self.pull_ssh_key(ssh_key)
             backend_ssh_key.destroy()
-        except digitalocean.DataReadError as e:
+        except TokenScopeError:
+            handlers.open_token_scope_alert(service_project_link)
+            six.reraise(*sys.exc_info())
+        except DigitalOceanBackendError:
             logger.exception('Failed to delete ssh public key %s from backend', ssh_key.name)
-            six.reraise(DigitalOceanBackendError, e)
+            six.reraise(*sys.exc_info())
+        else:
+            handlers.close_token_scope_alert(service_project_link)
 
 
 class DigitalOceanBackend(DigitalOceanBaseBackend):
@@ -209,39 +249,71 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
 
         return digitalocean_to_nodeconductor.get(droplet.status, models.Droplet.States.ERRED)
 
+    @digitalocean_error_handler
     def provision_droplet(self, droplet, backend_region_id=None, backend_image_id=None,
                           backend_size_id=None, ssh_key_uuid=None):
         if ssh_key_uuid:
             ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
             backend_ssh_key = self.get_or_create_ssh_key(ssh_key)
 
-        try:
-            backend_droplet = digitalocean.Droplet(
-                token=self.manager.token,
-                name=droplet.name,
-                user_data=droplet.user_data,
-                region=backend_region_id,
-                image=backend_image_id,
-                size_slug=backend_size_id,
-                ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
-            backend_droplet.create()
-        except digitalocean.DataReadError as e:
-            logger.exception('Failed to provision droplet %s', droplet.name)
-            six.reraise(DigitalOceanBackendError, e)
-
-        if ssh_key_uuid:
             droplet.key_name = ssh_key.name
             droplet.key_fingerprint = ssh_key.fingerprint
+
+        backend_droplet = digitalocean.Droplet(
+            token=self.manager.token,
+            name=droplet.name,
+            user_data=droplet.user_data,
+            region=backend_region_id,
+            image=backend_image_id,
+            size_slug=backend_size_id,
+            ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
+        backend_droplet.create()
 
         droplet.backend_id = backend_droplet.id
         droplet.save()
         return backend_droplet
 
+    @digitalocean_error_handler
     def get_droplet(self, backend_droplet_id):
-        try:
-            return self.manager.get_droplet(backend_droplet_id)
-        except digitalocean.DataReadError as e:
-            six.reraise(DigitalOceanBackendError, e)
+        return self.manager.get_droplet(backend_droplet_id)
+
+    @digitalocean_error_handler
+    def start_droplet(self, backend_droplet_id):
+        """
+        Start droplet with given id.
+        :return: ID of related action.
+        """
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        action = backend_droplet.power_on()
+        return action['action']['id']
+
+    @digitalocean_error_handler
+    def stop_droplet(self, backend_droplet_id):
+        """
+        Stop droplet with given id.
+        :return: ID of related action.
+        """
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        action = backend_droplet.shutdown()
+        return action['action']['id']
+
+    @digitalocean_error_handler
+    def restart_droplet(self, backend_droplet_id):
+        """
+        Restart droplet with given id.
+        :return: ID of related action.
+        """
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        action = backend_droplet.reboot()
+        return action['action']['id']
+
+    @digitalocean_error_handler
+    def destroy_droplet(self, backend_droplet_id):
+        """
+        Destroy droplet with given id.
+        """
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        backend_droplet.destroy()
 
     def get_monthly_cost_estimate(self, droplet):
         backend_droplet = self.get_droplet(droplet.backend_id)
@@ -270,19 +342,18 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         except DigitalOceanBackendError:
             return []
 
+    @digitalocean_error_handler
     def get_all_droplets(self):
-        try:
-            return self.manager.get_all_droplets()
-        except digitalocean.Error as e:
-            six.reraise(DigitalOceanBackendError, e)
+        return self.manager.get_all_droplets()
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
-            backend_ssh_key = self.push_ssh_key(ssh_key)
-        except digitalocean.DataReadError:
             backend_ssh_key = self.pull_ssh_key(ssh_key)
+        except NotFoundError:
+            backend_ssh_key = self.push_ssh_key(ssh_key)
         return backend_ssh_key
 
+    @digitalocean_error_handler
     def push_ssh_key(self, ssh_key):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
@@ -292,6 +363,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         backend_ssh_key.create()
         return backend_ssh_key
 
+    @digitalocean_error_handler
     def pull_ssh_key(self, ssh_key):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
