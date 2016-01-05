@@ -73,7 +73,8 @@ def wait_for_vm_state(vm_uuid, state=''):
     vm = Instance.objects.get(uuid=vm_uuid)
     try:
         backend = vm.get_backend()
-        backend_vm = backend.get_vm(vm.backend_id)
+        manager = backend.get_manager(vm)
+        backend_vm = manager.get_node(vm.backend_id)
     except AWSBackendError:
         return False
     return backend_vm.state == backend.State.fromstring(state)
@@ -122,7 +123,8 @@ def set_online(vm_uuid, transition_entity=None):
     vm.start_time = timezone.now()
 
     backend = vm.get_backend()
-    backend_vm = backend.get_vm(vm.backend_id)
+    manager = backend.get_manager(vm)
+    backend_vm = manager.get_node(vm.backend_id)
     vm.external_ips = backend_vm.public_ips[0]
 
     vm.save(update_fields=['start_time', 'external_ips'])
