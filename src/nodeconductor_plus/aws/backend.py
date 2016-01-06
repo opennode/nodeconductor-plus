@@ -1,5 +1,6 @@
 import collections
 import logging
+import re
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
@@ -211,11 +212,29 @@ class AWSBackend(AWSBaseBackend):
         """
         Fetch images from all regions
         """
+        # TODO: change into a more flexible filtering
+        options = self.settings.options or {}
+        if 'images_regex' in options:
+            try:
+                regex = re.compile(options['images_regex'])
+            except re.error:
+                logger.warning(
+                    'Invalid images regexp supplied for service settins %s: %s',
+                    self.settings.uuid, options['images_regex'])
+        else:
+            # XXX: a temporary default filter till SAAS-1069 is done
+            ubuntu_or_centos = '(.*Ubuntu.*)|(.*CentOS.*)'
+            regex = re.compile(ubuntu_or_centos)
+
         for region in models.Region.objects.all():
             manager = self._get_api(region.backend_id)
-            for image in manager.list_images(ex_owner='amazon'):
+            # opinionated filter for populating image list
+            for image in manager.list_images(ex_owner='aws-marketplace',
+                                             ex_filters={'virtualization-type': 'hvm', 'image-type': 'machine'}):
                 # Skip images without name
                 if image.name:
+                    if regex and not regex.match(image.name):
+                        continue
                     yield region, image
 
     def get_all_nodes(self):
