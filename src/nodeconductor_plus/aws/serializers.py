@@ -13,6 +13,10 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
         'token': '',
     }
 
+    SERVICE_ACCOUNT_EXTRA_FIELDS = {
+        'images_regex': ''
+    }
+
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.AWSService
         view_name = 'aws-detail'
@@ -24,6 +28,9 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
         fields['token'].label = 'Secret access key'
         fields['token'].required = True
+
+        fields['images_regex'].help_text = 'Regular expression to limit images list'
+
         return fields
 
 
