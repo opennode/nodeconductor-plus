@@ -214,12 +214,13 @@ class AWSBackend(AWSBaseBackend):
         """
         # TODO: change into a more flexible filtering
         options = self.settings.options or {}
+        regex = None
         if 'images_regex' in options:
             try:
                 regex = re.compile(options['images_regex'])
             except re.error:
                 logger.warning(
-                    'Invalid images regexp supplied for service settins %s: %s',
+                    'Invalid images regexp supplied for service settings %s: %s',
                     self.settings.uuid, options['images_regex'])
         else:
             # XXX: a temporary default filter till SAAS-1069 is done
