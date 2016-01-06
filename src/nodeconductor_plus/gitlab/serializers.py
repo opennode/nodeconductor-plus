@@ -115,7 +115,6 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
         view_name='gitlab-group-detail',
         queryset=models.Group.objects.all(),
         lookup_field='uuid',
-        required=False,
         write_only=True)
 
     wiki_enabled = serializers.BooleanField(write_only=True, required=False)

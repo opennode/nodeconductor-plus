@@ -54,7 +54,7 @@ class Project(quotas_models.QuotaModelMixin, GitLabResource):
     service_project_link = models.ForeignKey(
         GitLabServiceProjectLink, related_name='projects', on_delete=models.PROTECT)
 
-    group = models.ForeignKey(Group, related_name='projects', blank=True, null=True)
+    group = models.ForeignKey(Group, related_name='projects')
     visibility_level = models.SmallIntegerField(choices=Levels.CHOICES)
     http_url_to_repo = models.CharField(max_length=255, blank=True)
     ssh_url_to_repo = models.CharField(max_length=255, blank=True)
