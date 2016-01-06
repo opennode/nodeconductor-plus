@@ -176,7 +176,7 @@ class AWSBackend(AWSBaseBackend):
                 backend_id=val['id'],
                 defaults={
                     'name': val['name'],
-                    'cores': isinstance(val.get('cores'), int) and val['cores'] or 1,
+                    'cores': val.get('extra', {}).get('cpu', 1),
                     'ram': val['ram'],
                     'disk': ServiceBackend.gb2mb(val['disk'])
                 })
