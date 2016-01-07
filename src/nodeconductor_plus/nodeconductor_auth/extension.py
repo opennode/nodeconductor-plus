@@ -8,7 +8,6 @@ class AuthExtension(NodeConductorExtension):
         NODECONDUCTOR_PLUS = {
             'GOOGLE_SECRET': 'CHANGE_ME_TO_GOOGLE_SECRET',
             'FACEBOOK_SECRET': 'CHANGE_ME_TO_FACEBOOK_SECRET',
-            'CREATE_CUSTOMER_ON_USER_CREATION': False,
             'PROJECTED_COSTS_EXCESS': 20,
             'USER_ACTIVATION_URL_TEMPLATE': 'http://example.com/#/activate/{user_uuid}/{token}/'
         }
