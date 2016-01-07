@@ -1,16 +1,16 @@
+Amazon EC2 management
+=====================
+
+.. include:: aws.rst
+
+
+GitLab management
+=================
+
+.. include:: gitlab.rst
+
+
 Plan management
 ===============
 
 .. include:: plan.rst
-
-Order management
-================
-
-.. include:: order.rst
-
-
-Plan customers connection management
-====================================
-
-.. include:: plan_customer.rst
-
