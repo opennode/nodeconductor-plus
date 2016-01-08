@@ -5,7 +5,6 @@ from rest_framework import test
 
 from nodeconductor.logging.models import Alert
 from nodeconductor.structure import SupportedServices
-from nodeconductor.structure.models import ServiceSettings, CustomerRole
 from nodeconductor.structure.tests import factories
 
 from nodeconductor_plus.insights import tasks

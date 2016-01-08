@@ -45,24 +45,6 @@ class BaseGitLabResourceFactory(factory.DjangoModelFactory):
     state = models.Project.States.ONLINE
 
 
-class GitLabProjectFactory(BaseGitLabResourceFactory):
-    class Meta(object):
-        model = models.Project
-
-    name = factory.Sequence(lambda n: 'project%s' % n)
-    visibility_level = models.Project.Levels.PRIVATE
-
-    @classmethod
-    def get_url(cls, project=None):
-        if project is None:
-            project = GitLabProjectFactory()
-        return 'http://testserver' + reverse('gitlab-project-detail', kwargs={'uuid': project.uuid})
-
-    @classmethod
-    def get_list_url(cls):
-        return 'http://testserver' + reverse('gitlab-project-list')
-
-
 class GitLabGroupFactory(BaseGitLabResourceFactory):
     class Meta(object):
         model = models.Group
@@ -79,3 +61,21 @@ class GitLabGroupFactory(BaseGitLabResourceFactory):
     def get_list_url(cls):
         return 'http://testserver' + reverse('gitlab-group-list')
 
+
+class GitLabProjectFactory(BaseGitLabResourceFactory):
+    class Meta(object):
+        model = models.Project
+
+    group = factory.SubFactory(GitLabGroupFactory)
+    name = factory.Sequence(lambda n: 'project%s' % n)
+    visibility_level = models.Project.Levels.PRIVATE
+
+    @classmethod
+    def get_url(cls, project=None):
+        if project is None:
+            project = GitLabProjectFactory()
+        return 'http://testserver' + reverse('gitlab-project-detail', kwargs={'uuid': project.uuid})
+
+    @classmethod
+    def get_list_url(cls):
+        return 'http://testserver' + reverse('gitlab-project-list')
