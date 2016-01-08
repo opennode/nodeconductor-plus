@@ -35,7 +35,7 @@ def check_customers():
 def check_service_resources(service_str):
     try:
         service = next(Service.from_string(service_str))
-    except ObjectDoesNotExist:
+    except StopIteration:
         logger.warning('Missing service %s.', service_str)
         return
 
@@ -65,7 +65,7 @@ def check_service_resources(service_str):
 def check_service_availability(service_str):
     try:
         service = next(Service.from_string(service_str))
-    except ObjectDoesNotExist:
+    except StopIteration:
         logger.warning('Missing service %s.', service_str)
         return
 
@@ -93,15 +93,16 @@ def check_service_availability(service_str):
 def check_service_resources_availability(service_str):
     try:
         service = next(Service.from_string(service_str))
-    except ObjectDoesNotExist:
+    except StopIteration:
         logger.warning('Missing service %s.', service_str)
         return
 
     for resource_model in SupportedServices.get_service_resources(service):
         for resource in resource_model.objects.filter(
-            service_project_link__service=service).exclude(backend_id=''):
+                service_project_link__service=service).exclude(backend_id=''):
+            backend = resource.get_backend()
             try:
-                available = resource.get_backend().ping_resource(resource)
+                available = backend.ping_resource(resource)
             except ServiceBackendNotImplemented:
                 logger.error("Method ping_resource() is not implemented for %s" % backend.__class__.__name__)
                 available = True

@@ -20,7 +20,7 @@ class Plan(UuidMixin, models.Model):
     name = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=12, decimal_places=2)
     backend_id = models.CharField(max_length=255, null=True)
-    is_default = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=False, unique=True)
 
     def __str__(self):
         return self.name
@@ -116,11 +116,11 @@ class Agreement(UuidMixin, TimeStampedModel):
 
     @staticmethod
     def apply_default_plan(customer):
-        default_plan = Plan.objects.filter(is_default=True).first()
-        if default_plan is not None:
+        try:
+            default_plan = Plan.objects.filter(is_default=True).get()
             agreement = Agreement.objects.create(
                 plan=default_plan, customer=customer, state=Agreement.States.ACTIVE)
             agreement.apply_quotas()
             logger.info('Default plan for customer %s has been applied', customer.name)
-        else:
+        except Plan.DoesNotExist:
             logger.warning('Default plan does not exist')

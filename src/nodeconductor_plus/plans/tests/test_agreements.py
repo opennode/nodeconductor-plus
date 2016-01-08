@@ -60,8 +60,7 @@ class AgreementCreateTest(test.APITransactionTestCase):
             'plan': factories.PlanFactory.get_url(self.plan),
         }
 
-        self.client.force_authenticate(self.owner)
-        response = self.client.post(factories.AgreementFactory.get_list_url(), data=data)
+        response = self.create_agreement(data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertTrue(models.Agreement.objects.filter(plan=self.plan, customer=self.customer, user=self.owner).exists())
@@ -73,8 +72,7 @@ class AgreementCreateTest(test.APITransactionTestCase):
             'plan': factories.PlanFactory.get_url(self.plan),
         }
 
-        self.client.force_authenticate(self.owner)
-        response = self.client.post(factories.AgreementFactory.get_list_url(), data=data)
+        response = self.create_agreement(data)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(models.Agreement.objects.filter(plan=self.plan, customer=other_customer).exists())
@@ -84,8 +82,7 @@ class AgreementCreateTest(test.APITransactionTestCase):
             'plan': factories.PlanFactory.get_url(self.plan),
         }
 
-        self.client.force_authenticate(self.owner)
-        response = self.client.post(factories.AgreementFactory.get_list_url(), data=data)
+        response = self.create_agreement(data)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(models.Agreement.objects.filter(plan=self.plan, user=self.owner).exists())
@@ -95,11 +92,15 @@ class AgreementCreateTest(test.APITransactionTestCase):
             'customer': structure_factories.CustomerFactory.get_url(self.customer),
         }
 
-        self.client.force_authenticate(self.owner)
-        response = self.client.post(factories.AgreementFactory.get_list_url(), data=data)
+        response = self.create_agreement(data)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(models.Agreement.objects.filter(customer=self.customer, user=self.owner).exists())
+
+    def create_agreement(self, data):
+        self.client.force_authenticate(self.owner)
+        with patch('nodeconductor_plus.plans.views.tasks') as mocked_tasks:
+            return self.client.post(factories.AgreementFactory.get_list_url(), data=data)
 
 
 class AgreementCallbackViewsTest(test.APITransactionTestCase):
