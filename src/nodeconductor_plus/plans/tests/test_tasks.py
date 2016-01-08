@@ -22,8 +22,10 @@ class GenerateInvoicesTest(test.APITransactionTestCase):
     def test_transaction_is_added_to_current_invoice(self):
         agreement = factories.AgreementFactory()
         with mock.patch('nodeconductor_plus.plans.tasks.PaypalBackend') as backend:
-            backend().get_agreement_transactions.return_value = [self.agreement_transaction]
-            tasks.generate_agreement_invoices(agreement.id)
+            with mock.patch('nodeconductor_plus.plans.tasks.Invoice.generate_pdf') as generate_pdf:
+                backend().get_agreement_transactions.return_value = [self.agreement_transaction]
+                tasks.generate_agreement_invoices(agreement.id)
+                generate_pdf.assert_called_once_with()
 
         invoice = Invoice.objects.first()
         self.assertEqual(invoice.total_amount, self.agreement_transaction['amount'])

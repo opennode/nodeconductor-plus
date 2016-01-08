@@ -35,6 +35,11 @@ class SupportContractCreationTest(test.APITransactionTestCase):
         response = self.create_contract()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(response.data['url'] + 'approve/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        self.client.force_authenticate(self.owner)
         response = self.create_contract()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
 
