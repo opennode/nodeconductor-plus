@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import FSMField, transition
@@ -20,10 +21,14 @@ class Plan(UuidMixin, models.Model):
     name = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=12, decimal_places=2)
     backend_id = models.CharField(max_length=255, null=True)
-    is_default = models.BooleanField(default=False, unique=True)
+    is_default = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        if self.is_default and Plan.objects.filter(is_default=True).exclude(pk=self.pk).exists():
+            raise ValidationError('Cannot create two default plans')
 
     def push_to_backend(self, request):
         base_url = reverse('agreement-list', request=request)

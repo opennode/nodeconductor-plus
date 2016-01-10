@@ -1,9 +1,5 @@
 from __future__ import unicode_literals
 
-import django_filters
-
-from rest_framework import viewsets
-
 from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import views as structure_views
 
