@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='project',
             name='group',
-            field=models.ForeignKey(related_name='projects', to='gitlab.Group'),
-            preserve_default=True,
+            field=models.ForeignKey(related_name='projects', to='gitlab.Group', default=1),
+            preserve_default=False,
         ),
     ]
