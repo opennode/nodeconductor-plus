@@ -8,12 +8,14 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction, IntegrityError
 from rest_framework import views, status, response, generics
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 
 from nodeconductor.core.tasks import send_task
 from .models import AuthProfile
-from .serializers import RegistrationSerializer, ActivationSerializer, FacebookAuthSerializer
+from .serializers import RegistrationSerializer, ActivationSerializer, AuthSerializer
 
 
 nc_plus_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
@@ -57,19 +59,66 @@ def generate_username(name):
     return uuid.uuid4().hex[:30]
 
 
-class GoogleView(views.APIView):
-
+class BaseAuthView(views.APIView):
     permission_classes = []
     authentication_classes = []
+    provider = None  # either 'google' or 'facebook'
 
     def post(self, request, format=None):
+        if not self.request.user.is_anonymous():
+            raise ValidationError('This view is for anonymous users only.')
+
+        serializer = AuthSerializer(data={
+            'client_id': request.data.get('clientId'),
+            'redirect_uri': request.data.get('redirectUri'),
+            'code': request.data.get('code')
+        })
+        serializer.is_valid(raise_exception=True)
+
+        backend_user = self.get_backend_user(serializer.validated_data)
+        user, created = self.create_or_update_user(backend_user['id'], backend_user['name'])
+
+        token = Token.objects.get(user=user)
+        return response.Response({'token': token.key},
+                                 status=created and status.HTTP_201_CREATED or status.HTTP_200_OK)
+
+    def get_backend_user(self, validated_data):
+        """
+        It should return dictionary with fields 'name' and 'id'
+        """
+        raise NotImplementedError
+
+    def create_or_update_user(self, user_id, user_name):
+        try:
+            with transaction.atomic():
+                user = get_user_model().objects.create_user(
+                    username=generate_username(user_name),
+                    password=generate_password(),
+                    full_name=user_name
+                )
+                setattr(user.auth_profile, self.provider, user_id)
+                user.auth_profile.save()
+                return user, True
+        except IntegrityError:
+            profile = AuthProfile.objects.get(**{self.provider: user_id})
+            if profile.user.full_name != user_name:
+                profile.user.full_name = user_name
+                profile.user.save()
+            return profile.user, False
+
+
+class GoogleView(BaseAuthView):
+
+    provider = 'google'
+
+    def get_backend_user(self, validated_data):
         access_token_url = 'https://www.googleapis.com/oauth2/v3/token'
         people_api_url = 'https://www.googleapis.com/plus/v1/people/me/openIdConnect'
 
-        payload = dict(client_id=request.DATA['clientId'],
-                       redirect_uri=request.DATA['redirectUri'],
+        payload = dict(client_id=validated_data['client_id'],
+                       redirect_uri=validated_data['redirect_uri'],
                        client_secret=GOOGLE_SECRET,
-                       code=request.DATA['code'],
+                       code=validated_data['code'],
                        grant_type='authorization_code')
 
         # Step 1. Exchange authorization code for access token.
@@ -86,47 +135,25 @@ class GoogleView(views.APIView):
         if 'error' in response_data:
             raise GoogleException(response_data['error'])
 
-        # Step 4. Create a new user or get existing one.
-        try:
-            profile = AuthProfile.objects.get(google=response_data['sub'])
-            token = Token.objects.get(user=profile.user)
-            if profile.user.full_name != response_data['name']:
-                profile.user.full_name = response_data['name']
-                profile.user.save()
-            return response.Response({'token': token.key}, status=status.HTTP_200_OK)
-        except AuthProfile.DoesNotExist:
-            user = get_user_model().objects.create_user(
-                username=generate_username(response_data['name']),
-                password=generate_password(),
-                full_name=response_data['name'],
-            )
-            user.auth_profile.google = response_data['sub']
-            user.auth_profile.save()
-            token = Token.objects.get(user=user)
-            return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
+        return {
+            'id': response_data['sub'],
+            'name': response_data['name']
+        }
 
 
-class FacebookView(views.APIView):
+class FacebookView(BaseAuthView):
 
-    permission_classes = []
-    authentication_classes = []
+    provider = 'facebook'
 
-    def post(self, request, format=None):
+    def get_backend_user(self, validated_data):
         access_token_url = 'https://graph.facebook.com/oauth/access_token'
         graph_api_url = 'https://graph.facebook.com/me'
 
-        serializer = FacebookAuthSerializer(data={
-            'client_id': request.data.get('clientId'),
-            'redirect_uri': request.data.get('redirectUri'),
-            'code': request.data.get('code')
-        })
-        serializer.is_valid(raise_exception=True)
-
         params = {
-            'client_id': serializer.validated_data['client_id'],
-            'redirect_uri': serializer.validated_data['redirect_uri'],
+            'client_id': validated_data['client_id'],
+            'redirect_uri': validated_data['redirect_uri'],
             'client_secret': FACEBOOK_SECRET,
-            'code': serializer.validated_data['code']
+            'code': validated_data['code']
         }
 
         # Step 1. Exchange authorization code for access token.
@@ -139,24 +166,10 @@ class FacebookView(views.APIView):
         self.check_response(r)
         response_data = r.json()
 
-        # Step 3. Create a new user or get existing one.
-        try:
-            profile = AuthProfile.objects.get(facebook=response_data['id'])
-            token = Token.objects.get(user=profile.user)
-            if profile.user.full_name != response_data['name']:
-                profile.user.full_name = response_data['name']
-                profile.user.save()
-            return response.Response({'token': token.key}, status=status.HTTP_200_OK)
-        except AuthProfile.DoesNotExist:
-            user = get_user_model().objects.create_user(
-                username=generate_username(response_data['name']),
-                password=generate_password(),
-                full_name=response_data['name']
-            )
-            user.auth_profile.facebook = response_data['id']
-            user.auth_profile.save()
-            token = Token.objects.get(user=user)
-            return response.Response({'token': token.key}, status=status.HTTP_201_CREATED)
+        return {
+            'id': response_data['id'],
+            'name': response_data['name']
+        }
 
     def check_response(self, r, valid_response=requests.codes.ok):
         if r.status_code != valid_response:
