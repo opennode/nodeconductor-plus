@@ -3,8 +3,8 @@ import datetime
 
 from celery import shared_task
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 
+from nodeconductor.core.models import SynchronizationStates
 from nodeconductor.core.tasks import throttle
 from nodeconductor.structure import SupportedServices, ServiceBackendError, ServiceBackendNotImplemented
 from nodeconductor.structure.models import Customer, Service
@@ -71,13 +71,15 @@ def check_service_availability(service_str):
 
     backend = service.get_backend()
 
+    error_message = ''
     try:
         available = backend.ping()
     except ServiceBackendNotImplemented:
         logger.error("Method ping() is not implemented for %s" % backend.__class__.__name__)
         available = True
-    except ServiceBackendError:
+    except ServiceBackendError as e:
         available = False
+        error_message = str(e)
 
     if not available:
         alert_logger.service_state.warning(
@@ -85,8 +87,14 @@ def check_service_availability(service_str):
             scope=service,
             alert_type='service_unavailable',
             alert_context={'service': service})
+        service.settings.set_erred()
+        service.settings.error_message = error_message
+        service.save()
     else:
         alert_logger.service_state.close(scope=service, alert_type='service_unavailable')
+        if service.settings.state == SynchronizationStates.ERRED:
+            service.settings.set_in_sync_from_erred()
+            service.settings.save()
 
 
 @shared_task
