@@ -14,13 +14,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='authprofile',
             name='facebook',
-            field=models.CharField(unique=True, max_length=120, blank=True),
+            field=models.CharField(unique=True, max_length=120, blank=True, null=True),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='authprofile',
             name='google',
-            field=models.CharField(unique=True, max_length=120, blank=True),
+            field=models.CharField(unique=True, max_length=120, blank=True, null=True),
             preserve_default=True,
         ),
     ]
