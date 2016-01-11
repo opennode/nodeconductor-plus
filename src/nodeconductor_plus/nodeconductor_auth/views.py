@@ -82,7 +82,7 @@ class BaseAuthView(views.APIView):
         return response.Response({'token': token.key},
                                  status=created and status.HTTP_201_CREATED or status.HTTP_200_OK)
 
-    def get_backend_user(self, request):
+    def get_backend_user(self, validated_data):
         """
         It should return dictionary with fields 'name' and 'id'
         """
