@@ -13,6 +13,7 @@ class DigitalOceanCostTrackingBackend(CostTrackingBackend):
         ct = ContentType.objects.get_for_model(models.Droplet)
         # XXX: hardcode a list of sizes with prices since it's available only via API
         sizes = {
+            '512mb': 5.0,
             '1gb': 10.0,
             '2gb': 20.0,
             '4gb': 40.0,
@@ -21,14 +22,13 @@ class DigitalOceanCostTrackingBackend(CostTrackingBackend):
             '32gb': 320.0,
             '48gb': 480.0,
             '64gb': 640.0,
-            '512mb': 5.0,
         }
 
         # sizes
         for name, price in sizes.items():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
-                item_type='flavor',
+                item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
                 key=name,
                 value=price)
 
