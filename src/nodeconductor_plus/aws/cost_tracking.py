@@ -15,7 +15,7 @@ class AWSCostTrackingBackend(CostTrackingBackend):
         for size in EC2NodeDriver(None, None).list_sizes():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
-                item_type='size',
+                item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
                 key=size.id,
                 value=size.price)
 

@@ -15,7 +15,7 @@ class AzureCostTrackingBackend(CostTrackingBackend):
         for size in SizeQueryset():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
-                item_type='size',
+                item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
                 key=size.pk,
                 value=size.price)
 
