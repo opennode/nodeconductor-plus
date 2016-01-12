@@ -41,6 +41,3 @@ class Size(object):
 class VirtualMachine(structure_models.VirtualMachineMixin, structure_models.Resource):
     service_project_link = models.ForeignKey(
         AzureServiceProjectLink, related_name='virtualmachines', on_delete=models.PROTECT)
-
-    external_ips = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
-    internal_ips = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')

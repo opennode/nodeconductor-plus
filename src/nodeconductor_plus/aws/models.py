@@ -39,5 +39,3 @@ class Instance(structure_models.VirtualMachineMixin, structure_models.Resource):
         AWSServiceProjectLink, related_name='instances', on_delete=models.PROTECT)
 
     region = models.ForeignKey(Region)
-    external_ips = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
-    internal_ips = models.GenericIPAddressField(null=True, blank=True, protocol='IPv4')
