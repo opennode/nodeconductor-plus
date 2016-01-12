@@ -149,9 +149,9 @@ def set_online(droplet_uuid, transition_entity=None):
 
     backend = droplet.get_backend()
     backend_droplet = backend.get_droplet(droplet.backend_id)
-    droplet.ip_address = backend_droplet.ip_address
+    droplet.external_ips = backend_droplet.ip_address
 
-    droplet.save(update_fields=['start_time', 'ip_address'])
+    droplet.save(update_fields=['start_time', 'external_ips'])
 
 
 @shared_task
