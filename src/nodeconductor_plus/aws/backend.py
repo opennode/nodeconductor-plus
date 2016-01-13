@@ -19,34 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class ExtendedEC2NodeDriver(EC2NodeDriver):
-    def ex_terminate_node(self, node):
-        """
-        Terminate the node
-
-        :param      node: Node which should be used
-        :type       node: :class:`Node`
-
-        :rtype: ``bool``
-        """
-        params = {'Action': 'TerminateInstances'}
-        params.update(self._pathlist('InstanceId', [node.id]))
-        res = self.connection.request(self.path, params=params).object
-        return self._get_state_boolean(res)
-
-    def ex_reboot_node(self, node):
-        """
-        Reboot the node
-
-        :param      node: Node which should be used
-        :type       node: :class:`Node`
-
-        :rtype: ``bool``
-        """
-        params = {'Action': 'RebootInstances'}
-        params.update(self._pathlist('InstanceId', [node.id]))
-        res = self.connection.request(self.path, params=params).object
-        return self._get_state_boolean(res)
-
     def get_node(self, node_id):
         """
         Get a node based on an node_id
@@ -285,7 +257,7 @@ class AWSBackend(AWSBaseBackend):
     def reboot_vm(self, vm):
         try:
             manager = self.get_manager(vm)
-            manager.ex_reboot_node(manager.get_node(vm.backend_id))
+            manager.reboot_node(manager.get_node(vm.backend_id))
         except Exception as e:
             logger.exception('Unable to reboot Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
@@ -309,7 +281,7 @@ class AWSBackend(AWSBaseBackend):
     def destroy_vm(self, vm):
         try:
             manager = self.get_manager(vm)
-            manager.ex_terminate_node(manager.get_node(vm.backend_id))
+            manager.destroy_node(manager.get_node(vm.backend_id))
             logger.exception('Unable to destroy Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
             six.reraise(AWSBackendError, six.text_type(e))
@@ -411,7 +383,7 @@ class AWSBackend(AWSBaseBackend):
                 pass
             else:
                 return region, self.to_instance(instance, region)
-        raise AWSBaseBackend("Instance with id %s is not found", instance_id)
+        raise AWSBackendError("Instance with id %s is not found", instance_id)
 
     def get_managed_resources(self):
         try:
