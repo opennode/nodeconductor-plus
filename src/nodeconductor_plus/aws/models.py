@@ -1,6 +1,8 @@
 from django.db import models
+from libcloud.compute.drivers.ec2 import REGION_DETAILS
 
 from nodeconductor.structure import models as structure_models
+from nodeconductor.structure.utils import get_coordinates_by_ip
 
 
 class AWSService(structure_models.Service):
@@ -39,3 +41,10 @@ class Instance(structure_models.VirtualMachineMixin, structure_models.Resource):
         AWSServiceProjectLink, related_name='instances', on_delete=models.PROTECT)
 
     region = models.ForeignKey(Region)
+
+    def detect_coordinates(self):
+        if self.external_ips:
+            return get_coordinates_by_ip(self.external_ips)
+        region = self.region.backend_id
+        endpoint = REGION_DETAILS[region]['endpoint']
+        return get_coordinates_by_ip(endpoint)
