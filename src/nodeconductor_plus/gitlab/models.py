@@ -36,6 +36,10 @@ class Group(GitLabResource):
             self.service_project_link.service.settings.backend_url,
             self.path) if self.path else None
 
+    # a generic URL for access to the resource
+    def get_access_url(self):
+        return self.web_url
+
 
 class Project(quotas_models.QuotaModelMixin, GitLabResource):
     class Levels:
@@ -62,3 +66,7 @@ class Project(quotas_models.QuotaModelMixin, GitLabResource):
 
     def get_related_users(self):
         return self.service_project_link.project.get_users()
+
+    # a generic URL for access to the resource
+    def get_access_url(self):
+        return self.web_url
