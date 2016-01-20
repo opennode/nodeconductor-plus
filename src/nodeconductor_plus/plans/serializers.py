@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from nodeconductor.core.signals import pre_serializer_fields
 from . import models
 from nodeconductor.structure.serializers import CustomerSerializer
 
@@ -24,8 +25,15 @@ def get_plan_for_customer(serializer, customer):
         return serializer.data
 
 
-CustomerSerializer.add_field('plan', serializers.SerializerMethodField)
-CustomerSerializer.add_to_class('get_plan', get_plan_for_customer)
+def add_plan_for_customer(sender, fields, **kwargs):
+    fields['plan'] = serializers.SerializerMethodField()
+    setattr(sender, 'get_plan', get_plan_for_customer)
+
+
+pre_serializer_fields.connect(
+    add_plan_for_customer,
+    sender=CustomerSerializer
+)
 
 
 class PlanSerializer(serializers.HyperlinkedModelSerializer):

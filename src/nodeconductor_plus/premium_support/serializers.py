@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from nodeconductor.core.serializers import AugmentedSerializerMixin, GenericRelatedField
+from nodeconductor.core.signals import pre_serializer_fields
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.serializers import ProjectSerializer
 from nodeconductor_plus.premium_support import models
@@ -32,11 +33,26 @@ def get_pending_contracts_for_project(serializer, project):
     return project.id in serializer.context['has_pending_contracts']
 
 
-ProjectSerializer.add_field('plan', serializers.SerializerMethodField)
-ProjectSerializer.add_to_class('get_plan', get_plan_for_project)
+def add_plan_for_project(sender, fields, **kwargs):
+    fields['plan'] = serializers.SerializerMethodField()
+    setattr(sender, 'get_plan', get_plan_for_project)
 
-ProjectSerializer.add_field('has_pending_contracts', serializers.SerializerMethodField)
-ProjectSerializer.add_to_class('get_has_pending_contracts', get_pending_contracts_for_project)
+
+pre_serializer_fields.connect(
+    add_plan_for_project,
+    sender=ProjectSerializer
+)
+
+
+def add_has_pending_contracts(sender, fields, **kwargs):
+    fields['has_pending_contracts'] = serializers.SerializerMethodField()
+    setattr(sender, 'get_has_pending_contracts', get_plan_for_project)
+
+
+pre_serializer_fields.connect(
+    add_has_pending_contracts,
+    sender=ProjectSerializer
+)
 
 
 class BasicPlanSerializer(serializers.HyperlinkedModelSerializer):
