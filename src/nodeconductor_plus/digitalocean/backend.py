@@ -172,7 +172,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
                         'Could not create DigitalOcean region with id %s due to concurrent update',
                         backend_region.slug)
 
-        map(lambda i: i.delete(), cur_regions.values())
+        models.Region.objects.filter(backend_id__in=cur_regions.keys()).delete()
 
     @transaction.atomic
     def pull_images(self):
@@ -193,7 +193,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
                     'Could not create DigitalOcean image with id %s due to concurrent update',
                     backend_image.id)
 
-        map(lambda i: i.delete(), cur_images.values())
+        models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
 
     @transaction.atomic
     def pull_sizes(self):
@@ -208,14 +208,15 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
                         'cores': backend_size.vcpus,
                         'ram': backend_size.memory,
                         'disk': self.gb2mb(backend_size.disk),
-                        'transfer': int(self.tb2mb(backend_size.transfer))})
+                        'transfer': int(self.tb2mb(backend_size.transfer)),
+                        'price': backend_size.price_hourly})
                 self._update_entity_regions(size, backend_size)
             except IntegrityError:
                 logger.warning(
                     'Could not create DigitalOcean size with id %s due to concurrent update',
                     backend_size.slug)
 
-        map(lambda i: i.delete(), cur_sizes.values())
+        models.Size.objects.filter(backend_id__in=cur_sizes.keys()).delete()
 
     @transaction.atomic
     def pull_droplets(self):

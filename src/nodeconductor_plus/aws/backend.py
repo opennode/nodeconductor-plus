@@ -1,11 +1,10 @@
-import collections
 import logging
 import re
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
 from libcloud.common.types import LibcloudError
-from libcloud.compute.drivers.ec2 import EC2NodeDriver, INSTANCE_TYPES, REGION_DETAILS
+from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS
 from libcloud.compute.types import NodeState
 
 from nodeconductor.core.models import SshPublicKey
@@ -69,10 +68,10 @@ class AWSBaseBackend(ServiceBackend):
         vm.save()
 
         send_task('aws', 'provision')(
-                vm.uuid.hex,
-                backend_image_id=image.backend_id,
-                backend_size_id=size.backend_id,
-                ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
+            vm.uuid.hex,
+            backend_image_id=image.backend_id,
+            backend_size_id=size.backend_id,
+            ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
 
     def destroy(self, vm, force=False):
         if force:
@@ -138,27 +137,28 @@ class AWSBackend(AWSBaseBackend):
                 logger.warning(message, name)
 
     def pull_sizes(self):
-        # Reverse mapping region->sizes
-        size_regions = collections.defaultdict(list)
-        for region, val in REGION_DETAILS.items():
-            for size in val['instance_types']:
-                size_regions[size].append(region)
+        regions = models.Region.objects.values_list('backend_id', flat=True)
+        for region in regions:
+            manager = self._get_api(region)
 
-        for val in INSTANCE_TYPES.values():
-            size, _ = models.Size.objects.update_or_create(
-                backend_id=val['id'],
-                defaults={
-                    'name': val['name'],
-                    'cores': val.get('extra', {}).get('cpu', 1),
-                    'ram': val['ram'],
-                    'disk': ServiceBackend.gb2mb(val['disk'])
-                })
+            # XXX: Obviously each region has a different price,
+            #      find a better form of models relation
+            for backend_size in manager.list_sizes():
+                size, _ = models.Size.objects.update_or_create(
+                    backend_id=backend_size.id,
+                    defaults={
+                        'name': backend_size.name,
+                        'cores': backend_size.extra.get('cpu', 1),
+                        'ram': backend_size.ram,
+                        'disk': ServiceBackend.gb2mb(backend_size.disk),
+                        'price': backend_size.price,
+                    })
 
-            actual_regions = set(models.Region.objects.filter(backend_id__in=size_regions[size.backend_id]))
-            current_regions = set(size.regions.all())
+                current_regions = set(size.regions.all())
+                backend_regions = set(r for r, v in REGION_DETAILS.items() if backend_size.id in v['instance_types'])
 
-            size.regions.add(*(actual_regions - current_regions))
-            size.regions.remove(*(current_regions - actual_regions))
+                size.regions.add(*(backend_regions - current_regions))
+                size.regions.remove(*(current_regions - backend_regions))
 
     def pull_images(self):
         cur_images = {i.backend_id: i for i in models.Image.objects.all()}
