@@ -29,17 +29,42 @@ azure.WINDOWS_SERVER_REGEX = re.compile(
 AzureNodeDriver.ex_list_storage_services = lambda self: \
     self._perform_get(self._get_path('services', 'storageservices'), StorageServices)
 
+# there's a bug in libcloud, disk size is 127 for every size
+# https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-size-specs/#standard-tier-a-series
+AZURE_INSTANCE_DISK_SIZE = {
+    'A0': 20,
+    'A1': 70,
+    'A2': 135,
+    'A3': 285,
+    'A4': 605,
+    'A5': 135,
+    'A6': 285,
+    'A7': 605,
+    'A8': 382,
+    'A9': 382,
+    'A10': 382,
+    'A11': 382,
+    'D1': 50,
+    'D2': 100,
+    'D3': 200,
+    'D4': 400,
+    'D11': 100,
+    'D12': 200,
+    'D13': 400,
+    'D14': 800,
+}
+
 
 class SizeQueryset(object):
     def __init__(self):
         self.items = []
-        for val in azure.AZURE_COMPUTE_INSTANCE_TYPES.values():
+        for key, val in azure.AZURE_COMPUTE_INSTANCE_TYPES.items():
             self.items.append(SizeQueryset.Size(uuid=val['id'],
                                                 pk=val['id'],
-                                                name=val['name'],
+                                                name='{}: {}'.format(key, val['name']),
                                                 cores=isinstance(val['cores'], int) and val['cores'] or 1,
                                                 ram=val['ram'],
-                                                disk=ServiceBackend.gb2mb(val['disk']),
+                                                disk=ServiceBackend.gb2mb(AZURE_INSTANCE_DISK_SIZE[key]),
                                                 price=float(val['price'])))
 
         self.items = list(sorted(self.items, key=lambda s: s.price))

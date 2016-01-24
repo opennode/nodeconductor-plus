@@ -11,26 +11,20 @@ class DigitalOceanCostTrackingBackend(CostTrackingBackend):
     @classmethod
     def get_default_price_list_items(cls):
         ct = ContentType.objects.get_for_model(models.Droplet)
-        # XXX: hardcode a list of sizes with prices since it's available only via API
-        sizes = {
-            '512mb': 5.0,
-            '1gb': 10.0,
-            '2gb': 20.0,
-            '4gb': 40.0,
-            '8gb': 80.0,
-            '16gb': 160.0,
-            '32gb': 320.0,
-            '48gb': 480.0,
-            '64gb': 640.0,
-        }
 
-        # sizes
-        for name, price in sizes.items():
+        for size in models.Size.objects.iterator():
             yield DefaultPriceListItem(
                 resource_content_type=ct,
                 item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
-                key=name,
-                value=price)
+                key=size.name,
+                value=size.price,
+                metadata={
+                    'name': size.name,
+                    'disk': size.disk,
+                    'ram': size.ram,
+                    'cores': size.cores,
+                    'transfer': size.transfer,
+                })
 
     @classmethod
     def get_monthly_cost_estimate(cls, resource):

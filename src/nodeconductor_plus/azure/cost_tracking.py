@@ -17,7 +17,13 @@ class AzureCostTrackingBackend(CostTrackingBackend):
                 resource_content_type=ct,
                 item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
                 key=size.pk,
-                value=size.price)
+                value=size.price,
+                metadata={
+                    'name': size.name,
+                    'disk': size.disk,
+                    'ram': size.ram,
+                    'cores': size.cores,
+                })
 
     @classmethod
     def get_monthly_cost_estimate(cls, resource):

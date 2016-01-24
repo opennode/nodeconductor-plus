@@ -70,3 +70,4 @@ class SizeFactory(factory.DjangoModelFactory):
     ram = 2 * 1024
     disk = 10 * 1024
     transfer = 10 * 1024 * 1024
+    price = 0.99
