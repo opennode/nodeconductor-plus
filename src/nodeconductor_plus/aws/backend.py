@@ -155,7 +155,8 @@ class AWSBackend(AWSBaseBackend):
                     })
 
                 current_regions = set(size.regions.all())
-                backend_regions = set(r for r, v in REGION_DETAILS.items() if backend_size.id in v['instance_types'])
+                backend_regions = set(models.Region.objects.filter(backend_id__in=[
+                    r for r, v in REGION_DETAILS.items() if backend_size.id in v['instance_types']]))
 
                 size.regions.add(*(backend_regions - current_regions))
                 size.regions.remove(*(current_regions - backend_regions))
