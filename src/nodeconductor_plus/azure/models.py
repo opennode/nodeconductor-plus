@@ -41,3 +41,6 @@ class Size(object):
 class VirtualMachine(structure_models.VirtualMachineMixin, structure_models.Resource):
     service_project_link = models.ForeignKey(
         AzureServiceProjectLink, related_name='virtualmachines', on_delete=models.PROTECT)
+
+    def get_access_url_name(self):
+        return 'azure-virtualmachine-rdp'
