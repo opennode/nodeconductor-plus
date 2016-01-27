@@ -5,6 +5,8 @@ from django.db import models, migrations
 import django_fsm
 import uuidfield.fields
 
+import nodeconductor.core.validators
+
 
 class Migration(migrations.Migration):
 
@@ -41,7 +43,7 @@ class Migration(migrations.Migration):
             name='Image',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('name', models.CharField(max_length=150, verbose_name='name')),
+                ('name', models.CharField(max_length=150, verbose_name='name', validators=[nodeconductor.core.validators.validate_name])),
                 ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
                 ('backend_id', models.CharField(max_length=255)),
             ],
@@ -54,7 +56,7 @@ class Migration(migrations.Migration):
             name='Region',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('name', models.CharField(max_length=150, verbose_name='name')),
+                ('name', models.CharField(max_length=150, verbose_name='name', validators=[nodeconductor.core.validators.validate_name])),
                 ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
                 ('backend_id', models.CharField(max_length=255)),
                 ('service', models.ForeignKey(related_name='regions', to='digitalocean.DigitalOceanService')),
