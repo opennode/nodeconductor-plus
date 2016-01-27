@@ -41,7 +41,9 @@ def check_service_resources(service_str):
 
     erred = False
     with throttle(key="{}{}".format(service.settings.type, service.settings.backend_url)):
-        for service_project_link in service.get_service_project_links():
+        # Skip checking unmanaged resources for links in NEW state
+        links = service.get_service_project_links().exclude(state=SynchronizationStates.NEW)
+        for service_project_link in links:
             try:
                 resources = service_project_link.get_backend().get_resources_for_import()
                 if len(resources) > 0:
