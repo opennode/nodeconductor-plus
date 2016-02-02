@@ -149,8 +149,8 @@ class AWSBackend(AWSBaseBackend):
                     defaults={
                         'name': backend_size.name,
                         'cores': backend_size.extra.get('cpu', 1),
-                        'ram': backend_size.ram,
-                        'disk': ServiceBackend.gb2mb(backend_size.disk),
+                        'ram': self.gb2mb(backend_size.ram),
+                        'disk': self.gb2mb(backend_size.disk),
                         'price': backend_size.price,
                     })
 
