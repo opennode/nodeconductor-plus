@@ -3,6 +3,7 @@ import re
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
+from django.utils.lru_cache import lru_cache
 from libcloud.common.types import LibcloudError
 from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS
 from libcloud.compute.types import NodeState
@@ -120,6 +121,8 @@ class AWSBackend(AWSBaseBackend):
         else:
             return True
 
+    # Cache pulling static properties for better performance
+    @lru_cache
     def pull_service_properties(self):
         self.pull_regions()
         self.pull_sizes()
