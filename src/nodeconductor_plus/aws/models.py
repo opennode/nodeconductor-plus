@@ -34,7 +34,7 @@ class Size(structure_models.GeneralServiceProperty):
     cores = models.PositiveSmallIntegerField(help_text='Number of cores in a VM')
     ram = models.PositiveIntegerField(help_text='Memory size in MiB')
     disk = models.PositiveIntegerField(help_text='Disk size in MiB')
-    price = models.PositiveIntegerField(help_text='Hourly price in USD')
+    price = models.DecimalField('Hourly price rate', default=0, max_digits=11, decimal_places=5)
 
 
 class Instance(structure_models.VirtualMachineMixin, structure_models.Resource):

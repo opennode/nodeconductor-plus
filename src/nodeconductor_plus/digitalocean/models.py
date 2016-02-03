@@ -42,7 +42,7 @@ class Size(structure_models.GeneralServiceProperty):
     ram = models.PositiveIntegerField(help_text='Memory size in MiB')
     disk = models.PositiveIntegerField(help_text='Disk size in MiB')
     transfer = models.PositiveIntegerField(help_text='Amount of transfer bandwidth in MiB')
-    price = models.PositiveIntegerField(help_text='Hourly price in USD')
+    price = models.DecimalField('Hourly price rate', default=0, max_digits=11, decimal_places=5)
 
 
 class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
