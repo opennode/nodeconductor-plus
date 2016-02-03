@@ -11,7 +11,7 @@ Requires: nodeconductor >= 0.7.0
 Requires: python-digitalocean >= 1.5
 Requires: python-django-cors-headers
 Requires: python-gitlab >= 0.9
-Requires: python-libcloud >= 0.18.0
+Requires: python-libcloud >= 0.20.1
 
 BuildArch: noarch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
