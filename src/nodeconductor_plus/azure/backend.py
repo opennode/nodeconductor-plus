@@ -5,8 +5,8 @@ import collections
 
 from django.db import IntegrityError
 from django.utils import six
-from libcloud.common.types import LibcloudError
-from libcloud.compute.types import NodeState, InvalidCredsError
+from libcloud.common.types import LibcloudError, InvalidCredsError
+from libcloud.compute.types import NodeState
 from libcloud.compute.base import NodeAuthPassword
 from libcloud.compute.drivers import azure
 
@@ -141,9 +141,13 @@ class AzureBaseBackend(ServiceBackend):
     @property
     def manager(self):
         if not hasattr(self, '_manager'):
-            self._manager = AzureNodeDriver(
-                subscription_id=self.settings.username,
-                key_file=self.settings.certificate.path if self.settings.certificate else None)
+            try:
+                self._manager = AzureNodeDriver(
+                    subscription_id=self.settings.username,
+                    key_file=self.settings.certificate.path if self.settings.certificate else '')
+            except InvalidCredsError as e:
+                logger.exception("Wrong credentials for service settings %s", self.settings.uuid)
+                six.reraise(AzureBackendError, e)
         return self._manager
 
     def sync(self):
@@ -202,7 +206,7 @@ class AzureBackend(AzureBaseBackend):
     def ping(self):
         try:
             self.manager.list_locations()
-        except LibcloudError:
+        except (LibcloudError, AzureBackendError):
             return False
         else:
             return True
@@ -271,10 +275,7 @@ class AzureBackend(AzureBaseBackend):
         services = [s.service_name for s in self.manager.ex_list_cloud_services()]
         if cloud_service_name not in services:
             logger.debug('About to create new azure cloud service for SPL %s', service_project_link.pk)
-            try:
-                self.manager.ex_create_cloud_service(cloud_service_name, self.location)
-            except InvalidCredsError:
-                raise AzureBackendError("Wrong credentials for service settings %s" % self.settings.uuid)
+            self.manager.ex_create_cloud_service(cloud_service_name, self.location)
             service_project_link.cloud_service_name = cloud_service_name
             service_project_link.save(update_fields=['cloud_service_name'])
             logger.info('Successfully created new azure cloud for SPL %s', service_project_link.pk)
@@ -282,11 +283,8 @@ class AzureBackend(AzureBaseBackend):
             logger.debug('Skipped azure cloud service creation for SPL %s - such cloud already exists', service_project_link.pk)
 
         # create storage
-        try:
-            storage_name = self.get_storage_name(cloud_service_name)
-            storages = [s.service_name for s in self.manager.ex_list_storage_services()]
-        except InvalidCredsError:
-            raise AzureBackendError("Wrong credentials for service settings %s" % self.settings.uuid)
+        storage_name = self.get_storage_name(cloud_service_name)
+        storages = [s.service_name for s in self.manager.ex_list_storage_services()]
 
         if storage_name not in storages:
             logger.debug('About to create new azure storage for SPL %s', service_project_link.pk)
