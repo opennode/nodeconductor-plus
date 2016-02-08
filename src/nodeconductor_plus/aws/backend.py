@@ -121,8 +121,6 @@ class AWSBackend(AWSBaseBackend):
         else:
             return True
 
-    # Cache pulling static properties for better performance
-    @lru_cache
     def pull_service_properties(self):
         self.pull_regions()
         self.pull_sizes()
@@ -184,6 +182,7 @@ class AWSBackend(AWSBaseBackend):
         # Remove stale images using one SQL query
         models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
 
+    @lru_cache
     def get_all_images(self):
         """
         Fetch images from all regions
@@ -214,6 +213,7 @@ class AWSBackend(AWSBaseBackend):
                         continue
                     yield region, image
 
+    @lru_cache
     def get_all_nodes(self):
         """
         Fetch nodes from all regions
