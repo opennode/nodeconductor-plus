@@ -6,7 +6,6 @@ from nodeconductor_plus.aws.tests import factories
 
 class AWSBackendCachedMethodsTest(unittest.TestCase):
     def setUp(self):
-        self.mocked_backend = mock.Mock()
         self.aws_service = factories.AWSServiceFactory()
         factories.RegionFactory.create_batch(2)
 
@@ -18,7 +17,15 @@ class AWSBackendCachedMethodsTest(unittest.TestCase):
         )
         backend._get_api = mock.Mock(return_value=node_driver_mock)
 
+        # first call
         backend.pull_images()
+        self.assertEqual(backend.get_all_images.cache_info().hits, 0)
+        self.assertEqual(backend.get_all_images.cache_info().currsize, 1)
+
+        # second call
+        backend.pull_images()
+        self.assertEqual(backend.get_all_images.cache_info().hits, 1)
+        self.assertEqual(backend.get_all_images.cache_info().currsize, 1)
 
     def test_caching_pulled_resources_from_backend(self):
         backend = self.aws_service.get_backend()
@@ -28,4 +35,12 @@ class AWSBackendCachedMethodsTest(unittest.TestCase):
         )
         backend._get_api = mock.Mock(return_value=node_driver_mock)
 
+        # first call
         backend.get_managed_resources()
+        self.assertEqual(backend.get_all_nodes.cache_info().hits, 0)
+        self.assertEqual(backend.get_all_nodes.cache_info().currsize, 1)
+
+        # second call
+        backend.get_managed_resources()
+        self.assertEqual(backend.get_all_nodes.cache_info().hits, 1)
+        self.assertEqual(backend.get_all_nodes.cache_info().currsize, 1)
