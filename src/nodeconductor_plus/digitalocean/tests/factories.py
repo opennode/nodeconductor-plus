@@ -12,11 +12,11 @@ class DigitalOceanServiceFactory(factory.DjangoModelFactory):
         model = models.DigitalOceanService
 
     name = factory.Sequence(lambda n: 'service%s' % n)
-    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory)
+    settings = factory.SubFactory(structure_factories.ServiceSettingsFactory, type='DigitalOcean')
     customer = factory.SubFactory(structure_factories.CustomerFactory)
 
     @classmethod
-    def get_url(self, service=None):
+    def get_url(cls, service=None):
         if service is None:
             service = DigitalOceanServiceFactory()
         return 'http://testserver' + reverse('digitalocean-detail', kwargs={'uuid': service.uuid})
@@ -26,7 +26,7 @@ class DigitalOceanServiceFactory(factory.DjangoModelFactory):
         return 'http://testserver' + reverse('digitalocean-list')
 
 
-class DigitalOceanServiceProjectLingFactory(factory.DjangoModelFactory):
+class DigitalOceanServiceProjectLinkFactory(factory.DjangoModelFactory):
     class Meta(object):
         model = models.DigitalOceanServiceProjectLink
 

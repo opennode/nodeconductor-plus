@@ -3,6 +3,7 @@ import re
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
+from django.utils.lru_cache import lru_cache
 from libcloud.common.types import LibcloudError
 from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS
 from libcloud.compute.types import NodeState
@@ -181,6 +182,7 @@ class AWSBackend(AWSBaseBackend):
         # Remove stale images using one SQL query
         models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
 
+    @lru_cache()
     def get_all_images(self):
         """
         Fetch images from all regions
@@ -211,6 +213,7 @@ class AWSBackend(AWSBaseBackend):
                         continue
                     yield region, image
 
+    @lru_cache()
     def get_all_nodes(self):
         """
         Fetch nodes from all regions

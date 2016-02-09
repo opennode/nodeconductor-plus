@@ -50,9 +50,9 @@ class ServicePermissionTest(test.APITransactionTestCase):
         project_group.projects.add(self.projects['managed_by_group_manager'])
         project_group.add_user(self.users['group_manager'], ProjectGroupRole.MANAGER)
 
-        factories.DigitalOceanServiceProjectLingFactory(service=self.services['admined'], project=self.projects['admined'])
-        factories.DigitalOceanServiceProjectLingFactory(service=self.services['managed'], project=self.projects['managed'])
-        factories.DigitalOceanServiceProjectLingFactory(
+        factories.DigitalOceanServiceProjectLinkFactory(service=self.services['admined'], project=self.projects['admined'])
+        factories.DigitalOceanServiceProjectLinkFactory(service=self.services['managed'], project=self.projects['managed'])
+        factories.DigitalOceanServiceProjectLinkFactory(
             service=self.services['managed_by_group_manager'], project=self.projects['managed_by_group_manager'])
 
     # List filtration tests
