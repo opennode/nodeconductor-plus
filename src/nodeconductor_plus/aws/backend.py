@@ -104,10 +104,12 @@ class AWSBackend(AWSBaseBackend):
         https://libcloud.apache.org/
     """
 
-    def ping(self):
+    def ping(self, raise_exception=False):
         try:
             self._get_api().list_key_pairs()
-        except:
+        except Exception as e:
+            if raise_exception:
+                six.reraise(AWSBackendError, e)
             return False
         else:
             return True

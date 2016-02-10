@@ -29,13 +29,17 @@ class GitLabBaseBackend(ServiceBackend):
         self.settings = settings
 
     def sync(self):
-        self.ping()
+        self.ping(raise_exception=True)
 
-    def ping(self):
+    def ping(self, raise_exception=False):
         try:
-            return self.manager.auth()
-        except gitlab.GitlabError:
-            raise GitLabBackendError('Please check backend URL and credentials')
+            self.manager.auth()
+        except gitlab.GitlabError as e:
+            if raise_exception:
+                six.reraise(GitLabBackendError, e)
+            return False
+        else:
+            return True
 
     def provision(self, resource, **kwargs):
         kwargs.update({'name': resource.name, 'description': resource.description})

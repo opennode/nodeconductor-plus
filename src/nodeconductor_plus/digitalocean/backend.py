@@ -130,13 +130,14 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         https://github.com/koalalorenzo/python-digitalocean
     """
 
-    def ping(self):
+    def ping(self, raise_exception=False):
         tries_count = 3
         for _ in range(tries_count):
             try:
                 self.manager.get_account()
-            except digitalocean.DataReadError:
-                pass
+            except digitalocean.DataReadError as e:
+                if raise_exception:
+                    six.reraise(DigitalOceanBackendError, e)
             else:
                 return True
         return False
