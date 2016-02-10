@@ -1,10 +1,14 @@
+import os
 import re
+import ssl
 import time
 import logging
+import tempfile
 import collections
 
 from django.db import IntegrityError
 from django.utils import six
+from django.core.files.uploadedfile import File, InMemoryUploadedFile
 from libcloud.common.types import LibcloudError, InvalidCredsError
 from libcloud.compute.types import NodeState
 from libcloud.compute.base import NodeAuthPassword
@@ -137,14 +141,31 @@ class AzureBaseBackend(ServiceBackend):
         self.settings = settings
         self.cloud_service_name = cloud_service_name
 
+    def __del__(self):
+        try:
+            os.remove(self._temp_file)
+        except (AttributeError, OSError):
+            pass
+
     # Lazy init
     @property
     def manager(self):
         if not hasattr(self, '_manager'):
+            key_file = None
+            cert_file = self.settings.certificate.file if self.settings.certificate else None
+            if isinstance(cert_file, InMemoryUploadedFile):
+                cert_file.seek(0)
+                temp_file = tempfile.NamedTemporaryFile(mode='w+t', delete=False)
+                temp_file.writelines(cert_file.readlines())
+                temp_file.close()
+                cert_file.seek(0)
+                key_file = self._temp_file = temp_file.name
+            elif isinstance(cert_file, File):
+                key_file = cert_file.name
+
             try:
                 self._manager = AzureNodeDriver(
-                    subscription_id=self.settings.username,
-                    key_file=self.settings.certificate.path if self.settings.certificate else '')
+                    subscription_id=self.settings.username, key_file=key_file)
             except InvalidCredsError as e:
                 logger.exception("Wrong credentials for service settings %s", self.settings.uuid)
                 six.reraise(AzureBackendError, e)
@@ -203,10 +224,12 @@ class AzureBackend(AzureBaseBackend):
         http://libcloud.readthedocs.org/en/latest/compute/drivers/azure.html
     """
 
-    def ping(self):
+    def ping(self, raise_exception=False):
         try:
             self.manager.list_locations()
-        except (LibcloudError, AzureBackendError):
+        except (AzureBackendError, LibcloudError, ssl.SSLError) as e:
+            if raise_exception:
+                six.reraise(AzureBackendError, e)
             return False
         else:
             return True
