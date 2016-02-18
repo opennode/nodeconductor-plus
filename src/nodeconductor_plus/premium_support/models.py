@@ -1,4 +1,7 @@
+from __future__ import unicode_literals
+
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import transition, FSMIntegerField
 from model_utils.models import TimeStampedModel
 from model_utils.fields import AutoCreatedField
@@ -10,6 +13,7 @@ from nodeconductor.logging.log import LoggableMixin
 from nodeconductor.structure.models import Project
 
 
+@python_2_unicode_compatible
 class Plan(UuidMixin, NameMixin, DescribableMixin, LoggableMixin):
     base_rate = models.DecimalField(decimal_places=2, max_digits=10)
     hour_rate = models.DecimalField(decimal_places=2, max_digits=10)
