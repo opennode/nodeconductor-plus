@@ -164,7 +164,7 @@ class GitLabBaseBackend(ServiceBackend):
             return []
 
     def update_statistics(self):
-        for project in Project.objects.all():
+        for project in Project.objects.exclude(backend_id__isnull=True):
             try:
                 self.update_project_statistics(project)
             except gitlab.GitlabError as e:
