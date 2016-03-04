@@ -83,17 +83,26 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
         )
 
     def validate(self, attrs):
-        if not re.match(r'[a-zA-Z0-9_.\s-]+', attrs['name']):
+        if not re.match(r'^[a-zA-Z0-9_.\s-]+$', attrs['name']):
             raise serializers.ValidationError(
                 {'name': "Name can only contain letters, digits, '_', '.', dash and space."})
 
-        if not re.match(r'[a-zA-Z0-9_.\s-]+', attrs['path']):
+        if models.Group.objects.filter(name=attrs['name']).exists():
+            raise serializers.ValidationError(
+                {'name': "Group with this name already exists."}
+            )
+
+        if not re.match(r'^[a-zA-Z0-9_.\s-]+$', attrs['path']):
             raise serializers.ValidationError(
                 {'path': "Path can only contain letters, digits, '_', '.', dash and space."})
 
         if attrs['path'].startswith('-') or attrs['path'].endswith('.'):
             raise serializers.ValidationError(
                 {'path': "Path cannot start with '-' or end in '.'."})
+
+        if models.Group.objects.filter(path=attrs['path']).exists():
+            raise serializers.ValidationError(
+                {'path': "Group with this path already exists."})
 
         return attrs
 
