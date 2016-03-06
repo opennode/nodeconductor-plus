@@ -257,7 +257,7 @@ class AzureBackend(AzureBaseBackend):
                 regex = re.compile(options['images_regex'])
             except re.error:
                 logger.warning(
-                    'Invalid images regexp supplied for service settins %s: %s',
+                    'Invalid images regexp supplied for service settings %s: %s',
                     self.settings.uuid, options['images_regex'])
 
         images = {}
