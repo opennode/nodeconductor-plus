@@ -35,6 +35,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'ordering': ['-modified']
             },
             bases=(models.Model,),
         ),

@@ -58,6 +58,9 @@ class PlanQuota(models.Model):
 
 
 class Agreement(UuidMixin, TimeStampedModel):
+    class Meta:
+        ordering = ['-modified']
+
     class Permissions(object):
         customer_path = 'customer'
         project_path = 'customer__projects'
