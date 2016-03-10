@@ -11,7 +11,6 @@ tests_requires = [
     'factory_boy==2.4.1',
     'mock==1.0.1',
     'six>=1.7.3',
-    'django-celery==3.1.16',
 ]
 
 install_requires = [
