@@ -29,7 +29,7 @@ class ProjectDeletionTest(test.APITransactionTestCase):
         url = factories.GitLabProjectFactory.get_url(project)
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(mock_backend().destroy.called)
 
 
@@ -76,7 +76,7 @@ class GroupDeletionTest(test.APITransactionTestCase):
         url = factories.GitLabGroupFactory.get_url(group)
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(mock_backend().destroy.called)
 
     def test_if_group_has_project_deletion_is_not_allowed(self, mock_backend):
