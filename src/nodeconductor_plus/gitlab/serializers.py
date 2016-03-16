@@ -83,17 +83,38 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
         )
 
     def validate(self, attrs):
-        if not re.match(r'[a-zA-Z0-9_.\s-]+', attrs['name']):
+        if not re.match(r'^[a-zA-Z0-9_.\s-]+$', attrs['name']):
             raise serializers.ValidationError(
                 {'name': "Name can only contain letters, digits, '_', '.', dash and space."})
 
-        if not re.match(r'[a-zA-Z0-9_.\s-]+', attrs['path']):
+        if not re.match(r'^[a-zA-Z0-9_.\s-]+$', attrs['path']):
             raise serializers.ValidationError(
                 {'path': "Path can only contain letters, digits, '_', '.', dash and space."})
 
         if attrs['path'].startswith('-') or attrs['path'].endswith('.'):
             raise serializers.ValidationError(
                 {'path': "Path cannot start with '-' or end in '.'."})
+
+        spl = attrs['service_project_link']
+
+        # Name should be unique on backend
+        if models.Group.objects.filter(
+                name=attrs['name'],
+                service_project_link__service__settings__backend_url=spl.service.settings.backend_url,
+                service_project_link__service__settings__username=spl.service.settings.username
+        ).exists():
+            raise serializers.ValidationError(
+                {'name': "Group with this name already exists."}
+            )
+
+        # Path should be unique on backend
+        if models.Group.objects.filter(
+                path=attrs['path'],
+                service_project_link__service__settings__backend_url=spl.service.settings.backend_url,
+                service_project_link__service__settings__username=spl.service.settings.username
+        ).exists():
+            raise serializers.ValidationError(
+                {'path': "Group with this path already exists."})
 
         return attrs
 
