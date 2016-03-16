@@ -72,7 +72,7 @@ setup(
             'premium_support = nodeconductor_plus.premium_support.extension:SupportExtension',
         ),
     },
-    tests_require=tests_requires,
+    tests_require=tests_require,
     include_package_data=True,
     classifiers=[
         'Framework :: Django',
