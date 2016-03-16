@@ -7,7 +7,7 @@ dev_requires = [
     'Sphinx==1.2.2'
 ]
 
-tests_requires = [
+tests_require = [
     'factory_boy==2.4.1',
     'mock==1.0.1',
     'mock-django==0.6.6',
