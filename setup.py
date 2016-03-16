@@ -57,7 +57,7 @@ setup(
     install_requires=install_requires,
     zip_safe=False,
     extras_require={
-        'test': tests_requires,
+        'test': test_requires,
         'dev': dev_requires,
     },
     entry_points={
