@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 from setuptools import setup, find_packages
 
 
@@ -7,7 +8,7 @@ dev_requires = [
     'Sphinx==1.2.2'
 ]
 
-tests_requires = [
+tests_require = [
     'factory_boy==2.4.1',
     'mock==1.0.1',
     'six>=1.7.3',
@@ -23,6 +24,25 @@ install_requires = [
     'python-gitlab>=0.9',
 ]
 
+# RPM installation does not need oslo, cliff and stevedore libs -
+# they are required only for installation with setuptools
+try:
+    action = sys.argv[1]
+except IndexError:
+    pass
+else:
+    if action in ['develop', 'install', 'test']:
+        install_requires += [
+            'cliff==1.7.0',
+            'oslo.config==1.4.0',
+            'oslo.i18n==1.0.0',
+            'oslo.utils==1.0.0',
+            'stevedore==1.0.0',
+        ]
+    # handle the case when plugins are installed in develop mode
+    if action in ['develop']:
+        install_requires += tests_require
+
 
 setup(
     name='nodeconductor-plus',
@@ -37,7 +57,7 @@ setup(
     install_requires=install_requires,
     zip_safe=False,
     extras_require={
-        'test': tests_requires,
+        'test': tests_require,
         'dev': dev_requires,
     },
     entry_points={
@@ -52,7 +72,7 @@ setup(
             'premium_support = nodeconductor_plus.premium_support.extension:SupportExtension',
         ),
     },
-    tests_require=tests_requires,
+    tests_require=tests_require,
     include_package_data=True,
     classifiers=[
         'Framework :: Django',
