@@ -1,5 +1,5 @@
-AWS images
+AWS Images
 ----------
 
-AWS Images should be maintained manually in django admin. Periodic job will only make sure
-that all images exists and have proper names.
+AWS images should be maintained manually through /admin. Periodic job will make sure
+if all configured images exist and have proper names.
