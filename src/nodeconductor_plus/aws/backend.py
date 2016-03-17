@@ -126,7 +126,7 @@ class AWSBackend(AWSBaseBackend):
     def pull_service_properties(self):
         self.pull_regions()
         self.pull_sizes()
-        self.pull_images()
+        self.update_images()
 
     def pull_regions(self):
         nc_regions = set(models.Region.objects.values_list('backend_id', flat=True))
@@ -198,10 +198,6 @@ class AWSBackend(AWSBaseBackend):
                 logger.warning(
                     'Invalid images regexp supplied for service settings %s: %s',
                     self.settings.uuid, options['images_regex'])
-        else:
-            # XXX: a temporary default filter till SAAS-1069 is done
-            ubuntu_or_centos = '(.*Ubuntu.*)|(.*CentOS.*)'
-            regex = re.compile(ubuntu_or_centos)
 
         for region in models.Region.objects.all():
             manager = self._get_api(region.backend_id)
@@ -213,6 +209,28 @@ class AWSBackend(AWSBaseBackend):
                     if regex and not regex.match(image.name):
                         continue
                     yield region, image
+
+    def update_images(self):
+
+        get_images = lambda manager, owner: {
+            i.id: i.extra['description']
+            for i in manager.list_images(
+                ex_owner=owner,
+                ex_filters={'virtualization-type': 'hvm', 'image-type': 'machine'})}
+
+        for region in models.Region.objects.all():
+            images = region.image_set.all()
+            if images.count():
+                manager = self._get_api(region.backend_id)
+                backend_images = get_images(manager, 'amazon')
+                backend_images.update(get_images(manager, 'aws-marketplace'))
+                for image in images:
+                    try:
+                        image.name = backend_images[image.backend_id]
+                    except KeyError:
+                        image.delete()
+                    else:
+                        image.save()
 
     def get_all_nodes(self):
         """
