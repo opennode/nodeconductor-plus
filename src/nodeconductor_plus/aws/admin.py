@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from nodeconductor.structure import admin as structure_admin
-from .models import AWSService, AWSServiceProjectLink, Instance, Image, Region
+from .models import AWSService, AWSServiceProjectLink, Instance, Image, Region, Size
 
 
 class ImageAdmin(admin.ModelAdmin):
@@ -20,7 +20,13 @@ class RegionAdmin(structure_admin.ProtectedModelMixin, admin.ModelAdmin):
     inlines = ImageInline,
 
 
+class SizeAdmin(structure_admin.ProtectedModelMixin, admin.ModelAdmin):
+    readonly_fields = 'name', 'backend_id'
+    list_display = 'name', 'backend_id', 'cores', 'ram', 'disk'
+
+
 admin.site.register(Image, ImageAdmin)
+admin.site.register(Size, SizeAdmin)
 admin.site.register(Region, RegionAdmin)
 admin.site.register(Instance, structure_admin.VirtualMachineAdmin)
 admin.site.register(AWSService, structure_admin.ServiceAdmin)
