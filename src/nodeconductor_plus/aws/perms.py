@@ -24,4 +24,5 @@ PERMISSION_LOGICS = (
     )),
     ('aws.Instance', structure_perms.resource_permission_logic),
     ('aws.Image', StaffPermissionLogic(any_permission=True)),
+    ('aws.Region', StaffPermissionLogic(any_permission=True)),
 )
