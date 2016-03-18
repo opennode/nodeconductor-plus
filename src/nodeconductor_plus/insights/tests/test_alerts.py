@@ -1,13 +1,18 @@
+import datetime
+
+from dateutil.relativedelta import relativedelta
 from django.contrib.contenttypes.models import ContentType
 import factory
 import mock
 from rest_framework import test
 
+from nodeconductor.cost_tracking.models import PriceEstimate
 from nodeconductor.logging.models import Alert
 from nodeconductor.structure import SupportedServices
 from nodeconductor.structure.tests import factories
 
 from nodeconductor_plus.insights import tasks
+from nodeconductor_plus.insights.tasks import check_customer_costs
 
 
 class BaseAlertTest(object):
@@ -39,7 +44,10 @@ class BaseAlertTest(object):
 
 class CustomerAlertsTest(BaseAlertTest, test.APITransactionTestCase):
 
-    def test_when_customer_is_created_alerts_are_created(self):
+    def test_initial_alerts(self):
+        """
+        When customer is created alerts are created.
+        """
         customer = factories.CustomerFactory()
         alert_types = (
             'customer_has_zero_services',
@@ -49,7 +57,11 @@ class CustomerAlertsTest(BaseAlertTest, test.APITransactionTestCase):
         for alert_type in alert_types:
             self.assertTrue(self.has_alert(customer, alert_type))
 
-    def test_when_service_created_alert_closed_when_service_deleted_alert_reopened(self):
+    def test_services_alert(self):
+        """
+        When service is created, alert is closed.
+        When service is deleted, alert is reopened.
+        """
         customer = factories.CustomerFactory()
 
         service = self.create_service(customer)
@@ -58,7 +70,11 @@ class CustomerAlertsTest(BaseAlertTest, test.APITransactionTestCase):
         service.delete()
         self.assertTrue(self.has_alert(customer, 'customer_has_zero_services'))
 
-    def test_when_project_created_alert_closed_when_project_deleted_alert_reopened(self):
+    def test_projects_alert(self):
+        """
+        When project is created, alert is closed.
+        When project is deleted, alert is reopened.
+        """
         customer = factories.CustomerFactory()
 
         project = factories.ProjectFactory(customer=customer)
@@ -96,3 +112,34 @@ class ServiceAlertTest(BaseAlertTest, test.APITransactionTestCase):
         mock_backend().ping.return_value = True
         tasks.check_service_availability(service.to_string())
         self.assertFalse(self.has_alert(service, 'service_unavailable'))
+
+
+@mock.patch('nodeconductor_plus.insights.tasks.alert_logger')
+class CustomerCostsTest(BaseAlertTest, test.APITransactionTestCase):
+    def test_when_cost_exceeded_alert_created(self, mocked_event_logger):
+        customer = factories.CustomerFactory()
+        self.create_price_estimates(customer, 10, 100)
+
+        check_customer_costs(customer.uuid.hex)
+
+        mocked_event_logger.customer_state.warning.assert_called_once_with(
+            'This month estimated costs for customer {customer_name} exceeded',
+            scope=customer,
+            alert_type='customer_projected_costs_exceeded',
+            alert_context={'customer': customer}
+        )
+
+    def test_when_cost_is_not_exceeded_alert_is_not_created(self, mocked_event_logger):
+        customer = factories.CustomerFactory()
+        self.create_price_estimates(customer, 10, 11)
+
+        check_customer_costs(customer.uuid.hex)
+
+        self.assertFalse(mocked_event_logger.customer_state.warning.called)
+
+    def create_price_estimates(self, customer, prev, current):
+        dt_now = datetime.datetime.now()
+        dt_prev = dt_now - relativedelta(months=1)
+
+        PriceEstimate.objects.create(scope=customer, month=dt_now.month, year=dt_now.year, total=current)
+        PriceEstimate.objects.create(scope=customer, month=dt_prev.month, year=dt_prev.year, total=prev)
