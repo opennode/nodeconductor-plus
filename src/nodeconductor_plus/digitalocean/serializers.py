@@ -90,19 +90,19 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
     region = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-region-detail',
         lookup_field='uuid',
-        queryset=models.Region.objects.all().select_related('settings'),
+        queryset=models.Region.objects.all(),
         write_only=True)
 
     image = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-image-detail',
         lookup_field='uuid',
-        queryset=models.Image.objects.all().select_related('settings'),
+        queryset=models.Image.objects.all(),
         write_only=True)
 
     size = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-size-detail',
         lookup_field='uuid',
-        queryset=models.Size.objects.all().select_related('settings'),
+        queryset=models.Size.objects.all(),
         write_only=True)
 
     class Meta(structure_serializers.VirtualMachineSerializer.Meta):
