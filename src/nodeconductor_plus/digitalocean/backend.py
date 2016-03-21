@@ -184,7 +184,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
                 image, _ = models.Image.objects.update_or_create(
                     backend_id=backend_image.id,
                     defaults={
-                        'name': backend_image.name,
+                        'name': '{} {}'.format(backend_image.distribution, backend_image.name),
                         'type': backend_image.type,
                         'distribution': backend_image.distribution,
                     })
