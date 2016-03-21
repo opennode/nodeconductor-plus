@@ -2,6 +2,7 @@ import logging
 import datetime
 
 from celery import shared_task
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 
 from nodeconductor.core.models import SynchronizationStates
@@ -143,7 +144,7 @@ def check_customer_costs(customer_uuid):
         dt_now = datetime.datetime.now()
         costs_now = PriceEstimate.objects.get(scope=customer, month=dt_now.month, year=dt_now.year)
 
-        dt_prev = dt_now - datetime.timedelta(months=1)
+        dt_prev = dt_now - relativedelta(months=1)
         costs_prev = PriceEstimate.objects.get(scope=customer, month=dt_prev.month, year=dt_prev.year)
     except PriceEstimate.DoesNotExist:
         pass

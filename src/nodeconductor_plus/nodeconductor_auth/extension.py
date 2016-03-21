@@ -4,7 +4,7 @@ from nodeconductor.core import NodeConductorExtension
 class AuthExtension(NodeConductorExtension):
 
     class Settings:
-        # XXX: Split these settings accross corresponding NCPlus apps
+        # XXX: Split these settings across corresponding NCPlus apps
         NODECONDUCTOR_PLUS = {
             'GOOGLE_SECRET': 'CHANGE_ME_TO_GOOGLE_SECRET',
             'FACEBOOK_SECRET': 'CHANGE_ME_TO_FACEBOOK_SECRET',
