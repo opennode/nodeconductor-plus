@@ -158,6 +158,10 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         self.pull_images()
         self.pull_sizes()
 
+    def has_global_properties(self):
+        properties = (models.Region, models.Image, models.Size)
+        return all(model.objects.count() > 0 for model in properties)
+
     @transaction.atomic
     def pull_regions(self):
         cur_regions = self._get_current_properties(models.Region)
