@@ -107,8 +107,7 @@ class VirtualMachineSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='azure-spl-detail',
-        queryset=models.AzureServiceProjectLink.objects.all(),
-        write_only=True)
+        queryset=models.AzureServiceProjectLink.objects.all())
 
     image = serializers.HyperlinkedRelatedField(
         view_name='azure-image-detail',
