@@ -84,8 +84,7 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
-        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
-        write_only=True)
+        queryset=models.DigitalOceanServiceProjectLink.objects.all())
 
     region = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-region-detail',

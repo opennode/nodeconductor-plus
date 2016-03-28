@@ -91,8 +91,7 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='aws-spl-detail',
-        queryset=models.AWSServiceProjectLink.objects.all(),
-        write_only=True)
+        queryset=models.AWSServiceProjectLink.objects.all())
 
     region = serializers.HyperlinkedRelatedField(
         view_name='aws-region-detail',

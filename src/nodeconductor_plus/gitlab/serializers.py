@@ -68,8 +68,7 @@ class GroupSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='gitlab-spl-detail',
-        queryset=models.GitLabServiceProjectLink.objects.all(),
-        write_only=True)
+        queryset=models.GitLabServiceProjectLink.objects.all())
 
     projects = BasicProjectSerializer(many=True, read_only=True)
 
@@ -129,8 +128,7 @@ class ProjectSerializer(structure_serializers.BaseResourceSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='gitlab-spl-detail',
-        queryset=models.GitLabServiceProjectLink.objects.all(),
-        write_only=True)
+        queryset=models.GitLabServiceProjectLink.objects.all())
 
     group = serializers.HyperlinkedRelatedField(
         view_name='gitlab-group-detail',
