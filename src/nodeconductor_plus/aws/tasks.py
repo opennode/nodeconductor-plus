@@ -3,7 +3,6 @@ from celery import shared_task, chain
 from django.utils import timezone
 
 from nodeconductor.core.tasks import save_error_message, transition, retry_if_false
-from nodeconductor.structure.tasks import sync_service_project_links
 
 from .models import Instance
 from .backend import AWSBackendError
@@ -11,9 +10,7 @@ from .backend import AWSBackendError
 
 @shared_task(name='nodeconductor.aws.provision')
 def provision(vm_uuid, **kwargs):
-    vm = Instance.objects.get(uuid=vm_uuid)
     chain(
-        sync_service_project_links.si(vm.service_project_link.to_string(), initial=True),
         provision_vm.si(vm_uuid, **kwargs),
         wait_for_vm_state.si(vm_uuid, 'RUNNING'),
     ).apply_async(

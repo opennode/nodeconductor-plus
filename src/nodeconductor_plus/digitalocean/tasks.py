@@ -5,7 +5,6 @@ from celery import shared_task, chain
 from django.utils import six, timezone
 
 from nodeconductor.core.tasks import save_error_message, transition, retry_if_false
-from nodeconductor.structure.tasks import sync_service_project_links
 from nodeconductor_plus.digitalocean.backend import TokenScopeError
 
 from . import handlers
@@ -35,9 +34,7 @@ def save_token_scope(func):
 
 @shared_task(name='nodeconductor.digitalocean.provision')
 def provision(droplet_uuid, **kwargs):
-    droplet = Droplet.objects.get(uuid=droplet_uuid)
     chain(
-        sync_service_project_links.s(droplet.service_project_link.to_string(), initial=True),
         provision_droplet.si(droplet_uuid, **kwargs),
         wait_for_action_complete.s(droplet_uuid),
     ).apply_async(
