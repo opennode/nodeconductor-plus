@@ -1,16 +1,15 @@
 from django.apps import AppConfig
 from django.db.models import signals
 
-from nodeconductor.quotas.models import Quota
-from nodeconductor.structure.models import Customer, Service, Resource, Project
-from nodeconductor_plus.insights import handlers
-
 
 class InsightsConfig(AppConfig):
     name = 'nodeconductor_plus.insights'
     verbose_name = 'NodeConductor Insights'
 
     def ready(self):
+        from nodeconductor.quotas.models import Quota
+        from nodeconductor.structure.models import Customer, Service, Resource, Project
+        from nodeconductor_plus.insights import handlers
 
         for index, service in enumerate(Service.get_all_models()):
             signals.post_save.connect(

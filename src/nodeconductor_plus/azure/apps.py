@@ -1,8 +1,5 @@
 from django.apps import AppConfig
 
-from nodeconductor.cost_tracking import CostTrackingRegister
-from nodeconductor.structure import SupportedServices
-
 
 class AzureConfig(AppConfig):
     name = 'nodeconductor_plus.azure'
@@ -10,6 +7,9 @@ class AzureConfig(AppConfig):
     service_name = 'Azure'
 
     def ready(self):
+        from nodeconductor.cost_tracking import CostTrackingRegister
+        from nodeconductor.structure import SupportedServices
+
         from .backend import AzureBackend
         from .cost_tracking import AzureCostTrackingBackend
         SupportedServices.register_backend(AzureBackend)

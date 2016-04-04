@@ -1,8 +1,5 @@
 from django.apps import AppConfig
 
-from nodeconductor.cost_tracking import CostTrackingRegister
-from nodeconductor.structure import SupportedServices
-
 
 class AWSConfig(AppConfig):
     name = 'nodeconductor_plus.aws'
@@ -10,6 +7,9 @@ class AWSConfig(AppConfig):
     service_name = 'Amazon'
 
     def ready(self):
+        from nodeconductor.cost_tracking import CostTrackingRegister
+        from nodeconductor.structure import SupportedServices
+
         from .backend import AWSBackend
         from .cost_tracking import AWSCostTrackingBackend
         SupportedServices.register_backend(AWSBackend)

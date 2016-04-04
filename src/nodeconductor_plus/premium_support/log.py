@@ -6,7 +6,7 @@ class PremiumSupportLogger(EventLogger):
     contract = models.Contract
 
     class Meta:
-        event_types = 'contract_approved'
+        event_types = ('contract_approved',)
 
 
 event_logger.register('premium_support', PremiumSupportLogger)
