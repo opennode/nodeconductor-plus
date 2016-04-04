@@ -1,9 +1,6 @@
 from django.apps import AppConfig
 from django.db.models import signals
 
-from nodeconductor.quotas import handlers as quotas_handlers
-from nodeconductor.structure import SupportedServices
-
 
 class GitLabConfig(AppConfig):
     name = 'nodeconductor_plus.gitlab'
@@ -11,6 +8,9 @@ class GitLabConfig(AppConfig):
     service_name = 'GitLab'
 
     def ready(self):
+        from nodeconductor.quotas import handlers as quotas_handlers
+        from nodeconductor.structure import SupportedServices
+
         Project = self.get_model('Project')
 
         from .backend import GitLabBackend

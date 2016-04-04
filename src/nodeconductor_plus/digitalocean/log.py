@@ -1,4 +1,4 @@
-from nodeconductor.logging.log import AlertLogger, alert_logger
+from nodeconductor.logging.loggers import AlertLogger, alert_logger
 
 
 class DigitalOceanAlertLogger(AlertLogger):
