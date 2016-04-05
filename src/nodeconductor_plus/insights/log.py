@@ -10,7 +10,7 @@ class ServiceStateAlertLogger(AlertLogger):
 
 
 class ResourceStateAlertLogger(AlertLogger):
-    resource = 'structure.Resource'
+    resource = 'structure.ResourceMixin'
 
     class Meta:
         alert_types = ('resource_disappeared_from_backend',)
