@@ -1,6 +1,7 @@
 import logging
 
 from django.shortcuts import redirect
+from django.conf import settings
 import django_filters
 from django_fsm import TransitionNotAllowed
 from rest_framework import viewsets, permissions, mixins, exceptions, status, filters
@@ -103,7 +104,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
-        return redirect(PaypalBackend().return_url)
+        return redirect(settings.NODECONDUCTOR_PLUS['BILLING_PLAN_APPROVAL_URL'])
 
     @list_route()
     def cancel(self, request):
@@ -119,7 +120,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
             except TransitionNotAllowed:
                 logger.warning('Invalid agreement state')
 
-        return redirect(PaypalBackend().return_url)
+        return redirect(settings.NODECONDUCTOR_PLUS['BILLING_PLAN_CANCEL_URL'])
 
     @detail_route()
     def transactions(self, request, uuid):
