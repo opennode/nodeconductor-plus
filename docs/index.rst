@@ -24,6 +24,14 @@ API
 
    api/api
 
+Endpoints
+---------
+
+.. toctree::
+   :maxdepth: 1
+
+   drfapi/index
+
 License
 -------
 
