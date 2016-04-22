@@ -9,6 +9,7 @@ from rest_framework import test
 from nodeconductor.cost_tracking.models import PriceEstimate
 from nodeconductor.logging.models import Alert
 from nodeconductor.structure import SupportedServices
+from nodeconductor.structure.models import ServiceSettings
 from nodeconductor.structure.tests import factories
 
 from nodeconductor_plus.insights import tasks
@@ -109,9 +110,17 @@ class ServiceAlertTest(BaseAlertTest, test.APITransactionTestCase):
         self.assertTrue(mock_backend.called)
         self.assertTrue(self.has_alert(service, 'service_unavailable'))
 
+    def test_when_erred_service_responds_to_ping_it_is_recovered(self, mock_backend):
+        service = self.create_service()
+        service.settings.set_erred()
+        service.settings.save()
+
         mock_backend().ping.return_value = True
         tasks.check_service_availability(service.to_string())
         self.assertFalse(self.has_alert(service, 'service_unavailable'))
+
+        service.refresh_from_db()
+        self.assertTrue(ServiceSettings.States.OK, service.settings.state)
 
 
 @mock.patch('nodeconductor_plus.insights.tasks.alert_logger')

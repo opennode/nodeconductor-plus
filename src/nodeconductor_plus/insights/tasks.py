@@ -8,7 +8,7 @@ from django.conf import settings
 from nodeconductor.core.models import SynchronizationStates
 from nodeconductor.core.tasks import throttle
 from nodeconductor.structure import SupportedServices, ServiceBackendError, ServiceBackendNotImplemented
-from nodeconductor.structure.models import Customer, Service
+from nodeconductor.structure.models import Customer, Service, ServiceSettings
 from nodeconductor.cost_tracking.models import PriceEstimate
 from nodeconductor_plus.insights.log import alert_logger
 
@@ -95,9 +95,9 @@ def check_service_availability(service_str):
         service.save()
     else:
         alert_logger.service_state.close(scope=service, alert_type='service_unavailable')
-        if service.settings.state == SynchronizationStates.ERRED:
-            service.settings.set_in_sync_from_erred()
-            service.settings.save()
+        if service.settings.state == ServiceSettings.States.ERRED:
+            service.settings.recover()
+            service.settings.save(update_fields=['state'])
 
 
 @shared_task
