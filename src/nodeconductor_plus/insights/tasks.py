@@ -5,7 +5,6 @@ from celery import shared_task
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 
-from nodeconductor.core.models import SynchronizationStates
 from nodeconductor.core.tasks import throttle
 from nodeconductor.structure import SupportedServices, ServiceBackendError, ServiceBackendNotImplemented
 from nodeconductor.structure.models import Customer, Service, ServiceSettings
