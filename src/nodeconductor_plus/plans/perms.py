@@ -10,7 +10,7 @@ PERMISSION_LOGICS = (
     ('plans.Agreement', FilteredCollaboratorsPermissionLogic(
         collaborators_query='customer__roles__permission_group__user',
         collaborators_filter={
-            'roles__role_type': structure_models.CustomerRole.OWNER,
+            'customer__roles__role_type': structure_models.CustomerRole.OWNER,
         },
         any_permission=True,
     )),
