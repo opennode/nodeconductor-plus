@@ -5,6 +5,7 @@ class AzureConfig(AppConfig):
     name = 'nodeconductor_plus.azure'
     verbose_name = "NodeConductor Azure"
     service_name = 'Azure'
+    is_public_service = True
 
     def ready(self):
         from nodeconductor.cost_tracking import CostTrackingRegister
