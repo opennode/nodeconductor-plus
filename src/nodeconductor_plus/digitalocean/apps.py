@@ -5,6 +5,7 @@ class DigitalOceanConfig(AppConfig):
     name = 'nodeconductor_plus.digitalocean'
     verbose_name = "NodeConductor DigitalOcean"
     service_name = 'DigitalOcean'
+    is_public_service = True
 
     def ready(self):
         from nodeconductor.cost_tracking import CostTrackingRegister

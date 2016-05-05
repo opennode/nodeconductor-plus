@@ -5,6 +5,7 @@ class AWSConfig(AppConfig):
     name = 'nodeconductor_plus.aws'
     verbose_name = "NodeConductor AWS EC2"
     service_name = 'Amazon'
+    is_public_service = True
 
     def ready(self):
         from nodeconductor.cost_tracking import CostTrackingRegister
