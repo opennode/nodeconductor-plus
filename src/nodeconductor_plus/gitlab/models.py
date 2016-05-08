@@ -11,9 +11,17 @@ class GitLabService(structure_models.Service):
     projects = models.ManyToManyField(
         structure_models.Project, related_name='gitlab_services', through='GitLabServiceProjectLink')
 
+    class Meta(structure_models.Service.Meta):
+        verbose_name = 'GitLab service'
+        verbose_name_plural = 'GitLab service'
+
 
 class GitLabServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(GitLabService)
+
+    class Meta(structure_models.ServiceProjectLink.Meta):
+        verbose_name = 'GitLab service project link'
+        verbose_name_plural = 'GitLab service project link'
 
 
 class GitLabResource(structure_models.Resource, core_models.SerializableAbstractMixin):

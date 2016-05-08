@@ -11,9 +11,17 @@ class AWSService(structure_models.Service):
     projects = models.ManyToManyField(
         structure_models.Project, related_name='aws_services', through='AWSServiceProjectLink')
 
+    class Meta(structure_models.Service.Meta):
+        verbose_name = 'AWS service'
+        verbose_name_plural = 'AWS service'
+
 
 class AWSServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(AWSService)
+
+    class Meta(structure_models.ServiceProjectLink.Meta):
+        verbose_name = 'AWS service project link'
+        verbose_name_plural = 'AWS service project link'
 
 
 class Region(structure_models.GeneralServiceProperty):

@@ -10,9 +10,17 @@ class DigitalOceanService(structure_models.Service):
     projects = models.ManyToManyField(
         structure_models.Project, related_name='digitalocean_services', through='DigitalOceanServiceProjectLink')
 
+    class Meta(structure_models.Service.Meta):
+        verbose_name = 'DigitalOcean service'
+        verbose_name_plural = 'DigitalOcean service'
+
 
 class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
     service = models.ForeignKey(DigitalOceanService)
+
+    class Meta(structure_models.ServiceProjectLink.Meta):
+        verbose_name = 'DigitalOcean service project link'
+        verbose_name_plural = 'DigitalOcean service project link'
 
 
 class Region(structure_models.GeneralServiceProperty):
