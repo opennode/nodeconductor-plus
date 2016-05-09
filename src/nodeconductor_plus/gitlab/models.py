@@ -13,7 +13,7 @@ class GitLabService(structure_models.Service):
 
     class Meta(structure_models.Service.Meta):
         verbose_name = 'GitLab service'
-        verbose_name_plural = 'GitLab service'
+        verbose_name_plural = 'GitLab services'
 
 
 class GitLabServiceProjectLink(structure_models.ServiceProjectLink):
@@ -21,7 +21,7 @@ class GitLabServiceProjectLink(structure_models.ServiceProjectLink):
 
     class Meta(structure_models.ServiceProjectLink.Meta):
         verbose_name = 'GitLab service project link'
-        verbose_name_plural = 'GitLab service project link'
+        verbose_name_plural = 'GitLab service project links'
 
 
 class GitLabResource(structure_models.Resource, core_models.SerializableAbstractMixin):

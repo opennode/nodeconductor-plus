@@ -33,6 +33,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'verbose_name': 'GitLab service',
+                'verbose_name_plural': 'GitLab services'
             },
         ),
         migrations.CreateModel(
@@ -46,6 +48,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'verbose_name': 'GitLab service project link',
+                'verbose_name_plural': 'GitLab service project links'
             },
         ),
         migrations.AlterUniqueTogether(

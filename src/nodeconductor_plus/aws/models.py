@@ -13,7 +13,7 @@ class AWSService(structure_models.Service):
 
     class Meta(structure_models.Service.Meta):
         verbose_name = 'AWS service'
-        verbose_name_plural = 'AWS service'
+        verbose_name_plural = 'AWS services'
 
 
 class AWSServiceProjectLink(structure_models.ServiceProjectLink):
@@ -21,7 +21,7 @@ class AWSServiceProjectLink(structure_models.ServiceProjectLink):
 
     class Meta(structure_models.ServiceProjectLink.Meta):
         verbose_name = 'AWS service project link'
-        verbose_name_plural = 'AWS service project link'
+        verbose_name_plural = 'AWS service project links'
 
 
 class Region(structure_models.GeneralServiceProperty):
