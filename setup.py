@@ -64,7 +64,6 @@ setup(
     entry_points={
         'nodeconductor_extensions': (
             'aws = nodeconductor_plus.aws.extension:AWSExtension',
-            'azure = nodeconductor_plus.azure.extension:AzureExtension',
             'digitalocean = nodeconductor_plus.digitalocean.extension:DigitalOceanExtension',
             'gitlab = nodeconductor_plus.gitlab.extension:GitLabExtension',
             'insights = nodeconductor_plus.insights.extension:InsightsExtension',
