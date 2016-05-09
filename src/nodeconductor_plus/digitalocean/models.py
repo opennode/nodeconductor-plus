@@ -12,7 +12,7 @@ class DigitalOceanService(structure_models.Service):
 
     class Meta(structure_models.Service.Meta):
         verbose_name = 'DigitalOcean service'
-        verbose_name_plural = 'DigitalOcean service'
+        verbose_name_plural = 'DigitalOcean services'
 
 
 class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
@@ -20,7 +20,7 @@ class DigitalOceanServiceProjectLink(structure_models.ServiceProjectLink):
 
     class Meta(structure_models.ServiceProjectLink.Meta):
         verbose_name = 'DigitalOcean service project link'
-        verbose_name_plural = 'DigitalOcean service project link'
+        verbose_name_plural = 'DigitalOcean service project links'
 
 
 class Region(structure_models.GeneralServiceProperty):

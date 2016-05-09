@@ -34,6 +34,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'verbose_name': 'AWS service',
+                'verbose_name_plural': 'AWS services'
             },
         ),
         migrations.CreateModel(
@@ -47,6 +49,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'verbose_name': 'AWS service project link',
+                'verbose_name_plural': 'AWS service project links'
             },
         ),
         migrations.AlterUniqueTogether(

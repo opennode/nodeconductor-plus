@@ -34,6 +34,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'verbose_name': 'DigitalOcean service',
+                'verbose_name_plural': 'DigitalOcean services'
             },
         ),
         migrations.CreateModel(
@@ -47,6 +49,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'verbose_name': 'DigitalOcean service project link',
+                'verbose_name_plural': 'DigitalOcean service project links'
             },
         ),
         migrations.AlterUniqueTogether(
