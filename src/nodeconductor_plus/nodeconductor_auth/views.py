@@ -14,6 +14,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
 
 from nodeconductor.core.tasks import send_task
+from nodeconductor.core.views import RefreshTokenMixin
+
 from .models import AuthProfile
 from .serializers import RegistrationSerializer, ActivationSerializer, AuthSerializer
 
@@ -59,7 +61,7 @@ def generate_username(name):
     return uuid.uuid4().hex[:30]
 
 
-class BaseAuthView(views.APIView):
+class BaseAuthView(RefreshTokenMixin, views.APIView):
     permission_classes = []
     authentication_classes = []
     provider = None  # either 'google' or 'facebook'
@@ -78,7 +80,8 @@ class BaseAuthView(views.APIView):
         backend_user = self.get_backend_user(serializer.validated_data)
         user, created = self.create_or_update_user(backend_user['id'], backend_user['name'])
 
-        token = Token.objects.get(user=user)
+        token = self.refresh_token(user)
+
         return response.Response({'token': token.key},
                                  status=created and status.HTTP_201_CREATED or status.HTTP_200_OK)
 
