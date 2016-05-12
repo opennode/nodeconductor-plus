@@ -160,3 +160,14 @@ class DropletImportSerializer(structure_serializers.BaseResourceImportSerializer
             models.Droplet.States.OFFLINE
 
         return super(DropletImportSerializer, self).create(validated_data)
+
+
+class DropletResizeSerializer(serializers.Serializer):
+    size = serializers.HyperlinkedRelatedField(
+        view_name='digitalocean-size-detail',
+        lookup_field='uuid',
+        queryset=models.Size.objects.all(),
+        write_only=True)
+
+    class Meta:
+        fields = ['size']
