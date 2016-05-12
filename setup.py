@@ -19,31 +19,11 @@ tests_require = [
 install_requires = [
     'apache-libcloud>=0.20.0',
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
+    'nodeconductor_openstack>=0.1.0',
     'nodeconductor_paypal>=0.3.0',
-    'nodeconductor>0.91.0',
     'python-digitalocean>=1.5',
     'python-gitlab>=0.9',
 ]
-
-# RPM installation does not need oslo, cliff and stevedore libs -
-# they are required only for installation with setuptools
-try:
-    action = sys.argv[1]
-except IndexError:
-    pass
-else:
-    if action in ['develop', 'install', 'test', 'bdist_egg']:
-        install_requires += [
-            'cliff==1.7.0',
-            'oslo.config==1.4.0',
-            'oslo.i18n==1.0.0',
-            'oslo.utils==1.0.0',
-            'stevedore==1.0.0',
-        ]
-    # handle the case when plugins are installed in develop mode
-    if action in ['develop']:
-        install_requires += tests_require
-
 
 setup(
     name='nodeconductor-plus',

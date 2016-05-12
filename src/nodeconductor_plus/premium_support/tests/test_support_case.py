@@ -76,7 +76,7 @@ class SupportCaseTest(test.APITransactionTestCase):
         self.assertEqual(response.data['description'], new_data['description'])
 
     def test_user_can_specify_optional_resource_for_support_case(self):
-        from nodeconductor.openstack.tests.factories import InstanceFactory
+        from nodeconductor_plus.gitlab.tests.factories import GitLabProjectFactory
 
         self.support_case['resource'] = InstanceFactory.get_url()
         self.client.force_authenticate(self.staff)
