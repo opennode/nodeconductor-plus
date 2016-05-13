@@ -161,8 +161,10 @@ def begin_resizing(droplet_uuid, size_uuid, transition_entity=None):
     backend = droplet.get_backend()
     size = Size.objects.get(uuid=size_uuid)
 
-    droplet.size = size
-    droplet.save(update_fields=['size'])
+    droplet.cores = size.cores
+    droplet.ram = size.ram
+    droplet.disk = size.disk
+    droplet.save()
 
     return backend.resize_droplet(droplet.backend_id, size.backend_id)
 

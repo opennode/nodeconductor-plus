@@ -2,10 +2,9 @@ from __future__ import unicode_literals
 
 from rest_framework.decorators import detail_route
 
-from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import views as structure_views
 
-from . import models, serializers, log
+from . import models, serializers, log, filters
 
 
 class DigitalOceanServiceViewSet(structure_views.BaseServiceViewSet):
@@ -19,24 +18,10 @@ class DigitalOceanServiceProjectLinkViewSet(structure_views.BaseServiceProjectLi
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class ImageFilter(structure_filters.BaseServicePropertyFilter):
-
-    class Meta(object):
-        model = models.Image
-        fields = structure_filters.BaseServicePropertyFilter.Meta.fields + ('distribution', 'type')
-        order_by = (
-            'distribution',
-            'type',
-            # desc
-            '-distribution',
-            '-type',
-        )
-
-
 class ImageViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Image.objects.all()
     serializer_class = serializers.ImageSerializer
-    filter_class = ImageFilter
+    filter_class = filters.ImageFilter
     lookup_field = 'uuid'
 
 
@@ -52,6 +37,7 @@ class RegionViewSet(structure_views.BaseServicePropertyViewSet):
 class SizeViewSet(structure_views.BaseServicePropertyViewSet):
     queryset = models.Size.objects.all()
     serializer_class = serializers.SizeSerializer
+    filter_class = filters.SizeFilter
     lookup_field = 'uuid'
 
 

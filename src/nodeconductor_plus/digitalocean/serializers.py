@@ -169,5 +169,12 @@ class DropletResizeSerializer(serializers.Serializer):
         queryset=models.Size.objects.all(),
         write_only=True)
 
+    def get_fields(self):
+        fields = super(DropletResizeSerializer, self).get_fields()
+        field = fields['size']
+        field.value_field = 'url'
+        field.display_name_field = 'name'
+        return fields
+
     class Meta:
         fields = ['size']
