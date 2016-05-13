@@ -65,7 +65,7 @@ class DropletViewSet(structure_views.BaseResourceViewSet):
     def resize(self, request, instance, uuid=None):
         """
         To resize droplet, submit a **POST** request to the instance URL, specifying URI of a target size.
-        Note, that instance must be OFFLINE. Example of a valid request:
+        Note that instance must be OFFLINE. Example of a valid request:
 
         .. code-block:: http
 
