@@ -73,7 +73,7 @@ class DropletViewSet(structure_views.BaseResourceViewSet):
         Pass {'disk': false} along with target size in order to perform flexible resizing,
         which only upgrades your CPU and RAM. This option is reversible.
 
-        Note, that instance must be OFFLINE. Example of a valid request:
+        Note that instance must be OFFLINE. Example of a valid request:
 
         .. code-block:: http
 
