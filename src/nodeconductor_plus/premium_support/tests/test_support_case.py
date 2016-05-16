@@ -76,9 +76,9 @@ class SupportCaseTest(test.APITransactionTestCase):
         self.assertEqual(response.data['description'], new_data['description'])
 
     def test_user_can_specify_optional_resource_for_support_case(self):
-        from nodeconductor.openstack.tests.factories import InstanceFactory
+        from nodeconductor_plus.gitlab.tests.factories import GitLabProjectFactory
 
-        self.support_case['resource'] = InstanceFactory.get_url()
+        self.support_case['resource'] = GitLabProjectFactory.get_url()
         self.client.force_authenticate(self.staff)
         response = self.client.post(self.url, data=self.support_case)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
@@ -88,14 +88,14 @@ class SupportCaseTest(test.APITransactionTestCase):
         Create one case for each of contracts.
         After filtering by contract only one case is returned.
         """
-        support_case = support_factories.SupportCaseFactory(contract=self.contract)
+        support_factories.SupportCaseFactory(contract=self.contract)
 
         other_contract = support_factories.ContractFactory(
             state=support_models.Contract.States.CANCELLED,
             plan=self.plan,
             project=self.project
         )
-        other_case = support_factories.SupportCaseFactory(contract=other_contract)
+        support_factories.SupportCaseFactory(contract=other_contract)
 
         self.client.force_authenticate(self.owner)
         response = self.client.get(self.url, data={'contract_uuid': other_contract.uuid.hex})
