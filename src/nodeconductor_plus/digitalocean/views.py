@@ -65,6 +65,14 @@ class DropletViewSet(structure_views.BaseResourceViewSet):
     def resize(self, request, instance, uuid=None):
         """
         To resize droplet, submit a **POST** request to the instance URL, specifying URI of a target size.
+
+        Pass {'disk': true} along with target size in order to perform permanent resizing,
+        which allows you to resize your disk space as well as CPU and RAM.
+        After increasing the disk size, you will not be able to decrease it.
+
+        Pass {'disk': false} along with target size in order to perform flexible resizing,
+        which only upgrades your CPU and RAM. This option is reversible.
+
         Note, that instance must be OFFLINE. Example of a valid request:
 
         .. code-block:: http
@@ -82,12 +90,16 @@ class DropletViewSet(structure_views.BaseResourceViewSet):
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        size = serializer.validated_data.get('size')
-        backend = instance.get_backend()
-        backend.resize(instance, size)
+        size = serializer.validated_data['size']
+        disk = serializer.validated_data['disk']
 
+        backend = instance.get_backend()
+        backend.resize(instance, size, disk)
+
+        message = 'Droplet {droplet_name} has been scheduled to %s resize.' % \
+                  (disk and 'permanent' or 'flexible')
         log.event_logger.droplet_resize.info(
-            'Droplet {droplet_name} has been scheduled to resize.',
+            message,
             event_type='droplet_resize_scheduled',
             event_context={'droplet': instance, 'size': size}
         )

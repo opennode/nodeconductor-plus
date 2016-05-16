@@ -71,3 +71,33 @@ class SizeFactory(factory.DjangoModelFactory):
     disk = 10 * 1024
     transfer = 10 * 1024 * 1024
     price = 0.99
+
+    @classmethod
+    def get_url(cls, size=None):
+        if size is None:
+            size = SizeFactory()
+        return 'http://testserver' + reverse('digitalocean-size-detail', kwargs={'uuid': size.uuid})
+
+
+class DropletFactory(factory.DjangoModelFactory):
+    class Meta(object):
+        model = models.Droplet
+
+    name = factory.Sequence(lambda n: 'droplet%s' % n)
+    backend_id = factory.Sequence(lambda n: 'droplet-id%s' % n)
+
+    cores = 2
+    ram = 2 * 1024
+    disk = 10 * 1024
+    transfer = 10 * 1024 * 1024
+
+    @classmethod
+    def get_url(cls, droplet=None, action=None):
+        if droplet is None:
+            droplet = DropletFactory()
+        url = 'http://testserver' + reverse('digitalocean-droplet-detail', kwargs={'uuid': droplet.uuid})
+        return url if action is None else url + action + '/'
+
+    @classmethod
+    def get_list_url(cls):
+        return 'http://testserver' + reverse('digitalocean-droplet-list')

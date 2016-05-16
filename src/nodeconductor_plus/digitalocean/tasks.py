@@ -93,9 +93,9 @@ def restart(droplet_uuid):
 
 
 @shared_task(name='nodeconductor.digitalocean.resize')
-def resize(droplet_uuid, size_uuid):
+def resize(droplet_uuid, size_uuid, disk):
     chain(
-        begin_resizing.s(droplet_uuid, size_uuid),
+        begin_resizing.s(droplet_uuid, size_uuid, disk),
         wait_for_action_complete.s(droplet_uuid),
     ).apply_async(
         link=set_resized.si(droplet_uuid),
@@ -156,17 +156,19 @@ def begin_restarting(droplet_uuid, transition_entity=None):
 @transition(Droplet, 'begin_resizing')
 @save_error_message
 @save_token_scope
-def begin_resizing(droplet_uuid, size_uuid, transition_entity=None):
+def begin_resizing(droplet_uuid, size_uuid, disk, transition_entity=None):
     droplet = transition_entity
     backend = droplet.get_backend()
     size = Size.objects.get(uuid=size_uuid)
 
     droplet.cores = size.cores
     droplet.ram = size.ram
-    droplet.disk = size.disk
+
+    if disk:
+        droplet.disk = size.disk
     droplet.save()
 
-    return backend.resize_droplet(droplet.backend_id, size.backend_id)
+    return backend.resize_droplet(droplet.backend_id, size.backend_id, disk)
 
 
 @shared_task
@@ -201,7 +203,7 @@ def set_erred(droplet_uuid, transition_entity=None):
 def set_resized(droplet_uuid, transition_entity=None):
     droplet = transition_entity
     logger.info('Successfully resized droplet %s', droplet_uuid)
-    log.event_logger.openstack_flavor.info(
+    log.event_logger.droplet_resize.info(
         'Droplet {droplet_name} has been resized.',
         event_type='droplet_resize_succeeded',
         event_context={'droplet': droplet, 'size': droplet.size}
