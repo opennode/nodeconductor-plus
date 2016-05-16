@@ -4,6 +4,7 @@ import re
 
 from django.utils import dateparse
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from nodeconductor.structure import serializers as structure_serializers
 
@@ -160,3 +161,36 @@ class DropletImportSerializer(structure_serializers.BaseResourceImportSerializer
             models.Droplet.States.OFFLINE
 
         return super(DropletImportSerializer, self).create(validated_data)
+
+
+class DropletResizeSerializer(serializers.Serializer):
+    size = serializers.HyperlinkedRelatedField(
+        view_name='digitalocean-size-detail',
+        lookup_field='uuid',
+        queryset=models.Size.objects.all(),
+        write_only=True)
+    disk = serializers.BooleanField(required=True)
+
+    def get_fields(self):
+        fields = super(DropletResizeSerializer, self).get_fields()
+        field = fields['size']
+        field.value_field = 'url'
+        field.display_name_field = 'name'
+        return fields
+
+    class Meta:
+        fields = 'size', 'disk'
+
+    def validate_size(self, value):
+        if value:
+            if self.is_same_size(value):
+                raise ValidationError("New size is the same. Please select another one.")
+
+            if value.disk < self.instance.disk:
+                raise ValidationError("Disk sizes are not allowed to be decreased through a resize operation.")
+        return value
+
+    def is_same_size(self, new_size):
+        return new_size.disk == self.instance.disk and \
+               new_size.cores == self.instance.cores and \
+               new_size.ram == self.instance.ram

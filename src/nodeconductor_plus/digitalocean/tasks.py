@@ -1,4 +1,5 @@
 import functools
+import logging
 import sys
 
 from celery import shared_task, chain
@@ -7,8 +8,11 @@ from django.utils import six, timezone
 from nodeconductor.core.tasks import save_error_message, transition, retry_if_false
 from nodeconductor_plus.digitalocean.backend import TokenScopeError
 
-from . import handlers
-from .models import Droplet
+from . import handlers, log
+from .models import Droplet, Size
+
+
+logger = logging.getLogger(__name__)
 
 
 def save_token_scope(func):
@@ -88,6 +92,16 @@ def restart(droplet_uuid):
         link_error=set_erred.si(droplet_uuid))
 
 
+@shared_task(name='nodeconductor.digitalocean.resize')
+def resize(droplet_uuid, size_uuid, disk):
+    chain(
+        begin_resizing.s(droplet_uuid, size_uuid, disk),
+        wait_for_action_complete.s(droplet_uuid),
+    ).apply_async(
+        link=set_resized.si(droplet_uuid),
+        link_error=set_erred.si(droplet_uuid))
+
+
 @shared_task(max_retries=300, default_retry_delay=3)
 @retry_if_false
 def wait_for_action_complete(action_id, droplet_uuid):
@@ -139,6 +153,25 @@ def begin_restarting(droplet_uuid, transition_entity=None):
 
 
 @shared_task
+@transition(Droplet, 'begin_resizing')
+@save_error_message
+@save_token_scope
+def begin_resizing(droplet_uuid, size_uuid, disk, transition_entity=None):
+    droplet = transition_entity
+    backend = droplet.get_backend()
+    size = Size.objects.get(uuid=size_uuid)
+
+    droplet.cores = size.cores
+    droplet.ram = size.ram
+
+    if disk:
+        droplet.disk = size.disk
+    droplet.save()
+
+    return backend.resize_droplet(droplet.backend_id, size.backend_id, disk)
+
+
+@shared_task
 @transition(Droplet, 'set_online')
 def set_online(droplet_uuid, transition_entity=None):
     droplet = transition_entity
@@ -163,3 +196,15 @@ def set_offline(droplet_uuid, transition_entity=None):
 @transition(Droplet, 'set_erred')
 def set_erred(droplet_uuid, transition_entity=None):
     pass
+
+
+@shared_task
+@transition(Droplet, 'set_resized')
+def set_resized(droplet_uuid, transition_entity=None):
+    droplet = transition_entity
+    logger.info('Successfully resized droplet %s', droplet_uuid)
+    log.event_logger.droplet_resize.info(
+        'Droplet {droplet_name} has been resized.',
+        event_type='droplet_resize_succeeded',
+        event_context={'droplet': droplet, 'size': droplet.size}
+    )

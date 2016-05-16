@@ -98,6 +98,11 @@ class DigitalOceanBaseBackend(ServiceBackend):
         droplet.save()
         send_task('digitalocean', 'restart')(droplet.uuid.hex)
 
+    def resize(self, droplet, size, disk):
+        droplet.schedule_resizing()
+        droplet.save()
+        send_task('digitalocean', 'resize')(droplet.uuid.hex, size.uuid.hex, disk)
+
     def add_ssh_key(self, ssh_key, service_project_link):
         try:
             self.push_ssh_key(ssh_key)
@@ -311,6 +316,16 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         """
         backend_droplet = self.get_droplet(backend_droplet_id)
         action = backend_droplet.reboot()
+        return action['action']['id']
+
+    @digitalocean_error_handler
+    def resize_droplet(self, backend_droplet_id, backend_size_id, disk):
+        """
+        Resize droplet with given id.
+        :return: ID of related action.
+        """
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        action = backend_droplet.resize(new_size_slug=backend_size_id, disk=disk)
         return action['action']['id']
 
     @digitalocean_error_handler
