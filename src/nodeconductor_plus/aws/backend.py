@@ -3,10 +3,10 @@ import re
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
-from django.utils.lru_cache import lru_cache
 from libcloud.common.types import LibcloudError
+from libcloud.compute.base import StorageVolume
 from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS
-from libcloud.compute.types import NodeState
+from libcloud.compute.types import NodeState, StorageVolumeState
 
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.core.tasks import send_task
@@ -60,6 +60,7 @@ class AWSBaseBackend(ServiceBackend):
 
     def sync(self):
         self.pull_service_properties()
+        self.pull_volumes()
 
     def provision(self, vm, region=None, image=None, size=None, ssh_key=None):
         vm.ram = size.ram
@@ -183,6 +184,91 @@ class AWSBackend(AWSBaseBackend):
 
         # Remove stale images using one SQL query
         models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
+
+    def pull_volumes(self):
+        regions_map = {region.backend_id: region for region in models.Region.objects.all()}
+        instance_map = {instance.backend_id: instance for instance in models.Instance.objects.all()}
+        cur_volumes = {i.backend_id: i for i in models.Volume.objects.all()}
+
+        for backend_volume in self.get_all_volumes():
+            cur_volumes.pop(backend_volume.id, None)
+
+            region = regions_map.get(backend_volume.extra['zone'])
+            instance = instance_map.get(backend_volume.extra['instance_id'])
+
+            try:
+                models.Volume.objects.update_or_create(
+                    backend_id=backend_volume.id,
+                    defaults={
+                        'name': backend_volume.name,
+                        'size': backend_volume.size,
+                        'region': region,
+                        'volume_type': backend_volume.extra['volume_type'],
+                        'state': self._get_volume_state(backend_volume.state),
+                        'device': backend_volume.extra['device'],
+                        'instance': instance
+                    })
+            except IntegrityError:
+                logger.warning(
+                    'Could not create AWS volume with id %s due to concurrent update',
+                    backend_volume.id)
+
+        # Remove stale volumes using one SQL query
+        models.Volume.objects.filter(backend_id__in=cur_volumes.keys()).delete()
+
+    def get_all_volumes(self):
+        try:
+            return self._get_api().list_volumes()
+        except Exception as e:
+            logger.exception('Unable to list EC2 volumes')
+            six.reraise(AWSBackendError, e)
+
+    def _get_volume_state(self, state):
+        aws_to_nodeconductor = {
+            StorageVolumeState.AVAILABLE: models.Volume.States.OK,
+            StorageVolumeState.INUSE: models.Volume.States.OK,
+            StorageVolumeState.CREATING: models.Volume.States.CREATING,
+            StorageVolumeState.DELETING: models.Volume.States.DELETING,
+            StorageVolumeState.ATTACHING: models.Volume.States.UPDATING
+        }
+
+        return aws_to_nodeconductor.get(state, models.Volume.States.ERRED)
+
+    def create_volume(self, volume):
+        try:
+            new_volume = self._get_api().create_volume(
+                size=volume.size,
+                name=volume.name,
+                location=volume.region.name,
+                ex_volume_type=volume.volume_type
+            )
+            volume.backend_id = new_volume.id
+            volume.save(update_fields=['backend_id'])
+        except Exception as e:
+            logger.exception('Unable to create volume with id %s', volume.id)
+            six.reraise(AWSBackendError, e)
+
+    def delete_volume(self, volume):
+        try:
+            driver = self._get_api()
+            backend_volume = StorageVolume(id=volume.backend_id,
+                                           name=volume.name,
+                                           size=volume.size,
+                                           driver=driver)
+            driver.destroy_volume(backend_volume)
+        except Exception as e:
+            logger.exception('Unable to delete volume with id %s', volume.id)
+            six.reraise(AWSBackendError, e)
+
+    def attach_volume(self, instance, volume, device):
+        """
+        Attach volume to the instance
+        """
+
+    def detach_volume(self, volume):
+        """
+        Detach volume from the instance
+        """
 
     def get_all_images(self):
         """
@@ -322,6 +408,7 @@ class AWSBackend(AWSBaseBackend):
 
     def to_instance(self, instance, region):
         manager = self._get_api(region.backend_id)
+        # TODO: Connect volume with instance
         try:
             volumes = {v.id: v.size for v in manager.list_volumes(instance)}
         except Exception as e:

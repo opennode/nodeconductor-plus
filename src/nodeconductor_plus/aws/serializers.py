@@ -159,3 +159,13 @@ class InstanceImportSerializer(structure_serializers.BaseResourceImportSerialize
         validated_data['region'] = region
 
         return super(InstanceImportSerializer, self).create(validated_data)
+
+
+class VolumeSerializer(structure_serializers.BaseResourceSerializer):
+    class Meta(structure_serializers.BaseResourceSerializer.Meta):
+        model = models.Volume
+        view_name = 'aws-volume-detail'
+
+        volume_fields = ('size', 'device', 'region', 'volume_type', 'instance')
+        protected_fields = structure_serializers.BaseResourceSerializer.Meta.fields + volume_fields
+        fields = structure_serializers.BaseResourceSerializer.Meta.fields + volume_fields
