@@ -10,7 +10,7 @@ from nodeconductor_plus.insights.log import alert_logger
 # Issue: NC-920
 
 def check_unmanaged_resources(sender, instance, created=False, **kwargs):
-    if created:
+    if created and not instance.settings.shared:
         check_service_resources.delay(instance.to_string())
 
 
