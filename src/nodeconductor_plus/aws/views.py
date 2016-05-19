@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from nodeconductor.core.views import StateExecutorViewSet
 from nodeconductor.structure import views as structure_views
 
-from . import filters, models, serializers, executors, ResourceType
+from . import filters, models, serializers, executors
 
 
 class AmazonServiceViewSet(structure_views.BaseServiceViewSet):
@@ -16,11 +16,13 @@ class AmazonServiceViewSet(structure_views.BaseServiceViewSet):
         return {'resource_type': self.request.query_params.get('resource_type')}
 
     def get_serializer_class(self):
+        from nodeconductor.structure import SupportedServices
+
         if self.request.method == 'POST':
             resource_type = self.request.data.get('type')
-            if resource_type == ResourceType.INSTANCE:
+            if resource_type == SupportedServices.get_name_for_model(models.Instance):
                 return serializers.InstanceImportSerializer
-            elif resource_type == ResourceType.VOLUME:
+            elif resource_type == SupportedServices.get_name_for_model(models.Volume):
                 return serializers.VolumeImportSerializer
         return super(AmazonServiceViewSet, self).get_serializer_class()
 

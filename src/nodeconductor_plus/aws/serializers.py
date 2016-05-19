@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from nodeconductor.structure import serializers as structure_serializers
 
-from . import models, ResourceType
+from . import models
 from .backend import AWSBackendError
 
 
@@ -81,6 +81,16 @@ class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkS
         }
 
 
+class AWSImportSerializerMixin(object):
+    def get_fields(self):
+        from nodeconductor.structure import SupportedServices
+        fields = super(AWSImportSerializerMixin, self).get_fields()
+        resources = SupportedServices.get_service_resources(models.AWSService)
+        choices = [SupportedServices.get_name_for_model(resource) for resource in resources]
+        fields['type'] = serializers.ChoiceField(choices=choices, write_only=True)
+        return fields
+
+
 class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
     service = serializers.HyperlinkedRelatedField(
         source='service_project_link.service',
@@ -134,13 +144,11 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
         return attrs
 
 
-class InstanceImportSerializer(structure_serializers.BaseResourceImportSerializer):
-    type = serializers.ChoiceField(choices=ResourceType.CHOICES, write_only=True)
-
+class InstanceImportSerializer(AWSImportSerializerMixin,
+                               structure_serializers.BaseResourceImportSerializer):
     class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.Instance
         view_name = 'aws-instance-detail'
-        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + ('type',)
 
     def create(self, validated_data):
         backend = self.context['service'].get_backend()
@@ -199,13 +207,11 @@ class VolumeSerializer(structure_serializers.BaseResourceSerializer):
         }
 
 
-class VolumeImportSerializer(structure_serializers.BaseResourceImportSerializer):
-    type = serializers.ChoiceField(choices=ResourceType.CHOICES, write_only=True)
-
+class VolumeImportSerializer(AWSImportSerializerMixin,
+                             structure_serializers.BaseResourceImportSerializer):
     class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.Volume
         view_name = 'aws-volume-detail'
-        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + ('type',)
 
     def create(self, validated_data):
         backend = self.context['service'].get_backend()

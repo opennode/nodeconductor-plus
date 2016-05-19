@@ -13,7 +13,7 @@ from nodeconductor.core.tasks import send_task
 from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
-from . import models, ResourceType
+from . import models
 
 logger = logging.getLogger(__name__)
 
@@ -487,6 +487,8 @@ class AWSBackend(AWSBaseBackend):
         return size.price * hours_in_month()
 
     def to_instance(self, instance, region):
+        from nodeconductor.structure import SupportedServices
+
         manager = self._get_api(region.backend_id)
         # TODO: Connect volume with instance
         try:
@@ -514,7 +516,7 @@ class AWSBackend(AWSBaseBackend):
             'state': self._get_instance_state(instance.state),
             'external_ips': external_ips,
             'flavor_name': instance.extra.get('instance_type'),
-            'type': ResourceType.INSTANCE
+            'type': SupportedServices.get_name_for_model(models.Instance)
         }
 
     def _get_instance_state(self, state):
@@ -555,12 +557,14 @@ class AWSBackend(AWSBaseBackend):
             return manager.ex_import_keypair_from_string(ssh_key.name, ssh_key.public_key)
 
     def get_resources_for_import(self, resource_type=None):
+        from nodeconductor.structure import SupportedServices
+
         resources = []
 
-        if resource_type is None or resource_type == ResourceType.INSTANCE:
+        if resource_type is None or resource_type == SupportedServices.get_name_for_model(models.Instance):
             resources.extend(self.get_instances_for_import())
 
-        if resource_type is None or resource_type == ResourceType.VOLUME:
+        if resource_type is None or resource_type == SupportedServices.get_name_for_model(models.Volume):
             resources.extend(self.get_volumes_for_import())
         return resources
 
@@ -635,6 +639,8 @@ class AWSBackend(AWSBaseBackend):
             six.reraise(AWSBackendError, e)
 
     def to_volume(self, region, volume):
+        from nodeconductor.structure import SupportedServices
+
         return {
             'id': volume.id,
             'name': volume.name,
@@ -642,9 +648,8 @@ class AWSBackend(AWSBaseBackend):
             'created': volume.extra['create_time'],
             'state': self._get_volume_state(volume.state),
             'runtime_state': volume.state,
-            'type': ResourceType.VOLUME,
+            'type': SupportedServices.get_name_for_model(models.Volume),
             'device': volume.extra['device'],
-            'region': region.uuid.hex,
             'instance_id': volume.extra['instance_id'],
             'volume_type': volume.extra['volume_type']
         }
