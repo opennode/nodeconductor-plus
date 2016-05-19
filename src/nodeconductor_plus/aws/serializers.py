@@ -235,7 +235,7 @@ class VolumeImportSerializer(AWSImportSerializerMixin,
         validated_data['size'] = volume['size']
         validated_data['created'] = volume['created']
         validated_data['runtime_state'] = volume['runtime_state']
-        validated_data['state'] = volume['state']
+        validated_data['state'] = models.Volume.States.OK
         validated_data['device'] = volume['device']
         validated_data['volume_type'] = volume['volume_type']
         validated_data['region'] = region
