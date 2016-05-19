@@ -3,10 +3,10 @@ import re
 
 from django.db import IntegrityError
 from django.utils import six, dateparse
-from django.utils.lru_cache import lru_cache
 from libcloud.common.types import LibcloudError
-from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS
-from libcloud.compute.types import NodeState
+from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS, NAMESPACE, RESOURCE_EXTRA_ATTRIBUTES_MAP
+from libcloud.compute.types import NodeState, StorageVolumeState
+from libcloud.utils.xml import fixxpath
 
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.core.tasks import send_task
@@ -16,6 +16,12 @@ from nodeconductor.structure import ServiceBackend, ServiceBackendError
 from . import models
 
 logger = logging.getLogger(__name__)
+
+
+RESOURCE_EXTRA_ATTRIBUTES_MAP['volume']['volume_type'] = {
+    'xpath': 'volumeType',
+    'transform_func': str
+}
 
 
 class ExtendedEC2NodeDriver(EC2NodeDriver):
@@ -31,6 +37,116 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
         """
 
         return self.list_nodes(ex_node_ids=[node_id])[0]
+
+    def list_volumes(self, node=None, ex_volume_ids=None, ex_filters=None):
+        """
+        List all volumes
+
+        ex_volume_ids parameter is used to filter the list of
+        volumes that should be returned. Only the volumes
+        with the corresponding volume ids will be returned.
+
+        :param      ex_volume_ids: List of ``volume.id``
+        :type       ex_volume_ids: ``list`` of ``str``
+
+        :param      ex_filters: The filters so that the response includes
+                                information for only certain volumes.
+        :type       ex_filters: ``dict``
+
+        :rtype: ``list`` of :class:`Node`
+        """
+
+        params = {
+            'Action': 'DescribeVolumes',
+        }
+        if node:
+            filters = {'attachment.instance-id': node.id}
+            params.update(self._build_filters(filters))
+
+        if ex_volume_ids:
+            params.update(self._pathlist('VolumeId', ex_volume_ids))
+
+        if ex_filters:
+            params.update(self._build_filters(ex_filters))
+
+        response = self.connection.request(self.path, params=params).object
+        volumes = [self._to_volume(el) for el in response.findall(
+            fixxpath(xpath='volumeSet/item', namespace=NAMESPACE))
+        ]
+        return volumes
+
+    def get_volume(self, volume_id):
+        """
+        Get a volume based on an volume_id
+
+        :param volume_id: Volume identifier
+        :type volume_id: ``str``
+
+        :return: A Volume object
+        :rtype: :class:`Volume`
+        """
+        return self.list_volumes(ex_volume_ids=[volume_id])[0]
+
+    # Location is required argument
+    # http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateVolume.html
+    def create_volume(self, size, name, location, snapshot=None,
+                      ex_volume_type='standard', ex_iops=None):
+        """
+        Create a new volume.
+
+        :param size: Size of volume in gigabytes (required)
+        :type size: ``int``
+
+        :param name: Name of the volume to be created
+        :type name: ``str``
+
+        :param snapshot:  Snapshot from which to create the new
+                               volume.  (optional)
+        :type snapshot:  :class:`.VolumeSnapshot`
+
+        :param location: Datacenter in which to create a volume in (required).
+        :type location: :class:`.ExEC2AvailabilityZone`
+
+        :param ex_volume_type: Type of volume to create.
+        :type ex_volume_type: ``str``
+
+        :param iops: The number of I/O operations per second (IOPS)
+                     that the volume supports. Only used if ex_volume_type
+                     is io1.
+        :type iops: ``int``
+
+        :return: The newly created volume.
+        :rtype: :class:`StorageVolume`
+        """
+        valid_volume_types = ['standard', 'io1', 'gp2']
+
+        params = {
+            'Action': 'CreateVolume',
+            'Size': str(size)}
+
+        if ex_volume_type and ex_volume_type not in valid_volume_types:
+            raise ValueError('Invalid volume type specified: %s' %
+                             (ex_volume_type))
+
+        if snapshot:
+            params['SnapshotId'] = snapshot.id
+
+        params['AvailabilityZone'] = location.name
+
+        if ex_volume_type:
+            params['VolumeType'] = ex_volume_type
+
+        if ex_volume_type == 'io1' and ex_iops:
+            params['Iops'] = ex_iops
+
+        volume = self._to_volume(
+            self.connection.request(self.path, params=params).object,
+            name=name)
+
+        if self.ex_create_tags(volume, {'Name': name}):
+            volume.extra['tags']['Name'] = name
+
+        return volume
 
 
 class AWSBackendError(ServiceBackendError):
@@ -184,6 +300,57 @@ class AWSBackend(AWSBaseBackend):
         # Remove stale images using one SQL query
         models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
 
+    def create_volume(self, volume):
+        try:
+            manager = self._get_api(volume.region.backend_id)
+            zones = manager.ex_list_availability_zones()
+            # Availability zone is required by AWS
+            new_volume = manager.create_volume(
+                location=zones[0],
+                size=volume.size,
+                name=volume.name,
+                ex_volume_type=volume.volume_type
+            )
+            volume.backend_id = new_volume.id
+            volume.save(update_fields=['backend_id'])
+        except Exception as e:
+            logger.exception('Unable to create volume with id %s', volume.id)
+            six.reraise(AWSBackendError, e)
+
+    def delete_volume(self, volume):
+        try:
+            manager = self._get_api(volume.region.backend_id)
+            manager.destroy_volume(self.get_volume(volume))
+        except Exception as e:
+            logger.exception('Unable to delete volume with id %s', volume.id)
+            six.reraise(AWSBackendError, e)
+
+    def attach_volume(self, instance, volume, device):
+        """
+        Attach volume to the instance
+        """
+        manager = self._get_api(volume.region.backend_id)
+        backend_node = manager.get_node(instance.backend_id)
+        backend_volume = manager.get_volume(volume.backend_id)
+        try:
+            manager.attach_volume(backend_node, backend_volume, device)
+        except LibcloudError as e:
+            logger.exception('Unable to attach volume with id %s to instance with id %s',
+                             volume.id, instance.id)
+            six.reraise(AWSBackendError, e)
+
+    def detach_volume(self, volume):
+        """
+        Detach volume from the instance
+        """
+        manager = self._get_api(volume.region.backend_id)
+        backend_volume = manager.get_volume(volume.backend_id)
+        try:
+            manager.detach_volume(backend_volume)
+        except LibcloudError as e:
+            logger.exception('Unable to detach volume with id %s', volume.id)
+            six.reraise(AWSBackendError, e)
+
     def get_all_images(self):
         """
         Fetch images from all regions
@@ -211,7 +378,6 @@ class AWSBackend(AWSBaseBackend):
                     yield region, image
 
     def update_images(self):
-
         get_images = lambda manager, owner: {
             i.id: i.extra['description']
             for i in manager.list_images(
@@ -321,7 +487,10 @@ class AWSBackend(AWSBaseBackend):
         return size.price * hours_in_month()
 
     def to_instance(self, instance, region):
+        from nodeconductor.structure import SupportedServices
+
         manager = self._get_api(region.backend_id)
+        # TODO: Connect volume with instance
         try:
             volumes = {v.id: v.size for v in manager.list_volumes(instance)}
         except Exception as e:
@@ -346,7 +515,8 @@ class AWSBackend(AWSBaseBackend):
             'region': region.uuid.hex,
             'state': self._get_instance_state(instance.state),
             'external_ips': external_ips,
-            'flavor_name': instance.extra.get('instance_type')
+            'flavor_name': instance.extra.get('instance_type'),
+            'type': SupportedServices.get_name_for_model(models.Instance)
         }
 
     def _get_instance_state(self, state):
@@ -386,13 +556,33 @@ class AWSBackend(AWSBaseBackend):
         except LibcloudError:
             return manager.ex_import_keypair_from_string(ssh_key.name, ssh_key.public_key)
 
-    def get_resources_for_import(self):
+    def get_resources_for_import(self, resource_type=None):
+        from nodeconductor.structure import SupportedServices
+
+        resources = []
+
+        if resource_type is None or resource_type == SupportedServices.get_name_for_model(models.Instance):
+            resources.extend(self.get_instances_for_import())
+
+        if resource_type is None or resource_type == SupportedServices.get_name_for_model(models.Volume):
+            resources.extend(self.get_volumes_for_import())
+        return resources
+
+    def get_instances_for_import(self):
         cur_instances = models.Instance.objects.all().values_list('backend_id', flat=True)
 
         return [
             self.to_instance(instance, region)
             for region, instance in self.get_all_nodes()
             if instance.id not in cur_instances
+        ]
+
+    def get_volumes_for_import(self):
+        cur_volumes = models.Volume.objects.all().values_list('backend_id', flat=True)
+        return [
+            self.to_volume(region, volume)
+            for region, volume in self.get_all_volumes()
+            if volume.id not in cur_volumes
         ]
 
     def find_instance(self, instance_id):
@@ -407,9 +597,83 @@ class AWSBackend(AWSBaseBackend):
                 return region, self.to_instance(instance, region)
         raise AWSBackendError("Instance with id %s is not found", instance_id)
 
+    def find_volume(self, volume_id):
+        for region in models.Region.objects.all():
+            manager = self._get_api(region.backend_id)
+            try:
+                volume = manager.get_volume(volume_id)
+            except:
+                # Volume not found
+                pass
+            else:
+                return region, self.to_volume(region, volume)
+        raise AWSBackendError("Volume with id %s is not found", volume_id)
+
     def get_managed_resources(self):
+        backend_instance = self.get_managed_instances()
+        backend_volumes = self.get_managed_volumes()
+        return list(backend_instance) + list(backend_volumes)
+
+    def get_managed_instances(self):
         try:
             ids = [instance.id for region, instance in self.get_all_nodes()]
             return models.Instance.objects.filter(backend_id__in=ids)
         except LibcloudError:
             return []
+
+    def get_managed_volumes(self):
+        try:
+            ids = [volume.id for region, volume in self.get_all_volumes()]
+            return models.Volume.objects.filter(backend_id__in=ids)
+        except LibcloudError:
+            return []
+
+    def get_all_volumes(self):
+        try:
+            for region in models.Region.objects.all():
+                manager = self._get_api(region.backend_id)
+                for node in manager.list_volumes():
+                    yield region, node
+        except Exception as e:
+            logger.exception('Unable to list EC2 volumes')
+            six.reraise(AWSBackendError, e)
+
+    def to_volume(self, region, volume):
+        from nodeconductor.structure import SupportedServices
+
+        return {
+            'id': volume.id,
+            'name': volume.name,
+            'size': volume.size,
+            'created': volume.extra['create_time'],
+            'state': self._get_volume_state(volume.state),
+            'runtime_state': volume.state,
+            'type': SupportedServices.get_name_for_model(models.Volume),
+            'device': volume.extra['device'],
+            'instance_id': volume.extra['instance_id'],
+            'volume_type': volume.extra['volume_type']
+        }
+
+    def _get_volume_state(self, state):
+        aws_to_nodeconductor = {
+            StorageVolumeState.AVAILABLE: models.Volume.States.OK,
+            StorageVolumeState.INUSE: models.Volume.States.OK,
+            StorageVolumeState.CREATING: models.Volume.States.CREATING,
+            StorageVolumeState.DELETING: models.Volume.States.DELETING,
+            StorageVolumeState.ATTACHING: models.Volume.States.UPDATING
+        }
+
+        return aws_to_nodeconductor.get(state, models.Volume.States.ERRED)
+
+    def get_volume(self, volume):
+        try:
+            manager = self._get_api(volume.region.backend_id)
+            return manager.get_volume(volume.backend_id)
+        except LibcloudError as e:
+            six.reraise(AWSBackendError, e)
+
+    def pull_volume_runtime_state(self, volume):
+        backend_volume = self.get_volume(volume)
+        if backend_volume.state != volume.runtime_state:
+            volume.runtime_state = backend_volume.state
+            volume.save(update_fields=['runtime_state'])

@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from django.db import models
 from libcloud.compute.drivers.ec2 import REGION_DETAILS
 
+from nodeconductor.core.models import RuntimeStateMixin
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.utils import get_coordinates_by_ip
 
@@ -59,3 +60,19 @@ class Instance(structure_models.VirtualMachineMixin, structure_models.Resource):
         region = self.region.backend_id
         endpoint = REGION_DETAILS[region]['endpoint']
         return get_coordinates_by_ip(endpoint)
+
+
+class Volume(RuntimeStateMixin, structure_models.NewResource):
+    service_project_link = models.ForeignKey(
+        AWSServiceProjectLink, related_name='volumes', on_delete=models.PROTECT)
+
+    VOLUME_TYPES = (
+        ('gp2', 'General Purpose SSD'),
+        ('io1', 'Provisioned IOPS SSD'),
+        ('standard', 'Magnetic volumes')
+    )
+    size = models.PositiveIntegerField(help_text='Size of volume in gigabytes')
+    region = models.ForeignKey(Region)
+    volume_type = models.CharField(max_length=8, choices=VOLUME_TYPES)
+    device = models.CharField(max_length=128, blank=True, null=True)
+    instance = models.ForeignKey(Instance, blank=True, null=True)
