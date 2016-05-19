@@ -329,11 +329,27 @@ class AWSBackend(AWSBaseBackend):
         """
         Attach volume to the instance
         """
+        manager = self._get_api(volume.region.backend_id)
+        backend_node = manager.get_node(instance.backend_id)
+        backend_volume = manager.get_volume(volume.backend_id)
+        try:
+            manager.attach_volume(backend_node, backend_volume, device)
+        except LibcloudError as e:
+            logger.exception('Unable to attach volume with id %s to instance with id %s',
+                             volume.id, instance.id)
+            six.reraise(AWSBackendError, e)
 
     def detach_volume(self, volume):
         """
         Detach volume from the instance
         """
+        manager = self._get_api(volume.region.backend_id)
+        backend_volume = manager.get_volume(volume.backend_id)
+        try:
+            manager.detach_volume(backend_volume)
+        except LibcloudError as e:
+            logger.exception('Unable to detach volume with id %s', volume.id)
+            six.reraise(AWSBackendError, e)
 
     def get_all_images(self):
         """
