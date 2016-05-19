@@ -573,14 +573,14 @@ class AWSBackend(AWSBaseBackend):
         return aws_to_nodeconductor.get(state, models.Volume.States.ERRED)
 
     def get_volume(self, volume):
-        manager = self._get_api(volume.region.backend_id)
         try:
+            manager = self._get_api(volume.region.backend_id)
             return manager.get_volume(volume.backend_id)
         except LibcloudError as e:
             six.reraise(AWSBackendError, e)
 
     def pull_volume_runtime_state(self, volume):
-        backend_volume = self.get_volume(volume.backend_id)
-        if backend_volume.status != volume.runtime_state:
-            volume.runtime_state = backend_volume.status
+        backend_volume = self.get_volume(volume)
+        if backend_volume.state != volume.runtime_state:
+            volume.runtime_state = backend_volume.state
             volume.save(update_fields=['runtime_state'])
