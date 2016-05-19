@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from nodeconductor.structure import serializers as structure_serializers
 
-from . import models
+from . import models, ResourceType
 from .backend import AWSBackendError
 
 
@@ -82,7 +82,6 @@ class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkS
 
 
 class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
-
     service = serializers.HyperlinkedRelatedField(
         source='service_project_link.service',
         view_name='aws-detail',
@@ -136,10 +135,12 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
 
 
 class InstanceImportSerializer(structure_serializers.BaseResourceImportSerializer):
+    type = serializers.ChoiceField(choices=ResourceType.CHOICES, write_only=True)
 
     class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
         model = models.Instance
         view_name = 'aws-instance-detail'
+        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + ('type',)
 
     def create(self, validated_data):
         backend = self.context['service'].get_backend()
@@ -157,11 +158,28 @@ class InstanceImportSerializer(structure_serializers.BaseResourceImportSerialize
         validated_data['created'] = instance['created']
         validated_data['state'] = instance['state']
         validated_data['region'] = region
+        validated_data.pop('type')
 
         return super(InstanceImportSerializer, self).create(validated_data)
 
 
 class VolumeSerializer(structure_serializers.BaseResourceSerializer):
+    service = serializers.HyperlinkedRelatedField(
+        source='service_project_link.service',
+        view_name='aws-detail',
+        read_only=True,
+        lookup_field='uuid')
+
+    service_project_link = serializers.HyperlinkedRelatedField(
+        view_name='aws-spl-detail',
+        queryset=models.AWSServiceProjectLink.objects.all())
+
+    region = serializers.HyperlinkedRelatedField(
+        view_name='aws-region-detail',
+        lookup_field='uuid',
+        queryset=models.Region.objects.all(),
+        write_only=True)
+
     class Meta(structure_serializers.BaseResourceSerializer.Meta):
         model = models.Volume
         view_name = 'aws-volume-detail'
@@ -169,3 +187,44 @@ class VolumeSerializer(structure_serializers.BaseResourceSerializer):
         volume_fields = ('size', 'device', 'region', 'volume_type', 'instance')
         protected_fields = structure_serializers.BaseResourceSerializer.Meta.fields + volume_fields
         fields = structure_serializers.BaseResourceSerializer.Meta.fields + volume_fields
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+            'instance': {'lookup_field': 'uuid', 'view_name': 'aws-instance-detail'}
+        }
+
+
+class VolumeImportSerializer(structure_serializers.BaseResourceImportSerializer):
+    type = serializers.ChoiceField(choices=ResourceType.CHOICES, write_only=True)
+
+    class Meta(structure_serializers.BaseResourceImportSerializer.Meta):
+        model = models.Volume
+        view_name = 'aws-volume-detail'
+        fields = structure_serializers.BaseResourceImportSerializer.Meta.fields + ('type',)
+
+    def create(self, validated_data):
+        backend = self.context['service'].get_backend()
+        try:
+            region, volume = backend.find_volume(validated_data['backend_id'])
+        except AWSBackendError:
+            raise serializers.ValidationError(
+                {'backend_id': "Can't find volume with ID %s" % validated_data['backend_id']})
+
+        instance_id = volume['instance_id']
+        if instance_id:
+            try:
+                instance = models.Instance.objects.get(backend_id=instance_id)
+            except models.Instance.DoesNotExist:
+                raise serializers.ValidationError(
+                    "You must import instance with ID %s first" % instance_id)
+            else:
+                validated_data['instance'] = instance
+
+        validated_data['name'] = volume['name']
+        validated_data['size'] = volume['size']
+        validated_data['created'] = volume['created']
+        validated_data['state'] = volume['state']
+        validated_data['device'] = volume['device']
+        validated_data['region'] = region
+        validated_data.pop('type')
+
+        return super(VolumeImportSerializer, self).create(validated_data)

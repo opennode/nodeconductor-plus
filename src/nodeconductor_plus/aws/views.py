@@ -1,14 +1,28 @@
+import six
 from rest_framework import viewsets
 
+from nodeconductor.core.views import StateExecutorViewSet
 from nodeconductor.structure import views as structure_views
 
-from . import filters, models, serializers, executors
+from . import filters, models, serializers, executors, ResourceType
 
 
 class AmazonServiceViewSet(structure_views.BaseServiceViewSet):
     queryset = models.AWSService.objects.all()
     serializer_class = serializers.ServiceSerializer
     import_serializer_class = serializers.InstanceImportSerializer
+
+    def get_import_context(self):
+        return {'resource_type': self.request.query_params.get('resource_type')}
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            resource_type = self.request.data.get('type')
+            if resource_type == ResourceType.INSTANCE:
+                return serializers.InstanceImportSerializer
+            elif resource_type == ResourceType.VOLUME:
+                return serializers.VolumeImportSerializer
+        return super(AmazonServiceViewSet, self).get_serializer_class()
 
 
 class AmazonServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
@@ -51,12 +65,12 @@ class InstanceViewSet(structure_views.BaseResourceViewSet):
             ssh_key=serializer.validated_data.get('ssh_public_key'))
 
 
-class VolumeViewSet(structure_views.BaseResourceViewSet):
+class VolumeViewSet(six.with_metaclass(structure_views.ResourceViewMetaclass,
+                                       structure_views.ResourceViewMixin,
+                                       StateExecutorViewSet)):
     queryset = models.Volume.objects.all()
     serializer_class = serializers.VolumeSerializer
-
-    def perform_provision(self, serializer):
-        resource = serializer.save()
-        executors.VolumeCreateExecutor.execute(resource)
+    create_executor = executors.VolumeCreateExecutor
+    delete_executor = executors.VolumeDeleteExecutor
 
     # TODO: Attach & detach volume to instance

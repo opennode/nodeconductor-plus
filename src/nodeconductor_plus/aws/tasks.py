@@ -2,7 +2,7 @@ from celery import shared_task, chain
 
 from django.utils import timezone
 
-from nodeconductor.core.tasks import save_error_message, transition, retry_if_false
+from nodeconductor.core.tasks import save_error_message, transition, retry_if_false, Task
 
 from .models import Instance
 from .backend import AWSBackendError
@@ -139,3 +139,25 @@ def set_offline(vm_uuid, transition_entity=None):
 @transition(Instance, 'set_erred')
 def set_erred(vm_uuid, transition_entity=None):
     pass
+
+
+class RuntimeStateException(Exception):
+    pass
+
+
+class PollRuntimeStateTask(Task):
+    max_retries = 300
+    default_retry_delay = 5
+
+    def get_backend(self, instance):
+        return instance.get_backend()
+
+    def execute(self, instance, backend_pull_method, success_state, erred_state):
+        backend = self.get_backend(instance)
+        getattr(backend, backend_pull_method)(instance)
+        instance.refresh_from_db()
+        if instance.runtime_state not in (success_state, erred_state):
+            self.retry()
+        elif instance.runtime_state == erred_state:
+            raise RuntimeStateException(
+                'Instance %s (PK: %s) runtime state become erred: %s' % (instance, instance.pk, erred_state))

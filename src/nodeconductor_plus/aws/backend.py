@@ -5,15 +5,16 @@ from django.db import IntegrityError
 from django.utils import six, dateparse
 from libcloud.common.types import LibcloudError
 from libcloud.compute.base import StorageVolume
-from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS
+from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS, NAMESPACE
 from libcloud.compute.types import NodeState, StorageVolumeState
+from libcloud.utils.xml import fixxpath
 
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.core.tasks import send_task
 from nodeconductor.core.utils import hours_in_month
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
-from . import models
+from . import models, ResourceType
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,55 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
         """
 
         return self.list_nodes(ex_node_ids=[node_id])[0]
+
+    def list_volumes(self, node=None, ex_volume_ids=None, ex_filters=None):
+        """
+        List all volumes
+
+        ex_volume_ids parameter is used to filter the list of
+        volumes that should be returned. Only the volumes
+        with the corresponding volume ids will be returned.
+
+        :param      ex_volume_ids: List of ``volume.id``
+        :type       ex_volume_ids: ``list`` of ``str``
+
+        :param      ex_filters: The filters so that the response includes
+                                information for only certain volumes.
+        :type       ex_filters: ``dict``
+
+        :rtype: ``list`` of :class:`Node`
+        """
+
+        params = {
+            'Action': 'DescribeVolumes',
+        }
+        if node:
+            filters = {'attachment.instance-id': node.id}
+            params.update(self._build_filters(filters))
+
+        if ex_volume_ids:
+            params.update(self._pathlist('VolumeId', ex_volume_ids))
+
+        if ex_filters:
+            params.update(self._build_filters(ex_filters))
+
+        response = self.connection.request(self.path, params=params).object
+        volumes = [self._to_volume(el) for el in response.findall(
+            fixxpath(xpath='volumeSet/item', namespace=NAMESPACE))
+        ]
+        return volumes
+
+    def get_volume(self, volume_id):
+        """
+        Get a volume based on an volume_id
+
+        :param volume_id: Volume identifier
+        :type volume_id: ``str``
+
+        :return: A Volume object
+        :rtype: :class:`Volume`
+        """
+        return self.list_volumes(ex_volume_ids=[volume_id])[0]
 
 
 class AWSBackendError(ServiceBackendError):
@@ -60,7 +110,6 @@ class AWSBaseBackend(ServiceBackend):
 
     def sync(self):
         self.pull_service_properties()
-        self.pull_volumes()
 
     def provision(self, vm, region=None, image=None, size=None, ssh_key=None):
         vm.ram = size.ram
@@ -185,55 +234,6 @@ class AWSBackend(AWSBaseBackend):
         # Remove stale images using one SQL query
         models.Image.objects.filter(backend_id__in=cur_images.keys()).delete()
 
-    def pull_volumes(self):
-        regions_map = {region.backend_id: region for region in models.Region.objects.all()}
-        instance_map = {instance.backend_id: instance for instance in models.Instance.objects.all()}
-        cur_volumes = {i.backend_id: i for i in models.Volume.objects.all()}
-
-        for backend_volume in self.get_all_volumes():
-            cur_volumes.pop(backend_volume.id, None)
-
-            region = regions_map.get(backend_volume.extra['zone'])
-            instance = instance_map.get(backend_volume.extra['instance_id'])
-
-            try:
-                models.Volume.objects.update_or_create(
-                    backend_id=backend_volume.id,
-                    defaults={
-                        'name': backend_volume.name,
-                        'size': backend_volume.size,
-                        'region': region,
-                        'volume_type': backend_volume.extra['volume_type'],
-                        'state': self._get_volume_state(backend_volume.state),
-                        'device': backend_volume.extra['device'],
-                        'instance': instance
-                    })
-            except IntegrityError:
-                logger.warning(
-                    'Could not create AWS volume with id %s due to concurrent update',
-                    backend_volume.id)
-
-        # Remove stale volumes using one SQL query
-        models.Volume.objects.filter(backend_id__in=cur_volumes.keys()).delete()
-
-    def get_all_volumes(self):
-        try:
-            return self._get_api().list_volumes()
-        except Exception as e:
-            logger.exception('Unable to list EC2 volumes')
-            six.reraise(AWSBackendError, e)
-
-    def _get_volume_state(self, state):
-        aws_to_nodeconductor = {
-            StorageVolumeState.AVAILABLE: models.Volume.States.OK,
-            StorageVolumeState.INUSE: models.Volume.States.OK,
-            StorageVolumeState.CREATING: models.Volume.States.CREATING,
-            StorageVolumeState.DELETING: models.Volume.States.DELETING,
-            StorageVolumeState.ATTACHING: models.Volume.States.UPDATING
-        }
-
-        return aws_to_nodeconductor.get(state, models.Volume.States.ERRED)
-
     def create_volume(self, volume):
         try:
             new_volume = self._get_api().create_volume(
@@ -297,7 +297,6 @@ class AWSBackend(AWSBaseBackend):
                     yield region, image
 
     def update_images(self):
-
         get_images = lambda manager, owner: {
             i.id: i.extra['description']
             for i in manager.list_images(
@@ -433,7 +432,8 @@ class AWSBackend(AWSBaseBackend):
             'region': region.uuid.hex,
             'state': self._get_instance_state(instance.state),
             'external_ips': external_ips,
-            'flavor_name': instance.extra.get('instance_type')
+            'flavor_name': instance.extra.get('instance_type'),
+            'type': ResourceType.INSTANCE
         }
 
     def _get_instance_state(self, state):
@@ -473,13 +473,31 @@ class AWSBackend(AWSBaseBackend):
         except LibcloudError:
             return manager.ex_import_keypair_from_string(ssh_key.name, ssh_key.public_key)
 
-    def get_resources_for_import(self):
+    def get_resources_for_import(self, resource_type=None):
+        resources = []
+
+        if resource_type is None or resource_type == ResourceType.INSTANCE:
+            resources.extend(self.get_instances_for_import())
+
+        if resource_type is None or resource_type == ResourceType.VOLUME:
+            resources.extend(self.get_volumes_for_import())
+        return resources
+
+    def get_instances_for_import(self):
         cur_instances = models.Instance.objects.all().values_list('backend_id', flat=True)
 
         return [
             self.to_instance(instance, region)
             for region, instance in self.get_all_nodes()
             if instance.id not in cur_instances
+        ]
+
+    def get_volumes_for_import(self):
+        cur_volumes = models.Volume.objects.all().values_list('backend_id', flat=True)
+        return [
+            self.to_volume(region, volume)
+            for region, volume in self.get_all_volumes()
+            if volume.id not in cur_volumes
         ]
 
     def find_instance(self, instance_id):
@@ -494,9 +512,80 @@ class AWSBackend(AWSBaseBackend):
                 return region, self.to_instance(instance, region)
         raise AWSBackendError("Instance with id %s is not found", instance_id)
 
+    def find_volume(self, volume_id):
+        for region in models.Region.objects.all():
+            manager = self._get_api(region.backend_id)
+            try:
+                volume = manager.get_volume(volume_id)
+            except:
+                # Volume not found
+                pass
+            else:
+                return region, self.to_volume(region, volume)
+        raise AWSBackendError("Volume with id %s is not found", volume_id)
+
     def get_managed_resources(self):
+        backend_instance = self.get_managed_instances()
+        backend_volumes = self.get_managed_volumes()
+        return list(backend_instance) + list(backend_volumes)
+
+    def get_managed_instances(self):
         try:
             ids = [instance.id for region, instance in self.get_all_nodes()]
             return models.Instance.objects.filter(backend_id__in=ids)
         except LibcloudError:
             return []
+
+    def get_managed_volumes(self):
+        try:
+            ids = [volume.id for region, volume in self.get_all_volumes()]
+            return models.Volume.objects.filter(backend_id__in=ids)
+        except LibcloudError:
+            return []
+
+    def get_all_volumes(self):
+        try:
+            for region in models.Region.objects.all():
+                manager = self._get_api(region.backend_id)
+                for node in manager.list_volumes():
+                    yield region, node
+        except Exception as e:
+            logger.exception('Unable to list EC2 volumes')
+            six.reraise(AWSBackendError, e)
+
+    def to_volume(self, region, volume):
+        return {
+            'id': volume.id,
+            'name': volume.name,
+            'size': volume.size,
+            'created': volume.extra['create_time'],
+            'state': self._get_volume_state(volume.state),
+            'type': ResourceType.VOLUME,
+            'device': volume.extra['device'],
+            'region': region.uuid.hex,
+            'instance_id': volume.extra['instance_id']
+        }
+
+    def _get_volume_state(self, state):
+        aws_to_nodeconductor = {
+            StorageVolumeState.AVAILABLE: models.Volume.States.OK,
+            StorageVolumeState.INUSE: models.Volume.States.OK,
+            StorageVolumeState.CREATING: models.Volume.States.CREATING,
+            StorageVolumeState.DELETING: models.Volume.States.DELETING,
+            StorageVolumeState.ATTACHING: models.Volume.States.UPDATING
+        }
+
+        return aws_to_nodeconductor.get(state, models.Volume.States.ERRED)
+
+    def get_volume(self, volume):
+        manager = self._get_api(volume.region.backend_id)
+        try:
+            return manager.get_volume(volume.backend_id)
+        except LibcloudError as e:
+            six.reraise(AWSBackendError, e)
+
+    def pull_volume_runtime_state(self, volume):
+        backend_volume = self.get_volume(volume.backend_id)
+        if backend_volume.status != volume.runtime_state:
+            volume.runtime_state = backend_volume.status
+            volume.save(update_fields=['runtime_state'])
