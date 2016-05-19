@@ -184,9 +184,15 @@ class VolumeSerializer(structure_serializers.BaseResourceSerializer):
         model = models.Volume
         view_name = 'aws-volume-detail'
 
-        volume_fields = ('size', 'device', 'region', 'volume_type', 'instance')
-        protected_fields = structure_serializers.BaseResourceSerializer.Meta.fields + volume_fields
-        fields = structure_serializers.BaseResourceSerializer.Meta.fields + volume_fields
+        protected_fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
+            'size', 'region', 'volume_type'
+        )
+        read_only_fields = structure_serializers.BaseResourceSerializer.Meta.read_only_fields + (
+            'device', 'instance', 'runtime_state'
+        )
+        fields = structure_serializers.BaseResourceSerializer.Meta.fields + (
+            'size', 'region', 'volume_type', 'device', 'instance', 'runtime_state'
+        )
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'instance': {'lookup_field': 'uuid', 'view_name': 'aws-instance-detail'}

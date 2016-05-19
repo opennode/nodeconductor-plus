@@ -81,6 +81,67 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
         """
         return self.list_volumes(ex_volume_ids=[volume_id])[0]
 
+    # Location is required argument
+    # http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateVolume.html
+    def create_volume(self, size, name, location, snapshot=None,
+                      ex_volume_type='standard', ex_iops=None):
+        """
+        Create a new volume.
+
+        :param size: Size of volume in gigabytes (required)
+        :type size: ``int``
+
+        :param name: Name of the volume to be created
+        :type name: ``str``
+
+        :param snapshot:  Snapshot from which to create the new
+                               volume.  (optional)
+        :type snapshot:  :class:`.VolumeSnapshot`
+
+        :param location: Datacenter in which to create a volume in (required).
+        :type location: :class:`.ExEC2AvailabilityZone`
+
+        :param ex_volume_type: Type of volume to create.
+        :type ex_volume_type: ``str``
+
+        :param iops: The number of I/O operations per second (IOPS)
+                     that the volume supports. Only used if ex_volume_type
+                     is io1.
+        :type iops: ``int``
+
+        :return: The newly created volume.
+        :rtype: :class:`StorageVolume`
+        """
+        valid_volume_types = ['standard', 'io1', 'gp2']
+
+        params = {
+            'Action': 'CreateVolume',
+            'Size': str(size)}
+
+        if ex_volume_type and ex_volume_type not in valid_volume_types:
+            raise ValueError('Invalid volume type specified: %s' %
+                             (ex_volume_type))
+
+        if snapshot:
+            params['SnapshotId'] = snapshot.id
+
+        params['AvailabilityZone'] = location.name
+
+        if ex_volume_type:
+            params['VolumeType'] = ex_volume_type
+
+        if ex_volume_type == 'io1' and ex_iops:
+            params['Iops'] = ex_iops
+
+        volume = self._to_volume(
+            self.connection.request(self.path, params=params).object,
+            name=name)
+
+        if self.ex_create_tags(volume, {'Name': name}):
+            volume.extra['tags']['Name'] = name
+
+        return volume
+
 
 class AWSBackendError(ServiceBackendError):
     pass
@@ -236,7 +297,10 @@ class AWSBackend(AWSBaseBackend):
     def create_volume(self, volume):
         try:
             manager = self._get_api(volume.region.backend_id)
+            zones = manager.ex_list_availability_zones()
+            # Availability zone is required by AWS
             new_volume = manager.create_volume(
+                location=zones[0],
                 size=volume.size,
                 name=volume.name,
                 ex_volume_type=volume.volume_type
