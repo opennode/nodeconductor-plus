@@ -4,7 +4,7 @@ import re
 from django.db import IntegrityError
 from django.utils import six, dateparse
 from libcloud.common.types import LibcloudError
-from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS, NAMESPACE
+from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS, NAMESPACE, RESOURCE_EXTRA_ATTRIBUTES_MAP
 from libcloud.compute.types import NodeState, StorageVolumeState
 from libcloud.utils.xml import fixxpath
 
@@ -16,6 +16,12 @@ from nodeconductor.structure import ServiceBackend, ServiceBackendError
 from . import models, ResourceType
 
 logger = logging.getLogger(__name__)
+
+
+RESOURCE_EXTRA_ATTRIBUTES_MAP['volume']['volume_type'] = {
+    'xpath': 'volumeType',
+    'transform_func': str
+}
 
 
 class ExtendedEC2NodeDriver(EC2NodeDriver):
@@ -619,10 +625,12 @@ class AWSBackend(AWSBaseBackend):
             'size': volume.size,
             'created': volume.extra['create_time'],
             'state': self._get_volume_state(volume.state),
+            'runtime_state': volume.state,
             'type': ResourceType.VOLUME,
             'device': volume.extra['device'],
             'region': region.uuid.hex,
-            'instance_id': volume.extra['instance_id']
+            'instance_id': volume.extra['instance_id'],
+            'volume_type': volume.extra['volume_type']
         }
 
     def _get_volume_state(self, state):
