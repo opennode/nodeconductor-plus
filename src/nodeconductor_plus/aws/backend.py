@@ -235,10 +235,10 @@ class AWSBackend(AWSBaseBackend):
 
     def create_volume(self, volume):
         try:
-            new_volume = self._get_api().create_volume(
+            manager = self._get_api(volume.region.backend_id)
+            new_volume = manager.create_volume(
                 size=volume.size,
                 name=volume.name,
-                location=volume.region.name,
                 ex_volume_type=volume.volume_type
             )
             volume.backend_id = new_volume.id
