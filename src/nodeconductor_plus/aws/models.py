@@ -74,5 +74,5 @@ class Volume(RuntimeStateMixin, structure_models.NewResource):
     size = models.PositiveIntegerField(help_text='Size of volume in gigabytes')
     region = models.ForeignKey(Region)
     volume_type = models.CharField(max_length=8, choices=VOLUME_TYPES)
-    device = models.CharField(max_length=128)
+    device = models.CharField(max_length=128, blank=True, null=True)
     instance = models.ForeignKey(Instance, blank=True, null=True)

@@ -35,11 +35,11 @@ class Migration(migrations.Migration):
                 ('start_time', models.DateTimeField(null=True, blank=True)),
                 ('size', models.PositiveIntegerField(help_text='Size of volume in gigabytes')),
                 ('volume_type', models.CharField(max_length=8, choices=[('gp2', 'General Purpose SSD'), ('io1', 'Provisioned IOPS SSD'), ('standard', 'Magnetic volumes')])),
-                ('device', models.CharField(max_length=128)),
+                ('device', models.CharField(max_length=128, null=True, blank=True)),
                 ('instance', models.ForeignKey(to='aws.Instance', blank=True, null=True)),
                 ('region', models.ForeignKey(to='aws.Region')),
                 ('tags', taggit.managers.TaggableManager(to='taggit.Tag', through='taggit.TaggedItem', blank=True, help_text='A comma-separated list of tags.', verbose_name='Tags')),
-                ('service_project_link', models.ForeignKey(related_name='volumes', on_delete=models.deletion.PROTECT, default=None, to='aws.AWSServiceProjectLink')),
+                ('service_project_link', models.ForeignKey(related_name='volumes', on_delete=models.deletion.PROTECT, to='aws.AWSServiceProjectLink')),
                 ('runtime_state', models.CharField(max_length=150, verbose_name='runtime state', blank=True))
             ],
             options={
