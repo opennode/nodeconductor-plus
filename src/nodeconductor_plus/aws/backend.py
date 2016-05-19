@@ -4,7 +4,6 @@ import re
 from django.db import IntegrityError
 from django.utils import six, dateparse
 from libcloud.common.types import LibcloudError
-from libcloud.compute.base import StorageVolume
 from libcloud.compute.drivers.ec2 import EC2NodeDriver, REGION_DETAILS, NAMESPACE
 from libcloud.compute.types import NodeState, StorageVolumeState
 from libcloud.utils.xml import fixxpath
@@ -250,12 +249,8 @@ class AWSBackend(AWSBaseBackend):
 
     def delete_volume(self, volume):
         try:
-            driver = self._get_api()
-            backend_volume = StorageVolume(id=volume.backend_id,
-                                           name=volume.name,
-                                           size=volume.size,
-                                           driver=driver)
-            driver.destroy_volume(backend_volume)
+            manager = self._get_api(volume.region.backend_id)
+            manager.destroy_volume(self.get_volume(volume))
         except Exception as e:
             logger.exception('Unable to delete volume with id %s', volume.id)
             six.reraise(AWSBackendError, e)
