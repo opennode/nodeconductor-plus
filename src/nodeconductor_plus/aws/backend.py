@@ -574,7 +574,8 @@ class AWSBackend(AWSBaseBackend):
         return [
             self.to_instance(instance, region)
             for region, instance in self.get_all_nodes()
-            if instance.id not in cur_instances
+            if instance.id not in cur_instances and
+            instance.state != NodeState.TERMINATED
         ]
 
     def get_volumes_for_import(self):
@@ -582,7 +583,8 @@ class AWSBackend(AWSBaseBackend):
         return [
             self.to_volume(region, volume)
             for region, volume in self.get_all_volumes()
-            if volume.id not in cur_volumes
+            if volume.id not in cur_volumes and
+            volume.state != StorageVolumeState.DELETED
         ]
 
     def find_instance(self, instance_id):
