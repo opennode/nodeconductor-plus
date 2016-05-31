@@ -8,7 +8,6 @@ import digitalocean
 from django.db import IntegrityError, transaction
 from django.utils import six
 
-from nodeconductor.core.tasks import send_task
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
@@ -39,14 +38,18 @@ def digitalocean_error_handler(func):
     def wrapped(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except digitalocean.DataReadError, e:
+        except digitalocean.DataReadError as e:
+            exc = list(sys.exc_info())
             message = six.text_type(e)
             if message == 'You do not have access for the attempted action.':
-                six.reraise(TokenScopeError, e)
+                exc[0] = TokenScopeError
+                six.reraise(*exc)
             elif message == 'The resource you were accessing could not be found.':
-                six.reraise(NotFoundError, e)
+                exc[0] = NotFoundError
+                six.reraise(*exc)
             else:
-                six.reraise(DigitalOceanBackendError, e)
+                exc[0] = DigitalOceanBackendError
+                six.reraise(*exc)
     return wrapped
 
 
@@ -60,48 +63,60 @@ class DigitalOceanBaseBackend(ServiceBackend):
         self.pull_service_properties()
         self.pull_droplets()
 
-    def provision(self, droplet, region=None, image=None, size=None, ssh_key=None):
-        droplet.cores = size.cores
-        droplet.ram = size.ram
-        droplet.disk = size.disk
-        droplet.transfer = size.transfer
+    @digitalocean_error_handler
+    def provision(self, droplet, backend_region_id=None, backend_image_id=None,
+                  backend_size_id=None, ssh_key_uuid=None):
+
+        if ssh_key_uuid:
+            ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
+            backend_ssh_key = self.get_or_create_ssh_key(ssh_key)
+
+            droplet.key_name = ssh_key.name
+            droplet.key_fingerprint = ssh_key.fingerprint
+
+        backend_droplet = digitalocean.Droplet(
+            token=self.manager.token,
+            name=droplet.name,
+            user_data=droplet.user_data,
+            region=backend_region_id,
+            image=backend_image_id,
+            size_slug=backend_size_id,
+            ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
+        backend_droplet.create()
+
+        action_id = backend_droplet.action_ids[-1]
+        droplet.backend_id = backend_droplet.id
         droplet.save()
+        return action_id
 
-        send_task('digitalocean', 'provision')(
-            droplet.uuid.hex,
-            backend_region_id=region.backend_id,
-            backend_image_id=image.backend_id,
-            backend_size_id=size.backend_id,
-            ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
+    @digitalocean_error_handler
+    def destroy(self, droplet):
+        backend_droplet = self.get_droplet(droplet.backend_id)
+        backend_droplet.destroy()
 
-    def destroy(self, droplet, force=False):
-        if force:
-            droplet.delete()
-            return
-
-        droplet.schedule_deletion()
-        droplet.save()
-        send_task('digitalocean', 'destroy')(droplet.uuid.hex)
-
+    @digitalocean_error_handler
     def start(self, droplet):
-        droplet.schedule_starting()
-        droplet.save()
-        send_task('digitalocean', 'start')(droplet.uuid.hex)
+        backend_droplet = self.get_droplet(droplet.backend_id)
+        action = backend_droplet.power_on()
+        return action['action']['id']
 
+    @digitalocean_error_handler
     def stop(self, droplet):
-        droplet.schedule_stopping()
-        droplet.save()
-        send_task('digitalocean', 'stop')(droplet.uuid.hex)
+        backend_droplet = self.get_droplet(droplet.backend_id)
+        action = backend_droplet.shutdown()
+        return action['action']['id']
 
+    @digitalocean_error_handler
     def restart(self, droplet):
-        droplet.schedule_restarting()
-        droplet.save()
-        send_task('digitalocean', 'restart')(droplet.uuid.hex)
+        backend_droplet = self.get_droplet(droplet.backend_id)
+        action = backend_droplet.reboot()
+        return action['action']['id']
 
-    def resize(self, droplet, size, disk):
-        droplet.schedule_resizing()
-        droplet.save()
-        send_task('digitalocean', 'resize')(droplet.uuid.hex, size.uuid.hex, disk)
+    @digitalocean_error_handler
+    def resize(self, droplet, backend_size_id=None, disk=None):
+        backend_droplet = self.get_droplet(droplet.backend_id)
+        action = backend_droplet.resize(new_size_slug=backend_size_id, disk=disk)
+        return action['action']['id']
 
     def add_ssh_key(self, ssh_key, service_project_link):
         try:
@@ -247,94 +262,25 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         for droplet_id in nc_ids & backend_ids:
             backend_droplet = backend_droplets[droplet_id]
             nc_droplet = nc_droplets[droplet_id]
-            nc_droplet.state = self._get_droplet_state(backend_droplet)
+            nc_droplet.state, nc_droplet.runtime_state = self._get_droplet_states(backend_droplet)
             nc_droplet.save()
 
-    def _get_droplet_state(self, droplet):
+    def _get_droplet_states(self, droplet):
+        States = models.Droplet.States
+        RuntimeStates = models.Droplet.RuntimeStates
+
         digitalocean_to_nodeconductor = {
-            'new': models.Droplet.States.PROVISIONING,
-            'active': models.Droplet.States.ONLINE,
-            'off': models.Droplet.States.OFFLINE,
-            'archive': models.Droplet.States.OFFLINE,
+            'new': (States.CREATING, 'provisioning'),
+            'active': (States.OK, RuntimeStates.ONLINE),
+            'off': (States.OK, RuntimeStates.OFFLINE),
+            'archive': (States.OK, 'archive'),
         }
 
-        return digitalocean_to_nodeconductor.get(droplet.status, models.Droplet.States.ERRED)
-
-    @digitalocean_error_handler
-    def provision_droplet(self, droplet, backend_region_id=None, backend_image_id=None,
-                          backend_size_id=None, ssh_key_uuid=None):
-        if ssh_key_uuid:
-            ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
-            backend_ssh_key = self.get_or_create_ssh_key(ssh_key)
-
-            droplet.key_name = ssh_key.name
-            droplet.key_fingerprint = ssh_key.fingerprint
-
-        backend_droplet = digitalocean.Droplet(
-            token=self.manager.token,
-            name=droplet.name,
-            user_data=droplet.user_data,
-            region=backend_region_id,
-            image=backend_image_id,
-            size_slug=backend_size_id,
-            ssh_keys=[backend_ssh_key.id] if ssh_key_uuid else [])
-        backend_droplet.create()
-
-        droplet.backend_id = backend_droplet.id
-        droplet.save()
-        return backend_droplet
+        return digitalocean_to_nodeconductor.get(droplet.status, (States.ERRED, 'error'))
 
     @digitalocean_error_handler
     def get_droplet(self, backend_droplet_id):
         return self.manager.get_droplet(backend_droplet_id)
-
-    @digitalocean_error_handler
-    def start_droplet(self, backend_droplet_id):
-        """
-        Start droplet with given id.
-        :return: ID of related action.
-        """
-        backend_droplet = self.get_droplet(backend_droplet_id)
-        action = backend_droplet.power_on()
-        return action['action']['id']
-
-    @digitalocean_error_handler
-    def stop_droplet(self, backend_droplet_id):
-        """
-        Stop droplet with given id.
-        :return: ID of related action.
-        """
-        backend_droplet = self.get_droplet(backend_droplet_id)
-        action = backend_droplet.shutdown()
-        return action['action']['id']
-
-    @digitalocean_error_handler
-    def restart_droplet(self, backend_droplet_id):
-        """
-        Restart droplet with given id.
-        :return: ID of related action.
-        """
-        backend_droplet = self.get_droplet(backend_droplet_id)
-        action = backend_droplet.reboot()
-        return action['action']['id']
-
-    @digitalocean_error_handler
-    def resize_droplet(self, backend_droplet_id, backend_size_id, disk):
-        """
-        Resize droplet with given id.
-        :return: ID of related action.
-        """
-        backend_droplet = self.get_droplet(backend_droplet_id)
-        action = backend_droplet.resize(new_size_slug=backend_size_id, disk=disk)
-        return action['action']['id']
-
-    @digitalocean_error_handler
-    def destroy_droplet(self, backend_droplet_id):
-        """
-        Destroy droplet with given id.
-        """
-        backend_droplet = self.get_droplet(backend_droplet_id)
-        backend_droplet.destroy()
 
     def get_monthly_cost_estimate(self, droplet):
         backend_droplet = self.get_droplet(droplet.backend_id)
