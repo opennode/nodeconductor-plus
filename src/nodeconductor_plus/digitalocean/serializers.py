@@ -116,22 +116,23 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
         )
 
     def validate(self, attrs):
-        region = attrs['region']
-        image = attrs['image']
-        size = attrs['size']
+        if not self.instance:
+            region = attrs['region']
+            image = attrs['image']
+            size = attrs['size']
 
-        if not re.match(r'[a-zA-Z0-9.-]+$', attrs['name']):
-            raise serializers.ValidationError(
-                "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
+            if not re.match(r'[a-zA-Z0-9.-]+$', attrs['name']):
+                raise serializers.ValidationError(
+                    "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
 
-        if not attrs.get('ssh_public_key') and image.is_ssh_key_mandatory:
-            raise serializers.ValidationError("SSH public key is required for this image")
+            if not attrs.get('ssh_public_key') and image.is_ssh_key_mandatory:
+                raise serializers.ValidationError("SSH public key is required for this image")
 
-        if not image.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Image is missing in region %s" % region)
+            if not image.regions.filter(pk=region.pk).exists():
+                raise serializers.ValidationError("Image is missing in region %s" % region)
 
-        if not size.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Size is missing in region %s" % region)
+            if not size.regions.filter(pk=region.pk).exists():
+                raise serializers.ValidationError("Size is missing in region %s" % region)
 
         return attrs
 

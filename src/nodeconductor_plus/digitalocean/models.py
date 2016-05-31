@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
+from nodeconductor.core.models import RuntimeStateMixin, StateMixin
 from nodeconductor.structure import models as structure_models
 
 
@@ -53,7 +54,8 @@ class Size(structure_models.GeneralServiceProperty):
     price = models.DecimalField('Hourly price rate', default=0, max_digits=11, decimal_places=5)
 
 
-class Droplet(structure_models.VirtualMachineMixin, structure_models.Resource):
+class Droplet(RuntimeStateMixin, StateMixin,
+              structure_models.VirtualMachineMixin, structure_models.ResourceMixin):
     service_project_link = models.ForeignKey(
         DigitalOceanServiceProjectLink, related_name='droplets', on_delete=models.PROTECT)
 
