@@ -4,8 +4,6 @@ from django.apps import AppConfig
 from django.db.models import signals
 from django.conf import settings
 
-from . import handlers
-
 
 class NodeConductorAuthConfig(AppConfig):
     name = 'nodeconductor_plus.nodeconductor_auth'
@@ -13,23 +11,10 @@ class NodeConductorAuthConfig(AppConfig):
 
     # See, https://docs.djangoproject.com/en/1.7/ref/applications/#django.apps.AppConfig.ready
     def ready(self):
+        from . import handlers
+
         signals.post_save.connect(
             handlers.create_auth_profile,
             sender=settings.AUTH_USER_MODEL,
             dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_auth_profile',
         )
-
-        nc_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
-        if nc_settings.get('CREATE_CUSTOMER_ON_USER_CREATION', False):
-            signals.post_save.connect(
-                handlers.create_user_first_customer_and_project,
-                sender=settings.AUTH_USER_MODEL,
-                dispatch_uid='nodeconductor_plus.nodeconductor_auth.handlers.create_user_first_customer_and_project',
-            )
-
-            signals.post_save.connect(
-                handlers.update_user_first_customer_name_on_user_name_change,
-                sender=settings.AUTH_USER_MODEL,
-                dispatch_uid=('nodeconductor_plus.nodeconductor_auth.handlers.'
-                              'update_user_first_customer_name_on_user_name_change'),
-            )

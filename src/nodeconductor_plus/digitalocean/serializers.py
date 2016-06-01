@@ -3,28 +3,32 @@ from __future__ import unicode_literals
 import re
 
 from django.utils import dateparse
-
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
-from nodeconductor.structure import SupportedServices
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
 from .backend import DigitalOceanBackendError
 
 
-class ImageSerializer(serializers.HyperlinkedModelSerializer):
+class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    class Meta(object):
-        model = models.Image
-        view_name = 'digitalocean-image-detail'
-        fields = ('url', 'uuid', 'name', 'distribution', 'type')
-        extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
-        }
+    SERVICE_ACCOUNT_FIELDS = {
+        'token': '',
+    }
+
+    class Meta(structure_serializers.BaseServiceSerializer.Meta):
+        model = models.DigitalOceanService
+        view_name = 'digitalocean-detail'
+
+    def get_fields(self):
+        fields = super(ServiceSerializer, self).get_fields()
+        fields['token'].label = 'Access token'
+        return fields
 
 
-class RegionSerializer(serializers.HyperlinkedModelSerializer):
+class RegionSerializer(structure_serializers.BasePropertySerializer):
 
     class Meta(object):
         model = models.Region
@@ -35,27 +39,30 @@ class RegionSerializer(serializers.HyperlinkedModelSerializer):
         }
 
 
-class SizeSerializer(serializers.HyperlinkedModelSerializer):
+class ImageSerializer(structure_serializers.BasePropertySerializer):
 
     class Meta(object):
-        model = models.Size
-        view_name = 'digitalocean-size-detail'
-        fields = ('url', 'uuid', 'name')
+        model = models.Image
+        view_name = 'digitalocean-image-detail'
+        fields = ('url', 'uuid', 'name', 'distribution', 'type', 'regions')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
 
+    regions = RegionSerializer(many=True, read_only=True)
 
-class ServiceSerializer(structure_serializers.BaseServiceSerializer):
 
-    SERVICE_TYPE = SupportedServices.Types.DigitalOcean
-    SERVICE_ACCOUNT_FIELDS = {
-        'token': 'DigitalOcean personal access token',
-    }
+class SizeSerializer(structure_serializers.BasePropertySerializer):
 
-    class Meta(structure_serializers.BaseServiceSerializer.Meta):
-        model = models.DigitalOceanService
-        view_name = 'digitalocean-detail'
+    class Meta(object):
+        model = models.Size
+        view_name = 'digitalocean-size-detail'
+        fields = ('url', 'uuid', 'name', 'cores', 'ram', 'disk', 'transfer', 'regions')
+        extra_kwargs = {
+            'url': {'lookup_field': 'uuid'},
+        }
+
+    regions = RegionSerializer(many=True, read_only=True)
 
 
 class ServiceProjectLinkSerializer(structure_serializers.BaseServiceProjectLinkSerializer):
@@ -78,25 +85,24 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
 
     service_project_link = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-spl-detail',
-        queryset=models.DigitalOceanServiceProjectLink.objects.all(),
-        write_only=True)
+        queryset=models.DigitalOceanServiceProjectLink.objects.all())
 
     region = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-region-detail',
         lookup_field='uuid',
-        queryset=models.Region.objects.all().select_related('settings'),
+        queryset=models.Region.objects.all(),
         write_only=True)
 
     image = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-image-detail',
         lookup_field='uuid',
-        queryset=models.Image.objects.all().select_related('settings'),
+        queryset=models.Image.objects.all(),
         write_only=True)
 
     size = serializers.HyperlinkedRelatedField(
         view_name='digitalocean-size-detail',
         lookup_field='uuid',
-        queryset=models.Size.objects.all().select_related('settings'),
+        queryset=models.Size.objects.all(),
         write_only=True)
 
     class Meta(structure_serializers.VirtualMachineSerializer.Meta):
@@ -110,22 +116,23 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
         )
 
     def validate(self, attrs):
-        region = attrs['region']
-        image = attrs['image']
-        size = attrs['size']
+        if not self.instance:
+            region = attrs['region']
+            image = attrs['image']
+            size = attrs['size']
 
-        if not re.match(r'[a-zA-Z0-9.-]+', attrs['name']):
-            raise serializers.ValidationError(
-                "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
+            if not re.match(r'[a-zA-Z0-9.-]+$', attrs['name']):
+                raise serializers.ValidationError(
+                    "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
 
-        if not attrs.get('ssh_public_key') and image.is_ssh_key_mandatory:
-            raise serializers.ValidationError("SSH public key is required for this image")
+            if not attrs.get('ssh_public_key') and image.is_ssh_key_mandatory:
+                raise serializers.ValidationError("SSH public key is required for this image")
 
-        if not image.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Image is missed in region %s" % region)
+            if not image.regions.filter(pk=region.pk).exists():
+                raise serializers.ValidationError("Image is missing in region %s" % region)
 
-        if not size.regions.filter(pk=region.pk).exists():
-            raise serializers.ValidationError("Size is missed in region %s" % region)
+            if not size.regions.filter(pk=region.pk).exists():
+                raise serializers.ValidationError("Size is missing in region %s" % region)
 
         return attrs
 
@@ -149,9 +156,42 @@ class DropletImportSerializer(structure_serializers.BaseResourceImportSerializer
         validated_data['ram'] = droplet.memory
         validated_data['disk'] = backend.gb2mb(droplet.disk)
         validated_data['transfer'] = backend.tb2mb(droplet.size['transfer'])
-        validated_data['ip_address'] = droplet.ip_address
+        validated_data['external_ips'] = droplet.ip_address
         validated_data['created'] = dateparse.parse_datetime(droplet.created_at)
         validated_data['state'] = models.Droplet.States.ONLINE if droplet.status == 'active' else \
             models.Droplet.States.OFFLINE
 
         return super(DropletImportSerializer, self).create(validated_data)
+
+
+class DropletResizeSerializer(serializers.Serializer):
+    size = serializers.HyperlinkedRelatedField(
+        view_name='digitalocean-size-detail',
+        lookup_field='uuid',
+        queryset=models.Size.objects.all(),
+        write_only=True)
+    disk = serializers.BooleanField(required=True)
+
+    def get_fields(self):
+        fields = super(DropletResizeSerializer, self).get_fields()
+        field = fields['size']
+        field.value_field = 'url'
+        field.display_name_field = 'name'
+        return fields
+
+    class Meta:
+        fields = 'size', 'disk'
+
+    def validate_size(self, value):
+        if value:
+            if self.is_same_size(value):
+                raise ValidationError("New size is the same. Please select another one.")
+
+            if value.disk < self.instance.disk:
+                raise ValidationError("Disk sizes are not allowed to be decreased through a resize operation.")
+        return value
+
+    def is_same_size(self, new_size):
+        return new_size.disk == self.instance.disk and \
+               new_size.cores == self.instance.cores and \
+               new_size.ram == self.instance.ram

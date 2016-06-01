@@ -41,7 +41,7 @@ class ServicePermissionTest(test.APITransactionTestCase):
             'not_in_project': factories.DigitalOceanServiceFactory(),
         }
 
-        self.settings = structure_factories.ServiceSettingsFactory()
+        self.settings = structure_factories.ServiceSettingsFactory(type='DigitalOcean', shared=True)
         self.customers['owned'].add_user(self.users['customer_owner'], CustomerRole.OWNER)
 
         self.projects['admined'].add_user(self.users['project_admin'], ProjectRole.ADMINISTRATOR)
@@ -50,9 +50,9 @@ class ServicePermissionTest(test.APITransactionTestCase):
         project_group.projects.add(self.projects['managed_by_group_manager'])
         project_group.add_user(self.users['group_manager'], ProjectGroupRole.MANAGER)
 
-        factories.DigitalOceanServiceProjectLingFactory(service=self.services['admined'], project=self.projects['admined'])
-        factories.DigitalOceanServiceProjectLingFactory(service=self.services['managed'], project=self.projects['managed'])
-        factories.DigitalOceanServiceProjectLingFactory(
+        factories.DigitalOceanServiceProjectLinkFactory(service=self.services['admined'], project=self.projects['admined'])
+        factories.DigitalOceanServiceProjectLinkFactory(service=self.services['managed'], project=self.projects['managed'])
+        factories.DigitalOceanServiceProjectLinkFactory(
             service=self.services['managed_by_group_manager'], project=self.projects['managed_by_group_manager'])
 
     # List filtration tests
@@ -177,7 +177,7 @@ class ServicePermissionTest(test.APITransactionTestCase):
 
         new_service = factories.DigitalOceanServiceFactory.build(settings=self.settings, customer=self.customers['owned'])
         response = self.client.post(factories.DigitalOceanServiceFactory.get_list_url(), self._get_valid_payload(new_service))
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
     def test_user_cannot_add_service_to_the_customer_he_sees_but_doesnt_own(self):
         for user_role, customer_type in {
@@ -189,7 +189,7 @@ class ServicePermissionTest(test.APITransactionTestCase):
             new_service = factories.DigitalOceanServiceFactory.build(
                 settings=self.settings, customer=self.customers[customer_type])
             response = self.client.post(factories.DigitalOceanServiceFactory.get_list_url(), self._get_valid_payload(new_service))
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     def test_user_cannot_add_service_to_the_customer_he_has_no_role_in(self):
         self.client.force_authenticate(user=self.users['no_role'])

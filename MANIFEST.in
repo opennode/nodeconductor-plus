@@ -1,2 +1,2 @@
 include *.md *.rst
-recursive-include src/ncplus/templates *.html
+recursive-include src *.html *.txt

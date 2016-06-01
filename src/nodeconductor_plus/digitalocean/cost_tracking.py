@@ -1,24 +1,32 @@
-import logging
+from django.contrib.contenttypes.models import ContentType
 
-from nodeconductor.cost_tracking import CostTrackingStrategy
-from nodeconductor.structure import ServiceBackendError
+from nodeconductor.cost_tracking import CostTrackingBackend
+from nodeconductor.cost_tracking.models import DefaultPriceListItem
 
-from .models import Droplet
-
-
-logger = logging.getLogger(__name__)
+from . import models
 
 
-class DigitalOceanCostTracking(CostTrackingStrategy):
+class DigitalOceanCostTrackingBackend(CostTrackingBackend):
 
     @classmethod
-    def get_costs_estimates(cls, customer=None):
-        queryset = Droplet.objects.filter(customer=customer).exclude(state=Droplet.States.ERRED)
-        for droplet in queryset.iterator():
-            try:
-                backend = droplet.get_backend()
-                monthly_cost = backend.get_cost_estimate(droplet.backend_id)
-            except ServiceBackendError:
-                logger.error("Failed to get price estimate for droplet %s" % droplet)
-            else:
-                yield droplet, monthly_cost
+    def get_default_price_list_items(cls):
+        ct = ContentType.objects.get_for_model(models.Droplet)
+
+        for size in models.Size.objects.iterator():
+            yield DefaultPriceListItem(
+                resource_content_type=ct,
+                item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
+                key=size.name,
+                value=size.price,
+                metadata={
+                    'name': size.name,
+                    'disk': size.disk,
+                    'ram': size.ram,
+                    'cores': size.cores,
+                    'transfer': size.transfer,
+                })
+
+    @classmethod
+    def get_monthly_cost_estimate(cls, resource):
+        backend = resource.get_backend()
+        return backend.get_monthly_cost_estimate(resource)
