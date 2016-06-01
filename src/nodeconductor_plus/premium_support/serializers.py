@@ -1,18 +1,72 @@
 from rest_framework import serializers
 
 from nodeconductor.core.serializers import AugmentedSerializerMixin, GenericRelatedField
+from nodeconductor.core.signals import pre_serializer_fields
 from nodeconductor.structure import models as structure_models
+from nodeconductor.structure.serializers import ProjectSerializer
 from nodeconductor_plus.premium_support import models
 
 
-class PlanSerializer(serializers.HyperlinkedModelSerializer):
+def get_plan_for_project(serializer, project):
+    if 'plans' not in serializer.context:
+        contracts = models.Contract.objects\
+            .filter(state=models.Contract.States.APPROVED).select_related('plan')
+        if isinstance(serializer.instance, list):
+            contracts = contracts.filter(project__in=serializer.instance)
+        else:
+            contracts = contracts.filter(project=serializer.instance)
+        serializer.context['plans'] = {
+            contract.project_id: contract.plan for contract in list(contracts)
+        }
+    plan = serializer.context['plans'].get(project.id)
+    if plan:
+        serializer = BasicPlanSerializer(instance=plan, context=serializer.context)
+        return serializer.data
 
+
+def get_pending_contracts_for_project(serializer, project):
+    if 'has_pending_contracts' not in serializer.context:
+        contracts = models.Contract.objects.filter(state=models.Contract.States.REQUESTED)
+        serializer.context['has_pending_contracts'] = set(
+            contract.project_id for contract in contracts
+        )
+    return project.id in serializer.context['has_pending_contracts']
+
+
+def add_plan_for_project(sender, fields, **kwargs):
+    fields['plan'] = serializers.SerializerMethodField()
+    setattr(sender, 'get_plan', get_plan_for_project)
+
+
+pre_serializer_fields.connect(
+    add_plan_for_project,
+    sender=ProjectSerializer
+)
+
+
+def add_has_pending_contracts(sender, fields, **kwargs):
+    fields['has_pending_contracts'] = serializers.SerializerMethodField()
+    setattr(sender, 'get_has_pending_contracts', get_plan_for_project)
+
+
+pre_serializer_fields.connect(
+    add_has_pending_contracts,
+    sender=ProjectSerializer
+)
+
+
+class BasicPlanSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Plan
-        fields = ('url', 'uuid', 'name', 'description', 'base_rate', 'hour_rate')
+        fields = ('url', 'uuid', 'name')
         extra_kwargs = {
-            'url': {'lookup_field': 'uuid'},
+            'url': {'lookup_field': 'uuid', 'view_name': 'premium-support-plan-detail'}
         }
+
+
+class PlanSerializer(BasicPlanSerializer):
+    class Meta(BasicPlanSerializer.Meta):
+        fields = BasicPlanSerializer.Meta.fields + ('description',  'terms', 'base_rate', 'hour_rate')
 
 
 class ContractSerializer(serializers.HyperlinkedModelSerializer):
@@ -33,8 +87,8 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
         }
 
     def validate_project(self, project):
-        if models.Contract.objects.filter(project=project)\
-                 .exclude(state=models.Contract.States.CANCELLED).exists():
+        if models.Contract.objects.filter(
+                project=project, state=models.Contract.States.APPROVED).exists():
             raise serializers.ValidationError('Contract for this project already exists')
 
         return project
@@ -44,7 +98,7 @@ class ContractSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SupportCaseSerializer(AugmentedSerializerMixin, serializers.HyperlinkedModelSerializer):
-    resource = GenericRelatedField(related_models=models.get_resource_models(), required=False)
+    resource = GenericRelatedField(related_models=structure_models.Resource.get_all_models(), required=False)
 
     class Meta:
         model = models.SupportCase

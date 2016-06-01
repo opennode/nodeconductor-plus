@@ -1,20 +1,43 @@
 from nodeconductor.core import exceptions as core_exceptions
 from nodeconductor.structure import views as structure_views
 
-from . import models, serializers
+from . import ResourceType, models, serializers
 
 
 class GitLabServiceViewSet(structure_views.BaseServiceViewSet):
-    queryset = models.Service.objects.all()
+    queryset = models.GitLabService.objects.all()
     serializer_class = serializers.ServiceSerializer
+    import_serializer_class = serializers.GroupImportSerializer
+
+    def get_import_context(self):
+        return {'resource_type': self.request.query_params.get('resource_type')}
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            resource_type = self.request.data.get('type')
+            if resource_type == ResourceType.GROUP:
+                return serializers.GroupImportSerializer
+            elif resource_type == ResourceType.PROJECT:
+                return serializers.ProjectImportSerializer
+        return super(GitLabServiceViewSet, self).get_serializer_class()
 
 
 class GitLabServiceProjectLinkViewSet(structure_views.BaseServiceProjectLinkViewSet):
-    queryset = models.ServiceProjectLink.objects.all()
+    queryset = models.GitLabServiceProjectLink.objects.all()
     serializer_class = serializers.ServiceProjectLinkSerializer
 
 
-class GroupViewSet(structure_views.BaseResourceViewSet):
+class BaseGitLabResourceViewSet(structure_views.BaseOnlineResourceViewSet):
+
+    def check_destroy(self, resource):
+        pass
+
+    def perform_managed_resource_destroy(self, resource, force=False):
+        self.check_destroy(resource)
+        super(BaseGitLabResourceViewSet, self).perform_managed_resource_destroy(resource, force=force)
+
+
+class GroupViewSet(BaseGitLabResourceViewSet):
     queryset = models.Group.objects.all()
     serializer_class = serializers.GroupSerializer
 
@@ -25,19 +48,13 @@ class GroupViewSet(structure_views.BaseResourceViewSet):
             resource,
             path=serializer.validated_data['path'])
 
-    def perform_destroy(self, resource):
+    def check_destroy(self, resource):
         if resource.projects.count():
             raise core_exceptions.IncorrectStateException(
                 "This group contains projects. Only empty group can be deleted.")
 
-        # Resource must be online in order to schedule_delition transition success
-        # Forcely switch it offline since it's irrelevant for this type of service
-        resource.state = resource.States.OFFLINE
-        resource.save()
-        super(GroupViewSet, self).perform_destroy(resource)
 
-
-class ProjectViewSet(structure_views.BaseResourceViewSet):
+class ProjectViewSet(BaseGitLabResourceViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
 
@@ -50,10 +67,3 @@ class ProjectViewSet(structure_views.BaseResourceViewSet):
             issues_enabled=serializer.validated_data.get('issues_enabled', False),
             snippets_enabled=serializer.validated_data.get('snippets_enabled', False),
             merge_requests_enabled=serializer.validated_data.get('merge_requests_enabled', False))
-
-    def perform_destroy(self, resource):
-        # Resource must be online in order to schedule_delition transition success
-        # Forcely switch it offline since it's irrelevant for this type of service
-        resource.state = resource.States.OFFLINE
-        resource.save()
-        super(ProjectViewSet, self).perform_destroy(resource)

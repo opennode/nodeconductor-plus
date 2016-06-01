@@ -32,6 +32,9 @@ class PlanViewSet(mixins.CreateModelMixin,
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated, permissions.DjangoObjectPermissions)
 
+    def get_queryset(self):
+        return models.Plan.objects.order_by('base_rate')
+
 
 class SupportContractFilter(django_filters.FilterSet):
     project_uuid = django_filters.CharFilter(name='project__uuid')

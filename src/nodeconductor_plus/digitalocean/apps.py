@@ -1,14 +1,17 @@
 from django.apps import AppConfig
 
-from nodeconductor.structure import SupportedServices
-
 
 class DigitalOceanConfig(AppConfig):
     name = 'nodeconductor_plus.digitalocean'
     verbose_name = "NodeConductor DigitalOcean"
+    service_name = 'DigitalOcean'
+    is_public_service = True
 
     def ready(self):
-        Service = self.get_model('Service')
+        from nodeconductor.cost_tracking import CostTrackingRegister
+        from nodeconductor.structure import SupportedServices
 
         from .backend import DigitalOceanBackend
-        SupportedServices.register_backend(Service, DigitalOceanBackend)
+        from .cost_tracking import DigitalOceanCostTrackingBackend
+        SupportedServices.register_backend(DigitalOceanBackend)
+        CostTrackingRegister.register(self.label, DigitalOceanCostTrackingBackend)

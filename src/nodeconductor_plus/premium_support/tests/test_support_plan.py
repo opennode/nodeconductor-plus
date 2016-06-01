@@ -11,19 +11,19 @@ class SupportPlanTest(test.APITransactionTestCase):
         self.plans = [
             {
                 'name': 'Bronze support',
-                'description': 'Gives you access to online documentation, community forums, and billing support.',
+                'terms': 'Gives you access to online documentation, community forums, and billing support.',
                 'base_rate': 100,
                 'hour_rate': 10
             },
             {
                 'name': 'Silver support',
-                'description': 'Gives you direct access to our support team.',
+                'terms': 'Gives you direct access to our support team.',
                 'base_rate': 200,
                 'hour_rate': 20
             },
             {
                 'name': 'Gold support',
-                'description': '24x7 phone support, rapid response times and consultation on application development.',
+                'terms': '24x7 phone support, rapid response times and consultation on application development.',
                 'base_rate': 300,
                 'hour_rate': 30
             }
