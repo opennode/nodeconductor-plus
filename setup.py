@@ -8,19 +8,19 @@ dev_requires = [
 ]
 
 tests_require = [
+    'django-celery==3.1.16',
     'factory_boy==2.4.1',
     'mock==1.0.1',
     'mock-django==0.6.6',
     'six>=1.7.3',
-    'django-celery==3.1.16',
     'sqlalchemy>=1.0.12',
 ]
 
 install_requires = [
     'apache-libcloud>=0.20.0',
+    'nodeconductor>0.91.0',
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
     'nodeconductor_paypal>=0.3.0',
-    'nodeconductor>0.91.0',
     'python-digitalocean>=1.5',
     'python-gitlab>=0.9',
 ]
