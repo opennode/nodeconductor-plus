@@ -8,7 +8,7 @@ class InsightsConfig(AppConfig):
 
     def ready(self):
         from nodeconductor.quotas.models import Quota
-        from nodeconductor.structure.models import Customer, Service, Resource, Project
+        from nodeconductor.structure.models import Customer, Service, ResourceMixin, Project
         from nodeconductor_plus.insights import handlers
 
         for index, service in enumerate(Service.get_all_models()):
@@ -28,7 +28,7 @@ class InsightsConfig(AppConfig):
                     .format(service.__name__, index))
             )
 
-        for index, resource in enumerate(Resource.get_all_models()):
+        for index, resource in enumerate(ResourceMixin.get_all_models()):
             signals.post_save.connect(
                 handlers.check_managed_resources,
                 sender=resource,
