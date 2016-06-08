@@ -158,8 +158,8 @@ class DropletImportSerializer(structure_serializers.BaseResourceImportSerializer
         validated_data['transfer'] = backend.tb2mb(droplet.size['transfer'])
         validated_data['external_ips'] = droplet.ip_address
         validated_data['created'] = dateparse.parse_datetime(droplet.created_at)
-        validated_data['state'] = models.Droplet.States.ONLINE if droplet.status == 'active' else \
-            models.Droplet.States.OFFLINE
+        validated_data['runtime_state'] = models.Droplet.RuntimeStates.ONLINE if droplet.status == 'active' else \
+            models.Droplet.RuntimeStates.OFFLINE
 
         return super(DropletImportSerializer, self).create(validated_data)
 
