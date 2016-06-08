@@ -21,7 +21,7 @@ class DropletResizeTest(test.APITransactionTestCase):
 
         self.droplet = factories.DropletFactory(service_project_link=self.spl,
                                                 cores=2, ram=2 * 1024, disk=10 * 1024,
-                                                state=models.Droplet.States.PROVISIONING)
+                                                state=models.Droplet.States.UPDATING)
         new_size = factories.SizeFactory(cores=3, ram=3 * 1024, disk=20 * 1024)
 
         response = self.client.post(factories.DropletFactory.get_url(self.droplet, 'resize'), {
@@ -35,7 +35,8 @@ class DropletResizeTest(test.APITransactionTestCase):
 
         self.droplet = factories.DropletFactory(service_project_link=self.spl,
                                                 cores=2, ram=2 * 1024, disk=10 * 1024,
-                                                state=models.Droplet.States.OFFLINE)
+                                                state=models.Droplet.States.OK,
+                                                runtime_state=models.Droplet.RuntimeStates.OFFLINE)
         new_size = factories.SizeFactory(cores=3, ram=3 * 1024, disk=20 * 1024)
 
         response = self.client.post(factories.DropletFactory.get_url(self.droplet, 'resize'), {
@@ -48,7 +49,8 @@ class DropletResizeTest(test.APITransactionTestCase):
         self.client.force_authenticate(user=self.user)
 
         self.droplet = factories.DropletFactory(service_project_link=self.spl, cores=3, disk=20 * 1024,
-                                                state=models.Droplet.States.OFFLINE)
+                                                state=models.Droplet.States.OK,
+                                                runtime_state=models.Droplet.RuntimeStates.OFFLINE)
         new_size = factories.SizeFactory(cores=2, disk=20 * 1024)
 
         response = self.client.post(factories.DropletFactory.get_url(self.droplet, 'resize'), {
@@ -61,7 +63,8 @@ class DropletResizeTest(test.APITransactionTestCase):
         self.client.force_authenticate(user=self.user)
 
         self.droplet = factories.DropletFactory(service_project_link=self.spl, disk=20 * 1024,
-                                                state=models.Droplet.States.OFFLINE)
+                                                state=models.Droplet.States.OK,
+                                                runtime_state=models.Droplet.RuntimeStates.OFFLINE)
         new_size = factories.SizeFactory(disk=10 * 1024)
 
         response = self.client.post(factories.DropletFactory.get_url(self.droplet, 'resize'), {
