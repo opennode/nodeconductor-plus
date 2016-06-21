@@ -25,9 +25,6 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
 
-    def filter_queryset(self, queryset):
-        return queryset.exclude(backend_id__isnull=True)
-
     def get_queryset(self):
         return Plan.objects.order_by('price')
 
@@ -69,16 +66,13 @@ class AgreementViewSet(mixins.CreateModelMixin,
         Create new billing agreement
         """
         customer = serializer.validated_data['customer']
-        plan = serializer.validated_data['plan']
+        request = serializer.context['request']
 
         if not customer.has_user(self.request.user) and not self.request.user.is_staff:
             raise exceptions.PermissionDenied('You do not have permission to perform this action')
 
-        if not plan.backend_id:
-            raise exceptions.ValidationError('Plan is not synced with backend')
-
         agreement = serializer.save()
-        tasks.push_agreement(agreement)
+        tasks.push_agreement(request, agreement)
         serializer.object = agreement
 
     def get_pending_agreement(self):

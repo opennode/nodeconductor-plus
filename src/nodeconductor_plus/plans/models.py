@@ -8,11 +8,9 @@ from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django_fsm import FSMField, transition
 from model_utils.models import TimeStampedModel
-from rest_framework.reverse import reverse
 
 from nodeconductor.core.models import UuidMixin
 from nodeconductor.structure import models as structure_models
-from nodeconductor_paypal.backend import PaypalBackend
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +20,6 @@ logger = logging.getLogger(__name__)
 class Plan(UuidMixin, models.Model):
     name = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=12, decimal_places=2)
-    backend_id = models.CharField(max_length=255, null=True)
     is_default = models.BooleanField(default=False)
 
     def __str__(self):
@@ -31,20 +28,6 @@ class Plan(UuidMixin, models.Model):
     def clean(self):
         if self.is_default and Plan.objects.filter(is_default=True).exclude(pk=self.pk).exists():
             raise ValidationError('Cannot create two default plans')
-
-    def push_to_backend(self, request):
-        base_url = reverse('agreement-list', request=request)
-        return_url = base_url + 'approve/'
-        cancel_url = base_url + 'cancel/'
-
-        backend = PaypalBackend()
-        backend_id = backend.create_plan(amount=self.price,
-                                         name=self.name,
-                                         description=self.name,
-                                         return_url=return_url,
-                                         cancel_url=cancel_url)
-        self.backend_id = backend_id
-        self.save()
 
 
 class PlanQuota(models.Model):
@@ -86,6 +69,7 @@ class Agreement(UuidMixin, TimeStampedModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     plan = models.ForeignKey(Plan)
     customer = models.ForeignKey(structure_models.Customer)
+    tax = models.DecimalField(max_digits=9, decimal_places=2, default=0)
 
     # These values are fetched from backend
     backend_id = models.CharField(max_length=255, blank=True, null=True)

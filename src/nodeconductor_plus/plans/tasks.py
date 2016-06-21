@@ -2,6 +2,7 @@ import logging
 from dateutil.relativedelta import relativedelta
 
 from celery import shared_task
+from rest_framework.reverse import reverse
 
 from nodeconductor_paypal.backend import PaypalBackend, PayPalError
 from nodeconductor_paypal.models import Invoice, InvoiceItem
@@ -37,32 +38,38 @@ def check_agreement(agreement_id):
         logger.warning('Unable to fetch agreement from backend %s', agreement.backend_id)
 
 
-@shared_task(name='nodeconductor.plans.sync_agreement')
-def sync_agreement(agreement_id):
-    agreement = Agreement.objects.get(pk=agreement_id)
-    push_agreement(agreement)
-
-
-def push_agreement(agreement):
+def push_agreement(request, agreement):
     """
     Push billing agreement to backend
     """
     backend = PaypalBackend()
 
     try:
-        approval_url, token = backend.create_agreement(agreement.plan.backend_id, agreement.plan.name)
+        base_url = reverse('agreement-list', request=request)
+        return_url = base_url + 'approve/'
+        cancel_url = base_url + 'cancel/'
+
+        backend_id = backend.create_plan(
+            amount=agreement.plan.price,
+            tax=agreement.tax,
+            name=agreement.plan.name,
+            description=agreement.plan.name,
+            return_url=return_url,
+            cancel_url=cancel_url)
+
+        approval_url, token = backend.create_agreement(backend_id, agreement.plan.name)
         agreement.set_pending(approval_url, token)
         agreement.save()
 
         message = 'Agreement for plan %s and customer %s has been pushed to backend'
         logger.info(message, agreement.plan.name, agreement.customer.name)
 
-    except PayPalError:
+    except PayPalError as e:
         agreement.set_erred()
         agreement.save()
 
-        message = 'Unable to push agreement for plan %s and customer %s because of backend error'
-        logger.warning(message, agreement.plan.name, agreement.customer.name)
+        message = 'Unable to push agreement for plan %s and customer %s because of backend error %s'
+        logger.warning(message, agreement.plan.name, agreement.customer.name, e)
 
 
 @shared_task(name='nodeconductor.plans.activate_agreement')
