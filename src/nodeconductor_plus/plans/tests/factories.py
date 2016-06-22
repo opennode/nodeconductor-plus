@@ -12,7 +12,6 @@ class PlanFactory(factory.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'plan%s' % n)
     price = factory.fuzzy.FuzzyFloat(0, 20000)
-    backend_id = 'test_backend_id'
 
     @classmethod
     def get_url(self, plan=None):

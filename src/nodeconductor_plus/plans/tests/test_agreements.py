@@ -53,12 +53,16 @@ class AgreementCreateTest(test.APITransactionTestCase):
         self.owner = structure_factories.UserFactory()
         self.customer.add_user(self.owner, structure_models.CustomerRole.OWNER)
         self.staff = structure_factories.UserFactory(is_staff=True)
-        self.plan = factories.PlanFactory(backend_id='VALID_ID')
+        self.plan = factories.PlanFactory()
+        self.return_url = 'http://example.com/approve-agreement/'
+        self.cancel_url = 'http://example.com/cancel-agreement/'
 
     def test_customer_owner_can_create_agreement_for_his_customer(self):
         data = {
             'customer': structure_factories.CustomerFactory.get_url(self.customer),
             'plan': factories.PlanFactory.get_url(self.plan),
+            'return_url': self.return_url,
+            'cancel_url': self.cancel_url
         }
 
         response = self.create_agreement(data)
@@ -71,6 +75,8 @@ class AgreementCreateTest(test.APITransactionTestCase):
         data = {
             'customer': structure_factories.CustomerFactory.get_url(other_customer),
             'plan': factories.PlanFactory.get_url(self.plan),
+            'return_url': self.return_url,
+            'cancel_url': self.cancel_url
         }
 
         response = self.create_agreement(data)
@@ -81,6 +87,8 @@ class AgreementCreateTest(test.APITransactionTestCase):
     def test_agreement_cannot_be_created_without_customer(self):
         data = {
             'plan': factories.PlanFactory.get_url(self.plan),
+            'return_url': self.return_url,
+            'cancel_url': self.cancel_url
         }
 
         response = self.create_agreement(data)
@@ -91,6 +99,8 @@ class AgreementCreateTest(test.APITransactionTestCase):
     def test_agreement_cannot_be_created_without_plan(self):
         data = {
             'customer': structure_factories.CustomerFactory.get_url(self.customer),
+            'return_url': self.return_url,
+            'cancel_url': self.cancel_url
         }
 
         response = self.create_agreement(data)
@@ -115,15 +125,16 @@ class AgreementCallbackViewsTest(test.APITransactionTestCase):
 
     def check_action_result(self, user, action, state):
         models.Agreement.objects.all().delete()
-        self.token = 'VALID_TOKEN'
+        token = 'VALID_TOKEN'
         self.agreement = models.Agreement.objects.create(
-            plan=self.plan, state=models.Agreement.States.PENDING, token=self.token, customer=self.customer)
+            plan=self.plan, state=models.Agreement.States.PENDING, token=token, customer=self.customer)
 
         self.client.force_authenticate(user)
-        url = factories.AgreementFactory.get_list_url() + action + '/?token=' + self.token
-        self.client.get(url)
-        agreement = models.Agreement.objects.get(token=self.token)
-        self.assertEqual(agreement.state, state)
+        url = factories.AgreementFactory.get_list_url() + action + '/'
+        self.client.post(url, {'token': token})
+
+        self.agreement.refresh_from_db()
+        self.assertEqual(self.agreement.state, state)
 
     def test_owner_can_approve_payment(self):
         with patch('nodeconductor_plus.plans.utils.activate_agreement') as mocked_activate_agreement:
@@ -145,7 +156,7 @@ class AgreementBillingTasksTest(test.APITransactionTestCase):
     def test_cancel_agreement_task_calls_billing(self, mocked_billing):
         agreement = factories.AgreementFactory(state=models.Agreement.States.ACTIVE)
         utils.cancel_agreement(agreement)
-        mocked_billing.cancel_agreement.assert_called_with(agreement.backend_id)
+        mocked_billing().cancel_agreement.assert_called_with(agreement.backend_id)
 
         agreement = models.Agreement.objects.get(pk=agreement.pk)
         self.assertEqual(agreement.state, models.Agreement.States.CANCELLED)
