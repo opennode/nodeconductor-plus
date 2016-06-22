@@ -64,11 +64,14 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
     plan_name = serializers.ReadOnlyField(source='plan.name')
     plan_price = serializers.ReadOnlyField(source='plan.price')
     quotas = serializers.SerializerMethodField()
+    return_url = serializers.CharField(write_only=True)
+    cancel_url = serializers.CharField(write_only=True)
 
     class Meta:
         model = models.Agreement
         fields = ('url', 'uuid', 'state', 'created', 'modified', 'approval_url',
-                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price', 'quotas', 'tax')
+                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price', 'quotas',
+                  'tax', 'return_url', 'cancel_url')
         read_only_fields = ('state', 'user', 'approval_url', 'tax')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},

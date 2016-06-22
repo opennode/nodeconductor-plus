@@ -3,7 +3,7 @@ from .models import Agreement
 
 
 class PlanAgreementEventLogger(EventLogger):
-    payment = Agreement
+    agreement = Agreement
 
     class Meta:
         event_types = ('agreement_approve_succeeded',

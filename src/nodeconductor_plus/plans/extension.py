@@ -3,20 +3,9 @@ from nodeconductor.core import NodeConductorExtension
 
 class PlansExtension(NodeConductorExtension):
 
-    class Settings:
-        NODECONDUCTOR_PLANS = {
-            'APPROVAL_URL_TEMPLATE': 'http://example.com/#/approve-billing-plan/{token}/',
-            'CANCEL_URL_TEMPLATE': 'http://example.com/#/cancel-billing-plan/{token}/'
-        }
-
     @staticmethod
     def django_app():
         return 'nodeconductor_plus.plans'
-
-    @staticmethod
-    def django_urls():
-        from .urls import urlpatterns
-        return urlpatterns
 
     @staticmethod
     def rest_urls():

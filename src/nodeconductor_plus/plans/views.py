@@ -1,7 +1,5 @@
 import logging
 
-from django.shortcuts import redirect
-from django.conf import settings
 import django_filters
 from django_fsm import TransitionNotAllowed
 from rest_framework import viewsets, permissions, mixins, exceptions, status, filters
@@ -13,10 +11,10 @@ from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
 
+from .log import event_logger
 from .models import Plan, Agreement
 from .serializers import PlanSerializer, AgreementSerializer, TokenSerializer
 from . import utils
-from .log import event_logger
 
 logger = logging.getLogger(__name__)
 
@@ -67,14 +65,15 @@ class AgreementViewSet(mixins.CreateModelMixin,
         """
         Create new billing agreement
         """
+        return_url = serializer.validated_data.pop('return_url')
+        cancel_url = serializer.validated_data.pop('cancel_url')
         customer = serializer.validated_data['customer']
-        request = serializer.context['request']
 
         if not customer.has_user(self.request.user) and not self.request.user.is_staff:
             raise exceptions.PermissionDenied('You do not have permission to perform this action')
 
         agreement = serializer.save()
-        utils.create_plan_and_agreement(request, agreement)
+        utils.create_plan_and_agreement(return_url, cancel_url, agreement)
         serializer.object = agreement
 
     def get_agreement(self, request):
@@ -90,7 +89,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
         except Agreement.DoesNotExist:
             raise NotFound("Agreement with token %s does not exist" % token)
 
-    @list_route()
+    @list_route(methods=['POST'])
     def approve(self, request):
         agreement = self.get_agreement(request)
 
@@ -111,7 +110,7 @@ class AgreementViewSet(mixins.CreateModelMixin,
             return Response({'status': 'Invalid agreement state.'},
                             status=status.HTTP_409_CONFLICT)
 
-    @list_route()
+    @list_route(methods=['POST'])
     def cancel(self, request):
         agreement = self.get_agreement(request)
 
@@ -137,27 +136,3 @@ class AgreementViewSet(mixins.CreateModelMixin,
         agreement = self.get_object()
         txs = PaypalBackend().get_agreement_transactions(agreement.backend_id, agreement.created)
         return Response(txs, status=status.HTTP_200_OK)
-
-
-def approve_cb(request):
-    """
-    Callback view for billing agreement approval.
-    Do not use it directly. It is internal API.
-    """
-
-    url_template = settings.NODECONDUCTOR_PLANS['APPROVAL_URL_TEMPLATE']
-    token = request.GET.get('token')
-    url = url_template.format(token=token)
-    return redirect(url)
-
-
-def cancel_cb(request):
-    """
-    Callback view for billing agreement cancel.
-    Do not use it directly. It is internal API.
-    """
-
-    url_template = settings.NODECONDUCTOR_PLANS['CANCEL_URL_TEMPLATE']
-    token = request.GET.get('token')
-    url = url_template.format(token=token)
-    return redirect(url)

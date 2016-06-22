@@ -1,7 +1,5 @@
 import logging
 
-from rest_framework.reverse import reverse
-
 from nodeconductor_paypal.backend import PaypalBackend, PayPalError
 from .models import Agreement
 
@@ -9,16 +7,13 @@ from .models import Agreement
 logger = logging.getLogger(__name__)
 
 
-def create_plan_and_agreement(request, agreement):
+def create_plan_and_agreement(return_url, cancel_url, agreement):
     """
     Push billing agreement to backend
     """
     backend = PaypalBackend()
 
     try:
-        return_url = reverse('agreement_approve_cb', request=request)
-        cancel_url = reverse('agreement_cancel_cb', request=request)
-
         backend_id = backend.create_plan(
             amount=agreement.plan.price,
             tax=agreement.tax,
