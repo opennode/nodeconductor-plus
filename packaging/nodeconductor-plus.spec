@@ -3,11 +3,11 @@ Summary: Extension of NodeConductor with extra features
 Group: Development/Libraries
 Version: 0.2.0
 Release: 1.el7
-License: Copyright 2015 OpenNode LLC.  All rights reserved.
+License: Copyright 2016 OpenNode LLC. All rights reserved.
 Url: http://nodeconductor.com
 Source0: %{name}-%{version}.tar.gz
 
-Requires: nodeconductor > 0.101.3
+Requires: nodeconductor >= 0.102.0
 Requires: nodeconductor-paypal > 0.3.5
 Requires: python-digitalocean >= 1.5
 Requires: python-gitlab >= 0.9

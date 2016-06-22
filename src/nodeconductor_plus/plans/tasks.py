@@ -2,7 +2,6 @@ import logging
 from dateutil.relativedelta import relativedelta
 
 from celery import shared_task
-from rest_framework.reverse import reverse
 
 from nodeconductor_paypal.backend import PaypalBackend, PayPalError
 from nodeconductor_paypal.models import Invoice, InvoiceItem
@@ -36,98 +35,6 @@ def check_agreement(agreement_id):
         agreement.set_erred()
         agreement.save()
         logger.warning('Unable to fetch agreement from backend %s', agreement.backend_id)
-
-
-def push_agreement(request, agreement):
-    """
-    Push billing agreement to backend
-    """
-    backend = PaypalBackend()
-
-    try:
-        base_url = reverse('agreement-list', request=request)
-        return_url = base_url + 'approve/'
-        cancel_url = base_url + 'cancel/'
-
-        backend_id = backend.create_plan(
-            amount=agreement.plan.price,
-            tax=agreement.tax,
-            name=agreement.plan.name,
-            description=agreement.plan.name,
-            return_url=return_url,
-            cancel_url=cancel_url)
-
-        approval_url, token = backend.create_agreement(backend_id, agreement.plan.name)
-        agreement.set_pending(approval_url, token)
-        agreement.save()
-
-        message = 'Agreement for plan %s and customer %s has been pushed to backend'
-        logger.info(message, agreement.plan.name, agreement.customer.name)
-
-    except PayPalError as e:
-        agreement.set_erred()
-        agreement.save()
-
-        message = 'Unable to push agreement for plan %s and customer %s because of backend error %s'
-        logger.warning(message, agreement.plan.name, agreement.customer.name, e)
-
-
-@shared_task(name='nodeconductor.plans.activate_agreement')
-def activate_agreement(agreement_id):
-    """
-    Apply quotas for customer according to plan and cancel other active agreement
-    """
-    agreement = Agreement.objects.get(pk=agreement_id)
-    backend = PaypalBackend()
-
-    try:
-        agreement.backend_id = backend.execute_agreement(agreement.token)
-        message = 'Agreement for plan %s and customer %s has been activated'
-        logger.info(message, agreement.plan.name, agreement.customer.name)
-
-    except PayPalError:
-        agreement.set_erred()
-        agreement.save()
-
-        message = 'Unable to execute agreement for plan %s and customer %s because of backend error'
-        logger.warning(message, agreement.plan.name, agreement.customer.name)
-
-    # Customer should have only one active agreement at time
-    # That's why we need to cancel old agreement before activating new one
-    try:
-        old_agreement = Agreement.objects.get(customer=agreement.customer,
-                                              backend_id__isnull=False,
-                                              state=Agreement.States.ACTIVE)
-        cancel_agreement(old_agreement)
-    except Agreement.DoesNotExist:
-        logger.info('There is no active agreement for customer')
-
-    agreement.apply_quotas()
-    agreement.set_active()
-    agreement.save()
-    logger.info('New agreement has been activated')
-
-
-def cancel_agreement(agreement):
-    """
-    Cancel active agreement
-    """
-    backend = PaypalBackend()
-
-    try:
-        backend.cancel_agreement(agreement.backend_id)
-        agreement.set_cancelled()
-        agreement.save()
-
-        message = 'Agreement for plan %s and customer %s has been cancelled'
-        logger.info(message, agreement.plan.name, agreement.customer.name)
-
-    except PayPalError:
-        agreement.set_erred()
-        agreement.save()
-
-        message = 'Unable to cancel agreement for plan %s and customer %s because of backend error'
-        logger.warning(message, agreement.plan.name, agreement.customer.name)
 
 
 @shared_task(name='nodeconductor.plans.generate_agreement_invoices')

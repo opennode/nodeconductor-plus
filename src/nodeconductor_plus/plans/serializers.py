@@ -104,3 +104,7 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
         validated_data['tax'] = Decimal(rate) / Decimal(100) * plan.price
 
         return super(AgreementSerializer, self).create(validated_data)
+
+
+class TokenSerializer(serializers.Serializer):
+    token = serializers.CharField()

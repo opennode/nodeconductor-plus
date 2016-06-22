@@ -1,10 +1,11 @@
 from mock import patch
 from rest_framework import test, status
 
-from . import factories
-from .. import models, tasks
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.tests import factories as structure_factories
+
+from . import factories
+from .. import models, utils
 
 
 class AgreementListTest(test.APITransactionTestCase):
@@ -99,7 +100,7 @@ class AgreementCreateTest(test.APITransactionTestCase):
 
     def create_agreement(self, data):
         self.client.force_authenticate(self.owner)
-        with patch('nodeconductor_plus.plans.views.tasks') as mocked_tasks:
+        with patch('nodeconductor_plus.plans.views.utils'):
             return self.client.post(factories.AgreementFactory.get_list_url(), data=data)
 
 
@@ -125,9 +126,9 @@ class AgreementCallbackViewsTest(test.APITransactionTestCase):
         self.assertEqual(agreement.state, state)
 
     def test_owner_can_approve_payment(self):
-        with patch('nodeconductor_plus.plans.views.tasks') as mocked_tasks:
+        with patch('nodeconductor_plus.plans.utils.activate_agreement') as mocked_activate_agreement:
             self.check_action_result(self.owner, 'approve', models.Agreement.States.APPROVED)
-            mocked_tasks.activate_agreement.delay.assert_called_with(self.agreement.pk)
+            mocked_activate_agreement.assert_called_with(self.agreement)
 
     def test_owner_can_cancel_payment(self):
         self.check_action_result(self.owner, 'cancel', models.Agreement.States.CANCELLED)
@@ -139,23 +140,21 @@ class AgreementCallbackViewsTest(test.APITransactionTestCase):
         self.check_action_result(self.other, 'cancel', models.Agreement.States.PENDING)
 
 
+@patch('nodeconductor_plus.plans.utils.PaypalBackend')
 class AgreementBillingTasksTest(test.APITransactionTestCase):
-    def test_cancel_agreement_task_calls_billing(self):
+    def test_cancel_agreement_task_calls_billing(self, mocked_billing):
         agreement = factories.AgreementFactory(state=models.Agreement.States.ACTIVE)
-        with patch('nodeconductor_plus.plans.tasks.PaypalBackend') as mocked_billing:
-            tasks.cancel_agreement(agreement)
-            mocked_billing().cancel_agreement.assert_called_with(agreement.backend_id)
+        utils.cancel_agreement(agreement)
+        mocked_billing.cancel_agreement.assert_called_with(agreement.backend_id)
 
-            agreement = models.Agreement.objects.get(pk=agreement.pk)
-            self.assertEqual(agreement.state, models.Agreement.States.CANCELLED)
+        agreement = models.Agreement.objects.get(pk=agreement.pk)
+        self.assertEqual(agreement.state, models.Agreement.States.CANCELLED)
 
-    def test_activate_agreement_task_calls_billing(self):
+    def test_activate_agreement_task_calls_billing(self, mocked_billing):
         agreement = factories.AgreementFactory(state=models.Agreement.States.APPROVED)
-        with patch('nodeconductor_plus.plans.tasks.PaypalBackend') as mocked_billing:
+        mocked_billing().execute_agreement.return_value = 'VALID_ID'
+        utils.activate_agreement(agreement)
+        mocked_billing().execute_agreement.assert_called_with(agreement.token)
 
-            mocked_billing().execute_agreement.return_value = 'VALID_ID'
-            tasks.activate_agreement(agreement.pk)
-            mocked_billing().execute_agreement.assert_called_with(agreement.token)
-
-            agreement = models.Agreement.objects.get(pk=agreement.pk)
-            self.assertEqual(agreement.state, models.Agreement.States.ACTIVE)
+        agreement = models.Agreement.objects.get(pk=agreement.pk)
+        self.assertEqual(agreement.state, models.Agreement.States.ACTIVE)

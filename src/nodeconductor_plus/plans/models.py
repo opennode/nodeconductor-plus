@@ -10,6 +10,7 @@ from django_fsm import FSMField, transition
 from model_utils.models import TimeStampedModel
 
 from nodeconductor.core.models import UuidMixin
+from nodeconductor.logging.loggers import LoggableMixin
 from nodeconductor.structure import models as structure_models
 
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
-class Plan(UuidMixin, models.Model):
+class Plan(UuidMixin, LoggableMixin):
     name = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=12, decimal_places=2)
     is_default = models.BooleanField(default=False)
@@ -28,6 +29,9 @@ class Plan(UuidMixin, models.Model):
     def clean(self):
         if self.is_default and Plan.objects.filter(is_default=True).exclude(pk=self.pk).exists():
             raise ValidationError('Cannot create two default plans')
+
+    def get_log_fields(self):
+        return 'uuid', 'name'
 
 
 class PlanQuota(models.Model):
@@ -40,7 +44,8 @@ class PlanQuota(models.Model):
         unique_together = (('plan', 'name'),)
 
 
-class Agreement(UuidMixin, TimeStampedModel):
+@python_2_unicode_compatible
+class Agreement(UuidMixin, TimeStampedModel, LoggableMixin):
     class Meta:
         ordering = ['-modified']
 
@@ -118,3 +123,9 @@ class Agreement(UuidMixin, TimeStampedModel):
             logger.info('Default plan for customer %s has been applied', customer.name)
         except Plan.DoesNotExist:
             logger.warning('Default plan does not exist')
+
+    def __str__(self):
+        return 'Agreement for customer %s and plan %s' % (self.customer, self.plan)
+
+    def get_log_fields(self):
+        return 'uuid', 'customer', 'name', 'plan'
