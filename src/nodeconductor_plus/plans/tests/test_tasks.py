@@ -1,9 +1,8 @@
 import decimal
-import datetime
 import mock
 
 from django.utils import timezone
-from rest_framework import test, status
+from rest_framework import test
 
 from nodeconductor_paypal.models import Invoice
 from . import factories

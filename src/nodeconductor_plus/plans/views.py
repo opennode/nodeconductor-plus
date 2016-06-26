@@ -1,20 +1,20 @@
 import logging
 
-from django.shortcuts import redirect
-from django.conf import settings
 import django_filters
 from django_fsm import TransitionNotAllowed
 from rest_framework import viewsets, permissions, mixins, exceptions, status, filters
 from rest_framework.decorators import detail_route, list_route
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
-from . import tasks
 from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
-from nodeconductor_plus.plans.models import Plan, Agreement
-from nodeconductor_plus.plans.serializers import PlanSerializer, AgreementSerializer
 
+from .log import event_logger
+from .models import Plan, Agreement
+from .serializers import PlanSerializer, AgreementSerializer, TokenSerializer
+from . import utils
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +24,6 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PlanSerializer
     lookup_field = 'uuid'
     permission_classes = (permissions.IsAuthenticated,)
-
-    def filter_queryset(self, queryset):
-        return queryset.exclude(backend_id__isnull=True)
 
     def get_queryset(self):
         return Plan.objects.order_by('price')
@@ -68,59 +65,71 @@ class AgreementViewSet(mixins.CreateModelMixin,
         """
         Create new billing agreement
         """
+        return_url = serializer.validated_data.pop('return_url')
+        cancel_url = serializer.validated_data.pop('cancel_url')
         customer = serializer.validated_data['customer']
-        plan = serializer.validated_data['plan']
 
         if not customer.has_user(self.request.user) and not self.request.user.is_staff:
             raise exceptions.PermissionDenied('You do not have permission to perform this action')
 
-        if not plan.backend_id:
-            raise exceptions.ValidationError('Plan is not synced with backend')
-
         agreement = serializer.save()
-        tasks.push_agreement(agreement)
+        utils.create_plan_and_agreement(return_url, cancel_url, agreement)
         serializer.object = agreement
 
-    def get_pending_agreement(self):
-        token = self.request.query_params.get('token')
-        if token:
-            try:
-                return self.get_queryset().get(token=token, state=Agreement.States.PENDING)
-            except Agreement.DoesNotExist:
-                logger.warning('Unable to find pending agreement with token %s', token)
+    def get_agreement(self, request):
+        """
+        Find pending billing plan agreement object in the database by request.
+        """
+        serializer = TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data['token']
 
-    @list_route()
+        try:
+            return self.get_queryset().get(token=token, state=Agreement.States.PENDING)
+        except Agreement.DoesNotExist:
+            raise NotFound("Agreement with token %s does not exist" % token)
+
+    @list_route(methods=['POST'])
     def approve(self, request):
-        """
-        Callback view for billing agreement approval.
-        Do not use it directly. It is internal API.
-        """
-        agreement = self.get_pending_agreement()
-        if agreement:
-            try:
-                agreement.set_approved()
-                agreement.save()
-                tasks.activate_agreement.delay(agreement.pk)
-            except TransitionNotAllowed:
-                logger.warning('Invalid agreement state')
+        agreement = self.get_agreement(request)
 
-        return redirect(settings.NODECONDUCTOR_PLUS['BILLING_PLAN_APPROVAL_URL'])
+        try:
+            agreement.set_approved()
+            agreement.save()
+            utils.activate_agreement(agreement)
 
-    @list_route()
+            event_logger.plan_agreement.info(
+                'Billing plan agreement for {customer_name} has been activated.',
+                event_type='agreement_approve_succeeded',
+                event_context={'agreement': agreement}
+            )
+            return Response({'status': 'Billing plan agreement has been activated.'})
+        except TransitionNotAllowed:
+            logger.warning('Unable to approve agreement with ID %s because it has state %s',
+                           agreement.pk, agreement.state)
+            return Response({'status': 'Invalid agreement state.'},
+                            status=status.HTTP_409_CONFLICT)
+
+    @list_route(methods=['POST'])
     def cancel(self, request):
-        """
-        Callback view for billing agreement cancel.
-        Do not use it directly. It is internal API.
-        """
-        agreement = self.get_pending_agreement()
-        if agreement:
-            try:
-                agreement.set_cancelled()
-                agreement.save()
-            except TransitionNotAllowed:
-                logger.warning('Invalid agreement state')
+        agreement = self.get_agreement(request)
 
-        return redirect(settings.NODECONDUCTOR_PLUS['BILLING_PLAN_CANCEL_URL'])
+        try:
+            agreement.set_cancelled()
+            agreement.save()
+
+            event_logger.plan_agreement.info(
+                'Billing plan agreement for {customer_name} has been cancelled.',
+                event_type='agreement_cancel_succeeded',
+                event_context={'agreement': agreement}
+            )
+
+            return Response({'status': 'Billing plan agreement has been cancelled.'})
+        except TransitionNotAllowed:
+            logger.warning('Unable to cancel agreement with ID %s because it has state %s',
+                           agreement.pk, agreement.state)
+            return Response({'status': 'Invalid agreement state.'},
+                            status=status.HTTP_409_CONFLICT)
 
     @detail_route()
     def transactions(self, request, uuid):

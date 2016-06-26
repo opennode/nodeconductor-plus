@@ -18,9 +18,9 @@ tests_require = [
 
 install_requires = [
     'apache-libcloud>=0.20.0',
-    'nodeconductor>0.91.0',
+    'nodeconductor>=0.102.0',
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
-    'nodeconductor_paypal>=0.3.0',
+    'nodeconductor_paypal>0.3.5',
     'python-digitalocean>=1.5',
     'python-gitlab>=0.9',
 ]

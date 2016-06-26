@@ -1,8 +1,16 @@
+from decimal import Decimal
+import logging
+
 from rest_framework import serializers
 
 from nodeconductor.core.signals import pre_serializer_fields
-from . import models
+from nodeconductor.structure.models import VATException
 from nodeconductor.structure.serializers import CustomerSerializer
+
+from . import models
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_plan_for_customer(serializer, customer):
@@ -56,12 +64,15 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
     plan_name = serializers.ReadOnlyField(source='plan.name')
     plan_price = serializers.ReadOnlyField(source='plan.price')
     quotas = serializers.SerializerMethodField()
+    return_url = serializers.CharField(write_only=True)
+    cancel_url = serializers.CharField(write_only=True)
 
     class Meta:
         model = models.Agreement
         fields = ('url', 'uuid', 'state', 'created', 'modified', 'approval_url',
-                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price', 'quotas')
-        read_only_fields = ('state', 'user', 'approval_url')
+                  'user', 'customer', 'customer_name', 'plan', 'plan_name', 'plan_price', 'quotas',
+                  'tax', 'return_url', 'cancel_url')
+        read_only_fields = ('state', 'user', 'approval_url', 'tax')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
             'customer': {'lookup_field': 'uuid'},
@@ -83,4 +94,20 @@ class AgreementSerializer(serializers.HyperlinkedModelSerializer):
             validated_data['user'] = self.context['request'].user
         except AttributeError:
             raise AttributeError('AgreementSerializer have to be initialized with `request` in context')
+
+        customer = validated_data['customer']
+        plan = validated_data['plan']
+
+        try:
+            rate = customer.get_vat_rate() or 0
+        except (NotImplemented, VATException) as e:
+            rate = 0
+            logger.warning('Unable to compute VAT rate for customer with UUID %s, error is %s',
+                           customer.uuid, e)
+        validated_data['tax'] = Decimal(rate) / Decimal(100) * plan.price
+
         return super(AgreementSerializer, self).create(validated_data)
+
+
+class TokenSerializer(serializers.Serializer):
+    token = serializers.CharField()
