@@ -43,4 +43,3 @@ rm -rf %{buildroot}
 
 * Wed Jul 15 2015 Juri Hudolejev <juri@opennodecloud.com> - 0.1.0-1.el7
 - Initial version of the package
-
