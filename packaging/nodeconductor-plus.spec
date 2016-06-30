@@ -7,7 +7,7 @@ License: Copyright 2016 OpenNode LLC. All rights reserved.
 Url: http://nodeconductor.com
 Source0: %{name}-%{version}.tar.gz
 
-Requires: nodeconductor >= 0.102.0
+Requires: nodeconductor > 0.102.2
 Requires: nodeconductor-paypal > 0.3.5
 Requires: python-digitalocean >= 1.5
 Requires: python-gitlab >= 0.9
