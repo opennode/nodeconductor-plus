@@ -4,6 +4,7 @@ from django.db import models
 from libcloud.compute.drivers.ec2 import REGION_DETAILS
 
 from nodeconductor.core.models import RuntimeStateMixin
+from nodeconductor.cost_tracking.models import PaidResource
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.utils import get_coordinates_by_ip
 
@@ -48,7 +49,7 @@ class Size(structure_models.GeneralServiceProperty):
     price = models.DecimalField('Hourly price rate', default=0, max_digits=11, decimal_places=5)
 
 
-class Instance(structure_models.VirtualMachineMixin, structure_models.Resource):
+class Instance(structure_models.VirtualMachineMixin, structure_models.Resource, PaidResource):
     service_project_link = models.ForeignKey(
         AWSServiceProjectLink, related_name='instances', on_delete=models.PROTECT)
 
