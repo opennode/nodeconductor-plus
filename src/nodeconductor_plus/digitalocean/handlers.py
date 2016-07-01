@@ -1,20 +1,15 @@
-from .log import alert_logger
+from nodeconductor.core import models as core_models, utils as core_utils
+
+from . import models, tasks
 
 
-def open_token_scope_alert(service_project_link):
-    settings = service_project_link.service.settings
-
-    settings.set_erred()
-    settings.error_message = 'Token is read-only.'
-    settings.save(update_fields=['state', 'error_message'])
-
-    alert_logger.digital_ocean.warning(
-        'DigitalOcean token for {settings_name} is read-only.',
-        scope=settings,
-        alert_type='token_is_read_only',
-        alert_context={'settings': settings})
-
-
-def close_token_scope_alert(service_project_link):
-    settings = service_project_link.service.settings
-    alert_logger.digital_ocean.close(scope=settings, alert_type='token_is_read_only')
+def remove_ssh_keys_from_service(sender, structure, user, role, **kwargs):
+    """ Remove user ssh keys If he doesn't have access to service anymore. """
+    services = models.DigitalOceanService.objects.filter(**{sender.__name__.lower(): structure})
+    keys = core_models.SshPublicKey.objects.filter(user=user)
+    print 'services', services, 'keys', keys
+    for service in services:
+        serialized_service = core_utils.serialize_instance(service)
+        for key in keys:
+            serialized_key = core_utils.serialize_instance(key)
+            tasks.RemoveSshKeyTask().delay(serialized_key, serialized_service)

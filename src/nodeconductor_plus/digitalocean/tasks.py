@@ -7,7 +7,7 @@ from django.utils import six
 from nodeconductor.core import utils
 from nodeconductor.core.tasks import BackendMethodTask, Task
 
-from . import backend, handlers, log
+from . import backend, log
 
 
 logger = logging.getLogger(__name__)
@@ -49,8 +49,19 @@ class SafeBackendMethodTask(BackendMethodTask):
         try:
             result = super(SafeBackendMethodTask, self).execute(droplet, *args, **kwargs)
         except backend.TokenScopeError:
-            handlers.open_token_scope_alert(droplet.service_project_link)
+            droplet.service_project_link.service.raise_readonly_token_alert(droplet.service_project_link)
             six.reraise(*sys.exc_info())
         else:
-            handlers.close_token_scope_alert(droplet.service_project_link)
+            droplet.service_project_link.service.close_readonly_token_alert(droplet.service_project_link)
             return result
+
+
+class RemoveSshKeyTask(BackendMethodTask):
+    """ Additionally receives service that defined ssh_key backend """
+
+    def get_backend(self, ssh_key):
+        return self.service.settings.get_backend()
+
+    def execute(self, ssh_key, serialized_service, *args, **kwargs):
+        self.service = utils.deserialize_instance(serialized_service)
+        super(RemoveSshKeyTask, self).execute(ssh_key, 'remove_ssh_key')
