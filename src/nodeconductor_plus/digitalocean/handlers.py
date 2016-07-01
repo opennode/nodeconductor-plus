@@ -6,8 +6,9 @@ from . import models, tasks
 def remove_ssh_keys_from_service(sender, structure, user, role, **kwargs):
     """ Remove user ssh keys If he doesn't have access to service anymore. """
     services = models.DigitalOceanService.objects.filter(**{sender.__name__.lower(): structure})
+    services = services.exclude(customer__roles__permission_group__user=user)
+    services = services.exclude(customer__projects__roles__permission_group__user=user)
     keys = core_models.SshPublicKey.objects.filter(user=user)
-    print 'services', services, 'keys', keys
     for service in services:
         serialized_service = core_utils.serialize_instance(service)
         for key in keys:

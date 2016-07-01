@@ -65,6 +65,7 @@ class GitLabBaseBackend(ServiceBackend):
         else:
             raise NotImplementedError
 
+    # XXX: This method is not called by backend. Should be refactored. NC-1480.
     def add_user(self, user, service_project_link):
         try:
             self.get_or_create_user(user)
@@ -80,6 +81,7 @@ class GitLabBaseBackend(ServiceBackend):
         except gitlab.GitlabError as e:
             six.reraise(GitLabBackendError, e)
 
+    # XXX: This method is not called by backend. Should be refactored. NC-1480.
     def remove_user(self, user, service_project_link):
         try:
             for group in service_project_link.groups.all():
@@ -93,6 +95,7 @@ class GitLabBaseBackend(ServiceBackend):
         except gitlab.GitlabError as e:
             six.reraise(GitLabBackendError, e)
 
+    # XXX: This method is not called by backend. Should be refactored. NC-1480.
     def add_ssh_key(self, ssh_key, service_project_link=None):
         try:
             self.push_ssh_key(ssh_key)
@@ -100,6 +103,7 @@ class GitLabBaseBackend(ServiceBackend):
             logger.exception('Failed to propagate ssh public key %s to backend', ssh_key.name)
             six.reraise(GitLabBackendError, e)
 
+    # XXX: This method is not called by backend. Should be refactored. NC-1480.
     def remove_ssh_key(self, ssh_key, service_project_link=None):
         try:
             self.delete_ssh_key(ssh_key)
