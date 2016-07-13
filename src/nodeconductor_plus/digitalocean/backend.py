@@ -120,9 +120,9 @@ class DigitalOceanBaseBackend(ServiceBackend):
         return action['action']['id']
 
     @digitalocean_error_handler
-    def remove_ssh_key(self, ssh_key):
+    def remove_ssh_key(self, name, fingerprint):
         try:
-            backend_ssh_key = self.pull_ssh_key(ssh_key)
+            backend_ssh_key = self.pull_ssh_key(name, fingerprint)
         except NotFoundError:
             pass  # no need to perform any action if key doesn't exist at backend
         else:
@@ -316,10 +316,11 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         return backend_ssh_key
 
     @digitalocean_error_handler
-    def pull_ssh_key(self, ssh_key):
+    def pull_ssh_key(self, name, fingerprint):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
-            fingerprint=ssh_key.fingerprint,
+            fingerprint=fingerprint,
+            name=name,
             id=None)
 
         backend_ssh_key.load()

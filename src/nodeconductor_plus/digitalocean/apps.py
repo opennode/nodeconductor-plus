@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.db.models import signals
 
 
 class DigitalOceanConfig(AppConfig):
@@ -8,6 +9,7 @@ class DigitalOceanConfig(AppConfig):
     is_public_service = True
 
     def ready(self):
+        from nodeconductor.core import models as core_models
         from nodeconductor.cost_tracking import CostTrackingRegister
         from nodeconductor.structure import SupportedServices, signals as structure_signals, models as structure_models
 
@@ -22,5 +24,11 @@ class DigitalOceanConfig(AppConfig):
                 handlers.remove_ssh_keys_from_service,
                 sender=model,
                 dispatch_uid=('nodeconductor_plus.digitalocean.handlers.remove_ssh_keys_from_service__%s'
-                              % model.__name__)
+                              % model.__name__),
             )
+
+        signals.pre_delete.connect(
+            handlers.remove_ssh_key_from_service_settings_on_deletion,
+            sender=core_models.SshPublicKey,
+            dispatch_uid='nodeconductor_plus.digitalocean.handlers.remove_ssh_key_from_service_settings_on_deletion',
+        )

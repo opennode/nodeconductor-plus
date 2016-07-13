@@ -54,14 +54,3 @@ class SafeBackendMethodTask(BackendMethodTask):
         else:
             droplet.service_project_link.service.close_readonly_token_alert(droplet.service_project_link)
             return result
-
-
-class RemoveSshKeyTask(BackendMethodTask):
-    """ Additionally receives service that defined ssh_key backend """
-
-    def get_backend(self, ssh_key):
-        return self.service.settings.get_backend()
-
-    def execute(self, ssh_key, serialized_service, *args, **kwargs):
-        self.service = utils.deserialize_instance(serialized_service)
-        super(RemoveSshKeyTask, self).execute(ssh_key, 'remove_ssh_key')
