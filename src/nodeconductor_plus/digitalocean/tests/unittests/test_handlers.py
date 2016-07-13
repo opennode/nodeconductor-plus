@@ -7,7 +7,6 @@ from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.tests import factories as structure_factories
 
 from .. import factories
-from ... import models
 
 
 @patch('nodeconductor.core.tasks.IndependentBackendMethodTask.delay')
@@ -34,7 +33,7 @@ class SshKeysHandlersTest(TestCase):
         self.service.customer.add_user(self.user, structure_models.CustomerRole.OWNER)
         project.remove_user(self.user)
 
-        self.assertEqual(mocked_task_call.call_count, 0)
+        self.assertFalse(mocked_task_call.called)
 
     def test_ssh_key_will_be_deleted_from_service_settings_on_user_deletion(self, mocked_task_call):
         self.service.customer.add_user(self.user, structure_models.CustomerRole.OWNER)
