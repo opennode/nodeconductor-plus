@@ -21,10 +21,6 @@ class DigitalOceanService(structure_models.Service):
 
     def raise_readonly_token_alert(self):
         """ Raise alert if provided token is read-only """
-        self.settings.set_erred()  # XXX: I am not sure that we need to mark read-only settings as erred.
-        self.settings.error_message = 'Token is read-only.'
-        self.settings.save(update_fields=['state', 'error_message'])
-
         alert_logger.digital_ocean.warning(
             'DigitalOcean token for {settings_name} is read-only.',
             scope=self.settings,
