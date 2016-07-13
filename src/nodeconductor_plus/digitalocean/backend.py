@@ -300,7 +300,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
-            backend_ssh_key = self.pull_ssh_key(ssh_key)
+            backend_ssh_key = self.pull_ssh_key(ssh_key.name, ssh_key.fingerprint)
         except NotFoundError:
             backend_ssh_key = self.push_ssh_key(ssh_key)
         return backend_ssh_key
