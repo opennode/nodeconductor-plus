@@ -12,8 +12,8 @@ class DropletCreateExecutor(executors.CreateExecutor):
     @classmethod
     def get_task_signature(cls, droplet, serialized_droplet, **kwargs):
         return chain(
-            tasks.SafeBackendMethodTask(is_heavy_task=True).si(
-                serialized_droplet, 'provision',
+            tasks.SafeBackendMethodTask().si(
+                serialized_droplet, 'create_droplet',
                 state_transition='begin_creating',
                 runtime_state='provisioning',
                 success_runtime_state=RuntimeStateMixin.RuntimeStates.ONLINE,

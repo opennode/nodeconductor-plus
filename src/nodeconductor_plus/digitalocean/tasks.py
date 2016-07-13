@@ -7,7 +7,7 @@ from django.utils import six
 from nodeconductor.core import utils
 from nodeconductor.core.tasks import BackendMethodTask, Task
 
-from . import backend, handlers, log
+from . import backend, log
 
 
 logger = logging.getLogger(__name__)
@@ -49,8 +49,8 @@ class SafeBackendMethodTask(BackendMethodTask):
         try:
             result = super(SafeBackendMethodTask, self).execute(droplet, *args, **kwargs)
         except backend.TokenScopeError:
-            handlers.open_token_scope_alert(droplet.service_project_link)
+            droplet.service_project_link.service.raise_readonly_token_alert(droplet.service_project_link)
             six.reraise(*sys.exc_info())
         else:
-            handlers.close_token_scope_alert(droplet.service_project_link)
+            droplet.service_project_link.service.close_readonly_token_alert(droplet.service_project_link)
             return result

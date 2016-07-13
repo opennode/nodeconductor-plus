@@ -11,7 +11,7 @@ from django.utils import six
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
 
-from . import handlers, models
+from . import models
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ def digitalocean_error_handler(func):
     """
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
+        logger.debug('About to execute DO backend method `%s`' % func.__name__)
         try:
             return func(*args, **kwargs)
         except digitalocean.DataReadError as e:
@@ -64,8 +65,8 @@ class DigitalOceanBaseBackend(ServiceBackend):
         self.pull_droplets()
 
     @digitalocean_error_handler
-    def provision(self, droplet, backend_region_id=None, backend_image_id=None,
-                  backend_size_id=None, ssh_key_uuid=None):
+    def create_droplet(self, droplet, backend_region_id=None, backend_image_id=None,
+                       backend_size_id=None, ssh_key_uuid=None):
 
         if ssh_key_uuid:
             ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
@@ -118,30 +119,14 @@ class DigitalOceanBaseBackend(ServiceBackend):
         action = backend_droplet.resize(new_size_slug=backend_size_id, disk=disk)
         return action['action']['id']
 
-    def add_ssh_key(self, ssh_key, service_project_link):
+    @digitalocean_error_handler
+    def remove_ssh_key(self, name, fingerprint):
         try:
-            self.push_ssh_key(ssh_key)
-        except TokenScopeError:
-            handlers.open_token_scope_alert(service_project_link)
-            six.reraise(*sys.exc_info())
-        except DigitalOceanBackendError:
-            logger.exception('Failed to propagate ssh public key %s to backend', ssh_key.name)
-            six.reraise(*sys.exc_info())
+            backend_ssh_key = self.pull_ssh_key(name, fingerprint)
+        except NotFoundError:
+            pass  # no need to perform any action if key doesn't exist at backend
         else:
-            handlers.close_token_scope_alert(service_project_link)
-
-    def remove_ssh_key(self, ssh_key, service_project_link):
-        try:
-            backend_ssh_key = self.pull_ssh_key(ssh_key)
             backend_ssh_key.destroy()
-        except TokenScopeError:
-            handlers.open_token_scope_alert(service_project_link)
-            six.reraise(*sys.exc_info())
-        except DigitalOceanBackendError:
-            logger.exception('Failed to delete ssh public key %s from backend', ssh_key.name)
-            six.reraise(*sys.exc_info())
-        else:
-            handlers.close_token_scope_alert(service_project_link)
 
 
 class DigitalOceanBackend(DigitalOceanBaseBackend):
@@ -315,7 +300,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
-            backend_ssh_key = self.pull_ssh_key(ssh_key)
+            backend_ssh_key = self.pull_ssh_key(ssh_key.name, ssh_key.fingerprint)
         except NotFoundError:
             backend_ssh_key = self.push_ssh_key(ssh_key)
         return backend_ssh_key
@@ -331,10 +316,11 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         return backend_ssh_key
 
     @digitalocean_error_handler
-    def pull_ssh_key(self, ssh_key):
+    def pull_ssh_key(self, name, fingerprint):
         backend_ssh_key = digitalocean.SSHKey(
             token=self.manager.token,
-            fingerprint=ssh_key.fingerprint,
+            fingerprint=fingerprint,
+            name=name,
             id=None)
 
         backend_ssh_key.load()
