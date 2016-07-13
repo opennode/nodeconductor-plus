@@ -39,14 +39,14 @@ class SshKeysHandlersTest(TestCase):
         self.service.customer.add_user(self.user, structure_models.CustomerRole.OWNER)
         self.user.delete()
 
-        serialized_tenant = core_utils.serialize_instance(self.service.settings)
+        serialized_settings = core_utils.serialize_instance(self.service.settings)
         mocked_task_call.assert_called_once_with(
-            serialized_tenant, 'remove_ssh_key', self.ssh_key.name, self.ssh_key.fingerprint)
+            serialized_settings, 'remove_ssh_key', self.ssh_key.name, self.ssh_key.fingerprint)
 
     def test_ssh_key_will_be_deleted_from_service_settings_on_ssh_key_deletion(self, mocked_task_call):
         self.service.customer.add_user(self.user, structure_models.CustomerRole.OWNER)
         self.ssh_key.delete()
 
-        serialized_tenant = core_utils.serialize_instance(self.service.settings)
+        serialized_settings = core_utils.serialize_instance(self.service.settings)
         mocked_task_call.assert_called_once_with(
-            serialized_tenant, 'remove_ssh_key', self.ssh_key.name, self.ssh_key.fingerprint)
+            serialized_settings, 'remove_ssh_key', self.ssh_key.name, self.ssh_key.fingerprint)
