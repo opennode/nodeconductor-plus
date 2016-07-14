@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 
 import re
 
-from django.utils import dateparse
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -145,23 +144,13 @@ class DropletImportSerializer(structure_serializers.BaseResourceImportSerializer
 
     def create(self, validated_data):
         backend = self.context['service'].get_backend()
+        backend_id = validated_data['backend_id']
+        service_project_link = validated_data['service_project_link']
         try:
-            droplet = backend.get_droplet(validated_data['backend_id'])
+            return backend.import_droplet(backend_id, service_project_link)
         except DigitalOceanBackendError:
             raise serializers.ValidationError(
-                {'backend_id': "Can't find droplet with ID %s" % validated_data['backend_id']})
-
-        validated_data['name'] = droplet.name
-        validated_data['cores'] = droplet.vcpus
-        validated_data['ram'] = droplet.memory
-        validated_data['disk'] = backend.gb2mb(droplet.disk)
-        validated_data['transfer'] = backend.tb2mb(droplet.size['transfer'])
-        validated_data['external_ips'] = droplet.ip_address
-        validated_data['created'] = dateparse.parse_datetime(droplet.created_at)
-        validated_data['runtime_state'] = models.Droplet.RuntimeStates.ONLINE if droplet.status == 'active' else \
-            models.Droplet.RuntimeStates.OFFLINE
-
-        return super(DropletImportSerializer, self).create(validated_data)
+                {'backend_id': "Can't find droplet with ID %s" % backend_id})
 
 
 class DropletResizeSerializer(serializers.Serializer):

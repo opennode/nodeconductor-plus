@@ -6,7 +6,7 @@ import sys
 
 import digitalocean
 from django.db import IntegrityError, transaction
-from django.utils import six
+from django.utils import dateparse, six
 
 from nodeconductor.core.models import SshPublicKey
 from nodeconductor.structure import ServiceBackend, ServiceBackendError
@@ -283,9 +283,27 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
             'cores': droplet.vcpus,
             'ram': droplet.memory,
             'disk': self.gb2mb(droplet.disk),
-            'flavor_name': droplet.size_slug
+            'flavor_name': droplet.size_slug,
         } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
+
+    def import_droplet(self, backend_droplet_id, service_project_link=None, save=True):
+        backend_droplet = self.get_droplet(backend_droplet_id)
+        droplet = models.Droplet()
+        droplet.backend_id = backend_droplet_id
+        droplet.name = backend_droplet.name
+        droplet.cores = backend_droplet.vcpus
+        droplet.ram = backend_droplet.memory
+        droplet.disk = self.gb2mb(backend_droplet.disk)
+        droplet.transfer = self.tb2mb(backend_droplet.size['transfer'])
+        droplet.external_ips = backend_droplet.ip_address
+        droplet.created = dateparse.parse_datetime(backend_droplet.created_at)
+        droplet.runtime_state = backend_droplet.status
+        if service_project_link and save:
+            droplet.state = models.Droplet.States.OK
+            droplet.service_project_link = service_project_link
+            droplet.save()
+        return droplet
 
     def get_managed_resources(self):
         try:
