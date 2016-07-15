@@ -9,7 +9,7 @@ from django.db import IntegrityError, transaction
 from django.utils import dateparse, six
 
 from nodeconductor.core.models import SshPublicKey
-from nodeconductor.structure import ServiceBackend, ServiceBackendError
+from nodeconductor.structure import ServiceBackend, ServiceBackendError, SupportedServices
 
 from . import models
 
@@ -284,6 +284,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
             'ram': droplet.memory,
             'disk': self.gb2mb(droplet.disk),
             'flavor_name': droplet.size_slug,
+            'resource_type': SupportedServices.get_name_for_model(models.Droplet)
         } for droplet in droplets
             if str(droplet.id) not in cur_droplets and droplet.status in statuses]
 
