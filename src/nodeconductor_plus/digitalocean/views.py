@@ -49,7 +49,10 @@ class DropletViewSet(structure_views.VirtualMachineViewSet):
     update_executor = EmptyExecutor
     delete_executor = executors.DropletDeleteExecutor
     runtime_state_executor = executors.DropletStateChangeExecutor
-    runtime_acceptable_states = {'resize': models.Droplet.RuntimeStates.OFFLINE}
+    acceptable_states = dict(
+        resize=models.Droplet.RuntimeStates.OFFLINE,
+        **structure_views.VirtualMachineViewSet.acceptable_states
+    )
 
     def get_serializer_class(self):
         if self.action == 'resize':
