@@ -32,7 +32,7 @@ class NotFoundError(DigitalOceanBackendError):
 def digitalocean_error_handler(func):
     """
     Convert DigitalOcean exception to specific classes based on text message.
-    It shoud be applied to functions which directly call `manager`.
+    It should be applied to functions which directly call `manager`.
     """
     @functools.wraps(func)
     def wrapped(*args, **kwargs):

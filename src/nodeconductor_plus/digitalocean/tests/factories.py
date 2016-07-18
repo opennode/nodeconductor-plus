@@ -34,12 +34,25 @@ class DigitalOceanServiceProjectLinkFactory(factory.DjangoModelFactory):
     service = factory.SubFactory(DigitalOceanServiceFactory)
     project = factory.SubFactory(structure_factories.ProjectFactory)
 
+    @classmethod
+    def get_url(cls, link=None):
+        if link is None:
+            link = DigitalOceanServiceProjectLinkFactory()
+        return 'http://testserver' + reverse('digitalocean-spl-detail', kwargs={'pk': link.id})
+
 
 class RegionFactory(factory.DjangoModelFactory):
     class Meta(object):
         model = models.Region
 
     name = factory.Sequence(lambda n: 'region%s' % n)
+    backend_id = factory.Sequence(lambda n: 'region-id%s' % n)
+
+    @classmethod
+    def get_url(cls, region=None):
+        if region is None:
+            region = RegionFactory()
+        return 'http://testserver' + reverse('digitalocean-region-detail', kwargs={'uuid': region.uuid})
 
 
 class ImageFactory(factory.DjangoModelFactory):

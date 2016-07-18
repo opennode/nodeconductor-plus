@@ -22,6 +22,9 @@ class WaitForActionComplete(CeleryTask):
         backend = droplet.get_backend()
         action = backend.manager.get_action(action_id)
         if action.status == 'completed':
+            backend_droplet = backend.get_droplet(droplet.backend_id)
+            droplet.external_ips = backend_droplet.ip_address
+            droplet.save(update_fields=['external_ips'])
             return True
         else:
             self.retry()
@@ -49,8 +52,8 @@ class SafeBackendMethodTask(BackendMethodTask):
         try:
             result = super(SafeBackendMethodTask, self).execute(droplet, *args, **kwargs)
         except backend.TokenScopeError:
-            droplet.service_project_link.service.raise_readonly_token_alert(droplet.service_project_link)
+            droplet.service_project_link.service.raise_readonly_token_alert()
             six.reraise(*sys.exc_info())
         else:
-            droplet.service_project_link.service.close_readonly_token_alert(droplet.service_project_link)
+            droplet.service_project_link.service.close_readonly_token_alert()
             return result
