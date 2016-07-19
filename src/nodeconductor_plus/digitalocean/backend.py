@@ -299,9 +299,10 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         droplet.transfer = self.tb2mb(backend_droplet.size['transfer'])
         droplet.external_ips = backend_droplet.ip_address
         droplet.created = dateparse.parse_datetime(backend_droplet.created_at)
-        droplet.runtime_state = backend_droplet.status
+        state, runtime_state = self._get_droplet_states(backend_droplet)
+        droplet.runtime_state = runtime_state
         if service_project_link and save:
-            droplet.state = models.Droplet.States.OK
+            droplet.state = state
             droplet.service_project_link = service_project_link
             droplet.save()
         return droplet

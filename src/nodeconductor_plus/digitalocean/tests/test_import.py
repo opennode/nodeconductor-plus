@@ -46,7 +46,7 @@ class ImportDroptetTest(test.APITransactionTestCase):
         self.assertEqual(droplet.service_project_link, self.link)
         self.assertEqual(droplet.backend_id, 'VALID_ID')
         self.assertEqual(droplet.state, models.Droplet.States.OK)
-        self.assertEqual(droplet.runtime_state, self.mocked_droplet.status)
+        self.assertEqual(droplet.runtime_state, models.Droplet.RuntimeStates.ONLINE)
         self.assertEqual(droplet.name, self.mocked_droplet.name)
         self.assertEqual(droplet.cores, self.mocked_droplet.vcpus)
         self.assertEqual(droplet.ram, self.mocked_droplet.memory)
