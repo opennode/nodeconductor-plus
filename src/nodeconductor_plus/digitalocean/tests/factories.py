@@ -99,6 +99,7 @@ class DropletFactory(factory.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'droplet%s' % n)
     backend_id = factory.Sequence(lambda n: 'droplet-id%s' % n)
+    service_project_link = factory.SubFactory(DigitalOceanServiceProjectLinkFactory)
 
     cores = 2
     ram = 2 * 1024

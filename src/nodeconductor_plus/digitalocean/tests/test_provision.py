@@ -14,9 +14,6 @@ from ..apps import DigitalOceanConfig
 from . import factories
 
 
-DropletViewSet.async_executor = False
-
-
 class DigitalOceanBackendTest(test.APITransactionTestCase):
     def setUp(self):
         super(DigitalOceanBackendTest, self).setUp()
@@ -76,6 +73,11 @@ class BaseDropletProvisionTest(DigitalOceanBackendTest):
         self.ssh_url = structure_factories.SshPublicKeyFactory.get_url(self.ssh_public_key)
 
         self.mock_backend()
+        DropletViewSet.async_executor = False
+
+    def tearDown(self):
+        super(BaseDropletProvisionTest, self).tearDown()
+        DropletViewSet.async_executor = True
 
     def mock_backend(self):
         self.mock_key = mock.Mock()
