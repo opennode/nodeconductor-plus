@@ -1,3 +1,0 @@
-Congratulations {% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}!
-
-You have been granted access to GitLab {{ resource_type }} {{ resource.name }} (URL: {{ resource.web_url }}).
