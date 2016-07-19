@@ -1,8 +1,0 @@
-New GitLab account has been created (URL: {{ gitlab_url }})
-
-Account details:
-
- - username: {{ user.username }}
- - password: {{ password }}
-
-Do not forget to change password after first login!

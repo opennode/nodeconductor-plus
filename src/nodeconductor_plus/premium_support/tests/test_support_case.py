@@ -76,9 +76,9 @@ class SupportCaseTest(test.APITransactionTestCase):
         self.assertEqual(response.data['description'], new_data['description'])
 
     def test_user_can_specify_optional_resource_for_support_case(self):
-        from nodeconductor_plus.gitlab.tests.factories import GitLabProjectFactory
+        from nodeconductor_plus.digitalocean.tests.factories import DropletFactory
 
-        self.support_case['resource'] = GitLabProjectFactory.get_url()
+        self.support_case['resource'] = DropletFactory.get_url()
         self.client.force_authenticate(self.staff)
         response = self.client.post(self.url, data=self.support_case)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)

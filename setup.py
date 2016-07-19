@@ -8,7 +8,6 @@ dev_requires = [
 ]
 
 tests_require = [
-    'django-celery==3.1.16',
     'factory_boy==2.4.1',
     'mock==1.0.1',
     'mock-django==0.6.6',
@@ -21,8 +20,7 @@ install_requires = [
     'nodeconductor>0.102.2',
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
     'nodeconductor_paypal>0.3.5',
-    'python-digitalocean>=1.5',
-    'python-gitlab>=0.9',
+    'python-digitalocean>=1.5'
 ]
 
 setup(
@@ -45,7 +43,6 @@ setup(
         'nodeconductor_extensions': (
             'aws = nodeconductor_plus.aws.extension:AWSExtension',
             'digitalocean = nodeconductor_plus.digitalocean.extension:DigitalOceanExtension',
-            'gitlab = nodeconductor_plus.gitlab.extension:GitLabExtension',
             'insights = nodeconductor_plus.insights.extension:InsightsExtension',
             'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.extension:AuthExtension',
             'plans = nodeconductor_plus.plans.extension:PlansExtension',
