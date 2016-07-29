@@ -114,7 +114,7 @@ def check_service_resources_availability(service_str):
             try:
                 available = backend.ping_resource(resource)
             except ServiceBackendNotImplemented:
-                logger.error("Method ping_resource() is not implemented for %s" % backend.__class__.__name__)
+                logger.info("Method ping_resource() is not implemented for %s" % backend.__class__.__name__)
                 available = True
             except ServiceBackendError as exception:
                 available = False
