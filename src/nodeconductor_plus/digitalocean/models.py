@@ -5,6 +5,8 @@ from django.utils.encoding import python_2_unicode_compatible
 
 from nodeconductor.core.models import RuntimeStateMixin, StateMixin
 from nodeconductor.cost_tracking.models import PayableMixin
+from nodeconductor.quotas.fields import CounterQuotaField
+from nodeconductor.quotas.models import QuotaModelMixin
 from nodeconductor.structure import models as structure_models
 
 
@@ -18,6 +20,13 @@ class DigitalOceanService(structure_models.Service):
     class Meta(structure_models.Service.Meta):
         verbose_name = 'DigitalOcean service'
         verbose_name_plural = 'DigitalOcean services'
+
+    class Quotas(QuotaModelMixin.Quotas):
+        droplet_count = CounterQuotaField(
+            default_limit=50,
+            target_models=lambda: [Droplet],
+            path_to_scope='service_project_link.service'
+        )
 
     def raise_readonly_token_alert(self):
         """ Raise alert if provided token is read-only """
