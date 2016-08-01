@@ -5,6 +5,8 @@ from libcloud.compute.drivers.ec2 import REGION_DETAILS
 
 from nodeconductor.core.models import RuntimeStateMixin
 from nodeconductor.cost_tracking.models import PayableMixin
+from nodeconductor.quotas.fields import CounterQuotaField
+from nodeconductor.quotas.models import QuotaModelMixin
 from nodeconductor.structure import models as structure_models
 from nodeconductor.structure.utils import get_coordinates_by_ip
 
@@ -16,6 +18,17 @@ class AWSService(structure_models.Service):
     class Meta(structure_models.Service.Meta):
         verbose_name = 'AWS service'
         verbose_name_plural = 'AWS services'
+
+    class Quotas(QuotaModelMixin.Quotas):
+        instance_count = CounterQuotaField(
+            target_models=lambda: [Instance],
+            path_to_scope='service_project_link.service'
+        )
+
+        volume_count = CounterQuotaField(
+            target_models=lambda: [Volume],
+            path_to_scope='service_project_link.service'
+        )
 
 
 class AWSServiceProjectLink(structure_models.ServiceProjectLink):
