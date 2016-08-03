@@ -30,6 +30,7 @@ class ImportDroptetTest(test.APITransactionTestCase):
             status='active',
             size={'transfer': 1},
             created_at=datetime.datetime.now().isoformat(),
+            image={'distribution': 'CentOS', 'name': '7.1 x64'}
         )
 
     def test_user_can_import_droplet(self, mocked_manager):
@@ -48,6 +49,7 @@ class ImportDroptetTest(test.APITransactionTestCase):
         self.assertEqual(droplet.state, models.Droplet.States.OK)
         self.assertEqual(droplet.runtime_state, models.Droplet.RuntimeStates.ONLINE)
         self.assertEqual(droplet.name, self.mocked_droplet.name)
+        self.assertEqual(droplet.image_name, 'CentOS 7.1 x64')
         self.assertEqual(droplet.cores, self.mocked_droplet.vcpus)
         self.assertEqual(droplet.ram, self.mocked_droplet.memory)
         self.assertEqual(droplet.disk, ServiceBackend.gb2mb(self.mocked_droplet.disk))

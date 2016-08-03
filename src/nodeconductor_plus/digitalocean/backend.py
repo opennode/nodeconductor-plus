@@ -247,6 +247,7 @@ class DigitalOceanBackend(ServiceBackend):
             backend_droplet = backend_droplets[droplet_id]
             nc_droplet = nc_droplets[droplet_id]
             nc_droplet.state, nc_droplet.runtime_state = self._get_droplet_states(backend_droplet)
+            nc_droplet.image_name = self.format_image_name(backend_droplet.image)
             nc_droplet.save()
 
     def _get_droplet_states(self, droplet):
@@ -261,6 +262,9 @@ class DigitalOceanBackend(ServiceBackend):
         }
 
         return digitalocean_to_nodeconductor.get(droplet.status, (States.ERRED, 'error'))
+
+    def format_image_name(self, backend_image):
+        return '{} {}'.format(backend_image['distribution'], backend_image['name'])
 
     @digitalocean_error_handler
     def get_droplet(self, backend_droplet_id):
@@ -292,6 +296,7 @@ class DigitalOceanBackend(ServiceBackend):
         droplet = models.Droplet()
         droplet.backend_id = backend_droplet_id
         droplet.name = backend_droplet.name
+        droplet.image_name = self.format_image_name(backend_droplet.image)
         droplet.cores = backend_droplet.vcpus
         droplet.ram = backend_droplet.memory
         droplet.disk = self.gb2mb(backend_droplet.disk)
