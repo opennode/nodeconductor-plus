@@ -29,6 +29,10 @@ class NotFoundError(DigitalOceanBackendError):
     pass
 
 
+class UnauthorizedError(DigitalOceanBackendError):
+    pass
+
+
 def digitalocean_error_handler(func):
     """
     Convert DigitalOcean exception to specific classes based on text message.
@@ -36,25 +40,27 @@ def digitalocean_error_handler(func):
     """
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
+        error_messages = {
+            'You do not have access for the attempted action.': TokenScopeError,
+            'The resource you were accessing could not be found.': NotFoundError,
+            'Unable to authenticate you.': UnauthorizedError
+        }
         logger.debug('About to execute DO backend method `%s`' % func.__name__)
         try:
             return func(*args, **kwargs)
         except digitalocean.DataReadError as e:
             exc = list(sys.exc_info())
             message = six.text_type(e)
-            if message == 'You do not have access for the attempted action.':
-                exc[0] = TokenScopeError
-                six.reraise(*exc)
-            elif message == 'The resource you were accessing could not be found.':
-                exc[0] = NotFoundError
-                six.reraise(*exc)
-            else:
-                exc[0] = DigitalOceanBackendError
-                six.reraise(*exc)
+            exc[0] = error_messages.get(message, DigitalOceanBackendError)
+            six.reraise(*exc)
     return wrapped
 
 
-class DigitalOceanBaseBackend(ServiceBackend):
+class DigitalOceanBackend(ServiceBackend):
+    """ NodeConductor interface to Digital Ocean API.
+        https://developers.digitalocean.com/documentation/v2/
+        https://github.com/koalalorenzo/python-digitalocean
+    """
 
     def __init__(self, settings):
         self.settings = settings
@@ -128,13 +134,6 @@ class DigitalOceanBaseBackend(ServiceBackend):
         else:
             backend_ssh_key.destroy()
 
-
-class DigitalOceanBackend(DigitalOceanBaseBackend):
-    """ NodeConductor interface to Digital Ocean API.
-        https://developers.digitalocean.com/documentation/v2/
-        https://github.com/koalalorenzo/python-digitalocean
-    """
-
     def ping(self, raise_exception=False):
         tries_count = 3
         for _ in range(tries_count):
@@ -148,15 +147,12 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
         return False
 
     def ping_resource(self, droplet):
-        tries_count = 3
-        for _ in range(tries_count):
-            try:
-                self.get_droplet(droplet.backend_id)
-            except DigitalOceanBackendError:
-                logger.warning('Droplet %s (UUID: %s) is unreachable' % (droplet.name, droplet.uuid.hex))
-            else:
-                return True
-        return False
+        try:
+            self.get_droplet(droplet.backend_id)
+        except NotFoundError:
+            return False
+        else:
+            return True
 
     def pull_service_properties(self):
         self.pull_regions()
@@ -170,7 +166,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
     @transaction.atomic
     def pull_regions(self):
         cur_regions = self._get_current_properties(models.Region)
-        for backend_region in self.manager.get_all_regions():
+        for backend_region in self.get_all_regions():
             if backend_region.available:
                 cur_regions.pop(backend_region.slug, None)
                 try:
@@ -187,7 +183,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
     @transaction.atomic
     def pull_images(self):
         cur_images = self._get_current_properties(models.Image)
-        for backend_image in self.manager.get_all_images():
+        for backend_image in self.get_all_images():
             cur_images.pop(str(backend_image.id), None)
             try:
                 image, _ = models.Image.objects.update_or_create(
@@ -196,6 +192,9 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
                         'name': '{} {}'.format(backend_image.distribution, backend_image.name),
                         'type': backend_image.type,
                         'distribution': backend_image.distribution,
+                        'is_official': backend_image.slug is not None,
+                        'min_disk_size': self.gb2mb(backend_image.min_disk_size),
+                        'created_at': dateparse.parse_datetime(backend_image.created_at)
                     })
                 self._update_entity_regions(image, backend_image)
             except IntegrityError:
@@ -208,7 +207,7 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
     @transaction.atomic
     def pull_sizes(self):
         cur_sizes = self._get_current_properties(models.Size)
-        for backend_size in self.manager.get_all_sizes():
+        for backend_size in self.get_all_sizes():
             cur_sizes.pop(backend_size.slug, None)
             try:
                 size, _ = models.Size.objects.update_or_create(
@@ -317,6 +316,18 @@ class DigitalOceanBackend(DigitalOceanBaseBackend):
     @digitalocean_error_handler
     def get_all_droplets(self):
         return self.manager.get_all_droplets()
+
+    @digitalocean_error_handler
+    def get_all_regions(self):
+        return self.manager.get_all_regions()
+
+    @digitalocean_error_handler
+    def get_all_images(self):
+        return self.manager.get_all_images()
+
+    @digitalocean_error_handler
+    def get_all_sizes(self):
+        return self.manager.get_all_sizes()
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
