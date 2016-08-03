@@ -43,7 +43,7 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
     class Meta(object):
         model = models.Image
         view_name = 'digitalocean-image-detail'
-        fields = ('url', 'uuid', 'name', 'distribution', 'type', 'regions')
+        fields = ('url', 'uuid', 'name', 'distribution', 'type', 'regions', 'is_official')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
