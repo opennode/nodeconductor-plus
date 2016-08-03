@@ -192,7 +192,9 @@ class DigitalOceanBackend(ServiceBackend):
                         'name': '{} {}'.format(backend_image.distribution, backend_image.name),
                         'type': backend_image.type,
                         'distribution': backend_image.distribution,
-                        'is_official': backend_image.slug is not None
+                        'is_official': backend_image.slug is not None,
+                        'min_disk_size': self.gb2mb(backend_image.min_disk_size),
+                        'created_at': dateparse.parse_datetime(backend_image.created_at)
                     })
                 self._update_entity_regions(image, backend_image)
             except IntegrityError:

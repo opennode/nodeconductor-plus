@@ -43,7 +43,8 @@ class ImageSerializer(structure_serializers.BasePropertySerializer):
     class Meta(object):
         model = models.Image
         view_name = 'digitalocean-image-detail'
-        fields = ('url', 'uuid', 'name', 'distribution', 'type', 'regions', 'is_official')
+        fields = ('url', 'uuid', 'name', 'distribution', 'type', 'regions',
+                  'is_official', 'created_at', 'min_disk_size')
         extra_kwargs = {
             'url': {'lookup_field': 'uuid'},
         }
@@ -121,17 +122,29 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
             size = attrs['size']
 
             if not re.match(r'[a-zA-Z0-9.-]+$', attrs['name']):
-                raise serializers.ValidationError(
-                    "Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)")
+                raise serializers.ValidationError({
+                    'name': 'Only valid hostname characters are allowed. (a-z, A-Z, 0-9, . and -)'
+                })
 
             if not attrs.get('ssh_public_key') and image.is_ssh_key_mandatory:
-                raise serializers.ValidationError("SSH public key is required for this image")
+                raise serializers.ValidationError({
+                    'ssh_public_key': 'SSH public key is required for this image'
+                })
 
             if not image.regions.filter(pk=region.pk).exists():
-                raise serializers.ValidationError("Image is missing in region %s" % region)
+                raise serializers.ValidationError({
+                    'image': 'Image is missing in region %s' % region
+                })
 
             if not size.regions.filter(pk=region.pk).exists():
-                raise serializers.ValidationError("Size is missing in region %s" % region)
+                raise serializers.ValidationError({
+                    'size': 'Size is missing in region %s' % region
+                })
+
+            if image.min_disk_size and size.disk < image.min_disk_size:
+                raise serializers.ValidationError({
+                    'size': 'Disk provided by size %s is not enough for image %s' % (size, image)
+                })
 
         return attrs
 

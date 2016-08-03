@@ -58,6 +58,9 @@ class Image(structure_models.GeneralServiceProperty):
     distribution = models.CharField(max_length=100)
     type = models.CharField(max_length=100)
     is_official = models.BooleanField(default=False, help_text='Is image provided by DigitalOcean')
+    min_disk_size = models.PositiveIntegerField(
+        null=True, help_text='Minimum disk required for a size to use this image')
+    created_at = models.DateTimeField(null=True)
 
     @property
     def is_ssh_key_mandatory(self):
