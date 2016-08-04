@@ -109,10 +109,13 @@ class DropletSerializer(structure_serializers.VirtualMachineSerializer):
         model = models.Droplet
         view_name = 'digitalocean-droplet-detail'
         fields = structure_serializers.VirtualMachineSerializer.Meta.fields + (
-            'region', 'image', 'size',
+            'region', 'image', 'size', 'runtime_state'
         )
         protected_fields = structure_serializers.VirtualMachineSerializer.Meta.protected_fields + (
             'region', 'image', 'size',
+        )
+        read_only_fields = structure_serializers.VirtualMachineSerializer.Meta.read_only_fields + (
+            'runtime_state',
         )
 
     def validate(self, attrs):
