@@ -282,7 +282,6 @@ class DigitalOceanBackend(ServiceBackend):
             'id': droplet.id,
             'name': droplet.name,
             'created_at': droplet.created_at,
-            'kernel': droplet.kernel['name'],
             'cores': droplet.vcpus,
             'ram': droplet.memory,
             'disk': self.gb2mb(droplet.disk),
