@@ -19,7 +19,7 @@ class ImportDroptetTest(test.APITransactionTestCase):
         self.client.force_authenticate(user=structure_factories.UserFactory(is_staff=True))
 
         Droplet = collections.namedtuple('Droplet', (
-            'name', 'vcpus', 'memory', 'disk', 'ip_address', 'status', 'created_at', 'size'
+            'name', 'vcpus', 'memory', 'disk', 'ip_address', 'status', 'created_at', 'size', 'image'
         ))
         self.mocked_droplet = Droplet(
             name='Webserver',
