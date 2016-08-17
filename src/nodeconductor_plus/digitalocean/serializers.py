@@ -5,13 +5,15 @@ import re
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from nodeconductor.core import serializers as core_serializers
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
 from .backend import DigitalOceanBackendError
 
 
-class ServiceSerializer(structure_serializers.BaseServiceSerializer):
+class ServiceSerializer(core_serializers.ExtraFieldOptionsMixin,
+                        structure_serializers.BaseServiceSerializer):
 
     SERVICE_ACCOUNT_FIELDS = {
         'token': '',
@@ -20,11 +22,11 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.DigitalOceanService
         view_name = 'digitalocean-detail'
-
-    def get_fields(self):
-        fields = super(ServiceSerializer, self).get_fields()
-        fields['token'].label = 'Access token'
-        return fields
+        extra_field_options = {
+            'token': {
+                'label': 'Access token'
+            }
+        }
 
 
 class RegionSerializer(structure_serializers.BasePropertySerializer):
