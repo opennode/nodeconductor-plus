@@ -1,12 +1,14 @@
 from rest_framework import serializers
 
+from nodeconductor.core import serializers as core_serializers
 from nodeconductor.structure import serializers as structure_serializers
 
 from . import models
 from .backend import AWSBackendError
 
 
-class ServiceSerializer(structure_serializers.BaseServiceSerializer):
+class ServiceSerializer(core_serializers.ExtraFieldOptionsMixin,
+                        structure_serializers.BaseServiceSerializer):
 
     SERVICE_ACCOUNT_FIELDS = {
         'username': '',
@@ -20,18 +22,19 @@ class ServiceSerializer(structure_serializers.BaseServiceSerializer):
     class Meta(structure_serializers.BaseServiceSerializer.Meta):
         model = models.AWSService
         view_name = 'aws-detail'
-
-    def get_fields(self):
-        fields = super(ServiceSerializer, self).get_fields()
-        fields['username'].label = 'Access key ID'
-        fields['username'].required = True
-
-        fields['token'].label = 'Secret access key'
-        fields['token'].required = True
-
-        fields['images_regex'].help_text = 'Regular expression to limit images list'
-
-        return fields
+        extra_field_options = {
+            'username': {
+                'label': 'Access key ID',
+                'required': True
+            },
+            'token': {
+                'label': 'Secret access key',
+                'required': True
+            },
+            'images_regex': {
+                'help_text': 'Regular expression to limit images list'
+            }
+        }
 
 
 class RegionSerializer(structure_serializers.BasePropertySerializer):
