@@ -9,14 +9,32 @@ from nodeconductor_plus.aws.models import Image, Region
 
 class Command(BaseCommand):
     help_text = "Import catalog of Amazon images."
-    args = "[ami_catalog.csv]"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'file',
+            type=file,
+            metavar='FILE',
+            help='AMI catalog file.'
+        )
+        parser.add_argument(
+            '-y', '--yes',
+            action='store_true',
+            dest='yes',
+            default=False,
+            help='The answer to any question which would be asked will be yes.'
+        )
 
     def handle(self, *args, **options):
-        if len(args) == 0:
-            raise CommandError('AMI catalog filename is not specified.')
+        data = list(UnicodeDictReader(options['file']))
 
-        reader = UnicodeDictReader(open(args[0], 'r'))
-        csv_images = {image['backend_id']: image for image in reader}
+        csv_regions = set([image['region'] for image in data])
+        nc_regions = {region.name: region.id for region in Region.objects.all()}
+        new_regions = csv_regions - set(nc_regions.keys())
+        if new_regions:
+            raise CommandError('%s regions are missing in the database.' % ', '.join(new_regions))
+
+        csv_images = {image['backend_id']: image for image in data}
         csv_ids = set(csv_images.keys())
 
         nc_images = {image.backend_id: image for image in Image.objects.all()}
@@ -27,7 +45,6 @@ class Command(BaseCommand):
             new_ids_list = ', '.join(sorted(new_ids))
             self.stdout.write('The following AMIs would be created: {}.'.format(new_ids_list))
 
-        nc_regions = {region.name: region.id for region in Region.objects.all()}
         common_ids = nc_ids & csv_ids
         updated_ids = set()
         for image_id in common_ids:
@@ -50,10 +67,11 @@ class Command(BaseCommand):
             self.stdout.write('There are no changes to apply.')
             return
 
-        confirm = raw_input('Enter [y] to continue: ')
-        if confirm.strip().lower() != 'y':
-            self.stdout.write('Changes are not applied.')
-            return
+        if not options['yes']:
+            confirm = raw_input('Enter [y] to continue: ')
+            if confirm.strip().lower() != 'y':
+                self.stdout.write('Changes are not applied.')
+                return
 
         for image_id in new_ids:
             csv_image = csv_images[image_id]
