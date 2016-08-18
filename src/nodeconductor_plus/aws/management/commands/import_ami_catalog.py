@@ -26,15 +26,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        reader = list(UnicodeDictReader(options['file']))
+        data = list(UnicodeDictReader(options['file']))
 
-        csv_regions = set([image['region'] for image in reader])
+        csv_regions = set([image['region'] for image in data])
         nc_regions = {region.name: region.id for region in Region.objects.all()}
         new_regions = csv_regions - set(nc_regions.keys())
         if new_regions:
             raise CommandError('%s regions are missing in the database.' % ', '.join(new_regions))
 
-        csv_images = {image['backend_id']: image for image in reader}
+        csv_images = {image['backend_id']: image for image in data}
         csv_ids = set(csv_images.keys())
 
         nc_images = {image.backend_id: image for image in Image.objects.all()}
