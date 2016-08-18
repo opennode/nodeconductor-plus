@@ -26,7 +26,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        reader = UnicodeDictReader(options['file'])
+        reader = list(UnicodeDictReader(options['file']))
 
         csv_regions = set([image['region'] for image in reader])
         nc_regions = {region.name: region.id for region in Region.objects.all()}
