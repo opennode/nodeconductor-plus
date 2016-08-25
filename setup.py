@@ -18,6 +18,7 @@ tests_require = [
 install_requires = [
     'apache-libcloud>=0.20.0',
     'nodeconductor>0.102.2',
+    'html5lib<0.99999999', # Transient dependency for nodeconductor_paypal
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
     'nodeconductor_paypal>0.3.5',
     'python-digitalocean>=1.5'
