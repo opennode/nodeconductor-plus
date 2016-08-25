@@ -412,6 +412,7 @@ class AWSBackend(AWSBaseBackend):
                 for image in images:
                     try:
                         name = backend_images[image.backend_id]
+                        # Backend can return image with ID, but without name.
                         if name is None:
                             image.delete()
                             continue
