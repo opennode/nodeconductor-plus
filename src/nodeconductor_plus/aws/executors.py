@@ -30,3 +30,33 @@ class VolumeDeleteExecutor(executors.DeleteExecutor):
                 serialized_volume, 'delete_volume', state_transition='begin_deleting')
         else:
             return tasks.StateTransitionTask().si(serialized_volume, state_transition='begin_deleting')
+
+
+class InstanceResizeExecutor(executors.ActionExecutor):
+
+    @classmethod
+    def pre_apply(cls, instance, **kwargs):
+        instance.schedule_resizing()
+        instance.save(update_fields=['state'])
+
+    @classmethod
+    def get_task_signature(cls, instance, serialized_instance, **kwargs):
+        size = kwargs.pop('size')
+        return chain(
+            tasks.BackendMethodTask().si(
+                serialized_instance,
+                backend_method='resize_vm',
+                state_transition='begin_resizing',
+                size_id=size.backend_id
+            ),
+            PollRuntimeStateTask().si(
+                serialized_instance,
+                backend_pull_method='pull_vm_runtime_state',
+                success_state='stopped',
+                erred_state='error'
+            ).set(countdown=30)
+        )
+
+    @classmethod
+    def get_success_signature(cls, instance, serialized_instance, **kwargs):
+        return tasks.StateTransitionTask().si(serialized_instance, state_transition='set_resized')

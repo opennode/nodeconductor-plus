@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible, force_text
 from libcloud.compute.drivers.ec2 import REGION_DETAILS
 
 from nodeconductor.core.models import RuntimeStateMixin
@@ -44,11 +45,15 @@ class Region(structure_models.GeneralServiceProperty):
         ordering = ['name']
 
 
+@python_2_unicode_compatible
 class Image(structure_models.GeneralServiceProperty):
     class Meta:
         ordering = ['name']
 
     region = models.ForeignKey(Region)
+
+    def __str__(self):
+        return '{0} | {1}'.format(self.name, self.region.name)
 
 
 class Size(structure_models.GeneralServiceProperty):
@@ -62,7 +67,7 @@ class Size(structure_models.GeneralServiceProperty):
     price = models.DecimalField('Hourly price rate', default=0, max_digits=11, decimal_places=5)
 
 
-class Instance(structure_models.VirtualMachineMixin, structure_models.Resource, PayableMixin):
+class Instance(structure_models.VirtualMachineMixin, structure_models.Resource, PayableMixin, RuntimeStateMixin):
     service_project_link = models.ForeignKey(
         AWSServiceProjectLink, related_name='instances', on_delete=models.PROTECT)
 
@@ -74,6 +79,11 @@ class Instance(structure_models.VirtualMachineMixin, structure_models.Resource, 
         region = self.region.backend_id
         endpoint = REGION_DETAILS[region]['endpoint']
         return get_coordinates_by_ip(endpoint)
+
+    # XXX: For compatibility with new-style state.
+    @property
+    def human_readable_state(self):
+        return force_text(dict(self.States.CHOICES)[self.state])
 
 
 class Volume(RuntimeStateMixin, structure_models.NewResource):

@@ -174,6 +174,49 @@ class InstanceImportSerializer(AWSImportSerializerMixin,
         return super(InstanceImportSerializer, self).create(validated_data)
 
 
+class InstanceResizeSerializer(structure_serializers.PermissionFieldFilteringMixin,
+                               serializers.Serializer):
+    size = serializers.HyperlinkedRelatedField(
+        view_name='aws-size-detail',
+        lookup_field='uuid',
+        queryset=models.Size.objects.all(),
+    )
+
+    def get_fields(self):
+        fields = super(InstanceResizeSerializer, self).get_fields()
+        if self.instance:
+            fields['size'].query_params = {
+                'region_uuid': self.instance.region.uuid
+            }
+        return fields
+
+    def get_filtered_field_names(self):
+        return ('size',)
+
+    def validate(self, attrs):
+        size = attrs['size']
+
+        if not size.regions.filter(uuid=self.instance.region.uuid).exists():
+            raise serializers.ValidationError("New size is not within the same region.")
+
+        if (size.ram, size.disk, size.cores) == (self.instance.ram, self.instance.disk, self.instance.cores):
+            raise serializers.ValidationError("New size is the same as current.")
+
+        if size.disk < self.instance.disk:
+            raise serializers.ValidationError("New disk size should be greater than the previous value")
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        size = validated_data.get('size')
+
+        instance.ram = size.ram
+        instance.cores = size.cores
+        instance.disk = size.disk
+        instance.save(update_fields=['ram', 'cores', 'disk'])
+        return instance
+
+
 class VolumeSerializer(structure_serializers.BaseResourceSerializer):
     service = serializers.HyperlinkedRelatedField(
         source='service_project_link.service',

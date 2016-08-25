@@ -148,6 +148,23 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
 
         return volume
 
+    def ex_change_node_size(self, node, size_id):
+        """
+        Change the node size.
+        Note: Node must be turned of before changing the size.
+
+        :param      node: Node instance
+        :type       node: :class:`Node`
+
+        :param      size_id: New size ID
+        :type       size_id: string
+
+        :return: True on success, False otherwise.
+        :rtype: ``bool``
+        """
+        attributes = {'InstanceType.Value': size_id}
+        return self.ex_modify_instance_attribute(node, attributes)
+
 
 class AWSBackendError(ServiceBackendError):
     pass
@@ -394,11 +411,15 @@ class AWSBackend(AWSBaseBackend):
                 backend_images.update(get_images(manager, 'aws-marketplace'))
                 for image in images:
                     try:
-                        image.name = backend_images[image.backend_id]
+                        name = backend_images[image.backend_id]
+                        if name is None:
+                            image.delete()
+                            continue
                     except KeyError:
                         image.delete()
                     else:
-                        image.save()
+                        image.name = name
+                        image.save(update_fields=['name'])
 
     def get_all_nodes(self):
         """
@@ -475,6 +496,26 @@ class AWSBackend(AWSBaseBackend):
         except Exception as e:
             logger.exception('Unable to destroy Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
+
+    def resize_vm(self, vm, size_id):
+        try:
+            manager = self.get_manager(vm)
+            manager.ex_change_node_size(manager.get_node(vm.backend_id), size_id)
+        except Exception as e:
+            logger.exception('Unable to resize Amazon virtual machine %s', vm.uuid.hex)
+            six.reraise(AWSBackendError, six.text_type(e))
+
+    def pull_vm_runtime_state(self, vm):
+        try:
+            manager = self.get_manager(vm)
+            backend_vm = manager.get_node(vm.backend_id)
+        except Exception as e:
+            logger.exception('Unable to pull state for Amazon virtual machine %s', vm.uuid.hex)
+            six.reraise(AWSBackendError, six.text_type(e))
+
+        if backend_vm.state != vm.runtime_state:
+            vm.runtime_state = backend_vm.state
+            vm.save(update_fields=['runtime_state'])
 
     def get_monthly_cost_estimate(self, instance):
         manager = self.get_manager(instance)
