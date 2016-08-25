@@ -161,9 +161,11 @@ class AWSBaseBackend(ServiceBackend):
                ('us-west-1', 'US West (N. California)'),
                ('eu-west-1', 'EU (Ireland)'),
                ('eu-central-1', 'EU (Frankfurt)'),
+               ('ap-south-1', 'Asia Pacific (Mumbai)'),
                ('ap-southeast-1', 'Asia Pacific (Singapore)'),
                ('ap-southeast-2', 'Asia Pacific (Sydney)'),
                ('ap-northeast-1', 'Asia Pacific (Tokyo)'),
+               ('ap-northeast-2', 'Asia Pacific (Seoul)'),
                ('sa-east-1', 'South America (Sao Paulo)'))
 
     def __init__(self, settings):
