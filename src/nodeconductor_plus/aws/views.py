@@ -1,5 +1,5 @@
 import six
-from rest_framework import viewsets
+from rest_framework import decorators, viewsets
 
 from nodeconductor.core.views import StateExecutorViewSet
 from nodeconductor.structure import views as structure_views
@@ -56,6 +56,14 @@ class InstanceViewSet(structure_views.BaseResourceViewSet):
     queryset = models.Instance.objects.all()
     serializer_class = serializers.InstanceSerializer
 
+    serializers = {
+        'resize': serializers.InstanceResizeSerializer
+    }
+
+    def get_serializer_class(self):
+        serializer = self.serializers.get(self.action)
+        return serializer or super(InstanceViewSet, self).get_serializer_class()
+
     def perform_provision(self, serializer):
         resource = serializer.save()
         backend = resource.get_backend()
@@ -65,6 +73,16 @@ class InstanceViewSet(structure_views.BaseResourceViewSet):
             image=serializer.validated_data['image'],
             size=serializer.validated_data['size'],
             ssh_key=serializer.validated_data.get('ssh_public_key'))
+
+    @decorators.detail_route(methods=['post'])
+    @structure_views.safe_operation(valid_state=models.Instance.States.OFFLINE)
+    def resize(self, request, instance, uuid=None):
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        new_size = serializer.validated_data.get('size')
+        executors.InstanceResizeExecutor().execute(instance, size=new_size)
 
 
 class VolumeViewSet(six.with_metaclass(structure_views.ResourceViewMetaclass,
