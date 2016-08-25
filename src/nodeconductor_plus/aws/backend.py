@@ -454,24 +454,24 @@ class AWSBackend(AWSBaseBackend):
         try:
             manager = self.get_manager(vm)
             manager.ex_stop_node(manager.get_node(vm.backend_id))
-            logger.exception('Unable to stop Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
+            logger.exception('Unable to stop Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
     def start_vm(self, vm):
         try:
             manager = self.get_manager(vm)
             manager.ex_start_node(manager.get_node(vm.backend_id))
-            logger.exception('Unable to start Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
+            logger.exception('Unable to start Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
     def destroy_vm(self, vm):
         try:
             manager = self.get_manager(vm)
             manager.destroy_node(manager.get_node(vm.backend_id))
-            logger.exception('Unable to destroy Amazon virtual machine %s', vm.uuid.hex)
         except Exception as e:
+            logger.exception('Unable to destroy Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
     def get_monthly_cost_estimate(self, instance):
