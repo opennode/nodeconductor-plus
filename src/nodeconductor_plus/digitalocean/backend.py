@@ -331,7 +331,7 @@ class DigitalOceanBackend(ServiceBackend):
 
     @digitalocean_error_handler
     def get_all_sizes(self):
-        return self.manager.get_all_sizes()
+        return [size for size in self.manager.get_all_sizes() if size.slug]
 
     def get_or_create_ssh_key(self, ssh_key):
         try:
