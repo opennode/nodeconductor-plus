@@ -288,3 +288,43 @@ class VolumeImportSerializer(AWSImportSerializerMixin,
         validated_data.pop('type')
 
         return super(VolumeImportSerializer, self).create(validated_data)
+
+
+class VolumeAttachSerializer(structure_serializers.PermissionFieldFilteringMixin,
+                             serializers.Serializer):
+    instance = serializers.HyperlinkedRelatedField(
+        view_name='aws-instance-detail',
+        lookup_field='uuid',
+        queryset=models.Instance.objects.all(),
+    )
+    device = serializers.CharField()
+
+    def get_fields(self):
+        fields = super(VolumeAttachSerializer, self).get_fields()
+        if self.instance:
+            fields['instance'].query_params = {
+                'region_uuid': self.instance.region.uuid
+            }
+        return fields
+
+    def get_filtered_field_names(self):
+        return ('instance',)
+
+    def validate(self, attrs):
+        if self.instance:
+            volume = self.instance
+            instance = attrs['instance']
+
+            if volume.region != instance.region:
+                raise serializers.ValidationError("Instance is not within the same region.")
+
+            if instance.state != models.Instance.States.OFFLINE:
+                raise serializers.ValidationError("Instance must be in offline state.")
+
+        return attrs
+
+    def update(self, volume, validated_data):
+        instance = validated_data.get('instance')
+        volume.instance = instance
+        volume.save(update_fields=['instance'])
+        return instance

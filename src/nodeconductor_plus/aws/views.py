@@ -1,7 +1,8 @@
 import six
-from rest_framework import decorators, viewsets
+from rest_framework import decorators, exceptions, viewsets
 
 from nodeconductor.core.views import StateExecutorViewSet
+from nodeconductor.core.exceptions import IncorrectStateException
 from nodeconductor.structure import views as structure_views
 
 from . import filters, models, serializers, executors
@@ -93,4 +94,30 @@ class VolumeViewSet(six.with_metaclass(structure_views.ResourceViewMetaclass,
     create_executor = executors.VolumeCreateExecutor
     delete_executor = executors.VolumeDeleteExecutor
 
-    # TODO: Attach & detach volume to instance
+    serializers = {
+        'attach': serializers.VolumeAttachSerializer
+    }
+
+    @decorators.detail_route(methods=['post'])
+    @structure_views.safe_operation(valid_state=models.Volume.States.OK)
+    def detach(self, request, volume, uuid=None):
+        if not volume.instance:
+            raise exceptions.ValidationError('Volume is already detached.')
+        elif volume.instance.state != models.Instance.States.OFFLINE:
+            raise IncorrectStateException('Volume instance must be in offline state.')
+
+        executors.VolumeDetachExecutor.execute(volume)
+
+    @decorators.detail_route(methods=['post'])
+    @structure_views.safe_operation(valid_state=models.Volume.States.OK)
+    def attach(self, request, volume, uuid=None):
+        serializer = self.get_serializer(volume, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        device = serializer.validated_data.get('device')
+        executors.VolumeAttachExecutor.execute(volume, device=device)
+
+    def get_serializer_class(self):
+        serializer = self.serializers.get(self.action)
+        return serializer or super(VolumeViewSet, self).get_serializer_class()
