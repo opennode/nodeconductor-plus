@@ -115,8 +115,7 @@ class VolumeViewSet(six.with_metaclass(structure_views.ResourceViewMetaclass,
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        device = serializer.validated_data.get('device')
-        executors.VolumeAttachExecutor.execute(volume, device=device)
+        executors.VolumeAttachExecutor.execute(volume)
 
     def get_serializer_class(self):
         serializer = self.serializers.get(self.action)

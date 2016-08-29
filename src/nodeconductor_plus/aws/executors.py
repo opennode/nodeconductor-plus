@@ -52,13 +52,9 @@ class VolumeAttachExecutor(executors.ActionExecutor):
 
     @classmethod
     def get_task_signature(cls, volume, serialized_volume, **kwargs):
-        device = kwargs.pop('device')
         return chain(
             tasks.BackendMethodTask().si(
-                serialized_volume,
-                backend_method='attach_volume',
-                state_transition='begin_updating',
-                device=device),
+                serialized_volume, 'attach_volume', state_transition='begin_updating'),
             PollRuntimeStateTask().si(
                  serialized_volume,
                  backend_pull_method='pull_volume_runtime_state',

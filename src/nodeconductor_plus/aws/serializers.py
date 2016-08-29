@@ -297,7 +297,7 @@ class VolumeAttachSerializer(structure_serializers.PermissionFieldFilteringMixin
         lookup_field='uuid',
         queryset=models.Instance.objects.all(),
     )
-    device = serializers.CharField()
+    device = serializers.CharField(max_length=128)
 
     def get_fields(self):
         fields = super(VolumeAttachSerializer, self).get_fields()
@@ -324,7 +324,8 @@ class VolumeAttachSerializer(structure_serializers.PermissionFieldFilteringMixin
         return attrs
 
     def update(self, volume, validated_data):
-        instance = validated_data.get('instance')
-        volume.instance = instance
-        volume.save(update_fields=['instance'])
-        return instance
+        volume.instance = validated_data.get('instance')
+        volume.device = validated_data.get('device')
+        volume.save(update_fields=['instance', 'device'])
+
+        return volume

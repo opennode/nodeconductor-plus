@@ -344,7 +344,7 @@ class AWSBackend(AWSBaseBackend):
             logger.exception('Unable to delete volume with id %s', volume.id)
             six.reraise(AWSBackendError, e)
 
-    def attach_volume(self, volume, device):
+    def attach_volume(self, volume):
         """
         Attach volume to the instance
         """
@@ -352,7 +352,7 @@ class AWSBackend(AWSBaseBackend):
             manager = self._get_api(volume.region.backend_id)
             backend_node = manager.get_node(volume.instance.backend_id)
             backend_volume = manager.get_volume(volume.backend_id)
-            manager.attach_volume(backend_node, backend_volume, device)
+            manager.attach_volume(backend_node, backend_volume, volume.device)
         except Exception as e:
             logger.exception('Unable to attach volume with id %s to instance with id %s',
                              volume.id, volume.instance.id)
@@ -371,7 +371,8 @@ class AWSBackend(AWSBaseBackend):
             six.reraise(AWSBackendError, e)
         else:
             volume.instance = None
-            volume.save()
+            volume.device = ''
+            volume.save(update_fields=['instance', 'device'])
 
     def get_all_images(self):
         """
