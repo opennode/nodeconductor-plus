@@ -344,31 +344,35 @@ class AWSBackend(AWSBaseBackend):
             logger.exception('Unable to delete volume with id %s', volume.id)
             six.reraise(AWSBackendError, e)
 
-    def attach_volume(self, instance, volume, device):
+    def attach_volume(self, volume):
         """
         Attach volume to the instance
         """
-        manager = self._get_api(volume.region.backend_id)
-        backend_node = manager.get_node(instance.backend_id)
-        backend_volume = manager.get_volume(volume.backend_id)
         try:
-            manager.attach_volume(backend_node, backend_volume, device)
-        except LibcloudError as e:
+            manager = self._get_api(volume.region.backend_id)
+            backend_node = manager.get_node(volume.instance.backend_id)
+            backend_volume = manager.get_volume(volume.backend_id)
+            manager.attach_volume(backend_node, backend_volume, volume.device)
+        except Exception as e:
             logger.exception('Unable to attach volume with id %s to instance with id %s',
-                             volume.id, instance.id)
+                             volume.id, volume.instance.id)
             six.reraise(AWSBackendError, e)
 
     def detach_volume(self, volume):
         """
         Detach volume from the instance
         """
-        manager = self._get_api(volume.region.backend_id)
-        backend_volume = manager.get_volume(volume.backend_id)
         try:
+            manager = self._get_api(volume.region.backend_id)
+            backend_volume = manager.get_volume(volume.backend_id)
             manager.detach_volume(backend_volume)
-        except LibcloudError as e:
+        except Exception as e:
             logger.exception('Unable to detach volume with id %s', volume.id)
             six.reraise(AWSBackendError, e)
+        else:
+            volume.instance = None
+            volume.device = ''
+            volume.save(update_fields=['instance', 'device'])
 
     def get_all_images(self):
         """
