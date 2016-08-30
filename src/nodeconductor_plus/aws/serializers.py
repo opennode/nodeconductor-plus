@@ -297,7 +297,10 @@ class VolumeAttachSerializer(structure_serializers.PermissionFieldFilteringMixin
         lookup_field='uuid',
         queryset=models.Instance.objects.all(),
     )
-    device = serializers.CharField(max_length=128)
+    device = serializers.CharField(
+        max_length=128,
+        help_text='The device name for attachment. For example, use /dev/sd[f-p] for Linux instances.'
+    )
 
     def get_fields(self):
         fields = super(VolumeAttachSerializer, self).get_fields()
@@ -311,15 +314,17 @@ class VolumeAttachSerializer(structure_serializers.PermissionFieldFilteringMixin
         return ('instance',)
 
     def validate(self, attrs):
-        if self.instance:
-            volume = self.instance
-            instance = attrs['instance']
+        volume = self.instance
+        instance = attrs['instance']
 
-            if volume.region != instance.region:
-                raise serializers.ValidationError("Instance is not within the same region.")
+        if volume.instance:
+            raise serializers.ValidationError("Volume is already attached to instance.")
 
-            if instance.state != models.Instance.States.OFFLINE:
-                raise serializers.ValidationError("Instance must be in offline state.")
+        if volume.region != instance.region:
+            raise serializers.ValidationError("Instance is not within the same region.")
+
+        if instance.state != models.Instance.States.OFFLINE:
+            raise serializers.ValidationError("Instance must be in offline state.")
 
         return attrs
 
