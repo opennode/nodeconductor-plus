@@ -196,19 +196,6 @@ class AWSBaseBackend(ServiceBackend):
     def sync(self):
         self.pull_service_properties()
 
-    def provision(self, vm, region=None, image=None, size=None, ssh_key=None):
-        vm.ram = size.ram
-        vm.disk = size.disk
-        vm.cores = size.cores
-        vm.region = region
-        vm.save()
-
-        send_task('aws', 'provision')(
-            vm.uuid.hex,
-            backend_image_id=image.backend_id,
-            backend_size_id=size.backend_id,
-            ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
-
     def destroy(self, vm, force=False):
         if force:
             vm.delete()
@@ -467,8 +454,37 @@ class AWSBackend(AWSBaseBackend):
             vm.key_fingerprint = ssh_key.fingerprint
 
         vm.backend_id = backend_vm.id
-        vm.save()
+        vm.save(update_fields=['backend_id'])
         return vm
+
+    def import_vm_volumes(self, vm):
+        try:
+            manager = self.get_manager(vm)
+            backend_vm = manager.get_node(vm.backend_id)
+            backend_volumes = [mapping['ebs']['volume_id']
+                               for mapping in backend_vm.extra['block_device_mapping']]
+        except Exception as e:
+            logger.exception('Failed to get volumes for Amazon virtual machine %s', vm.uuid.hex)
+            six.reraise(AWSBackendError, six.text_type(e))
+
+        # Import new volumes
+        volumes = models.Volume.objects.all().values_list('backend_id', flat=True)
+        new_volumes = set(backend_volumes) - set(volumes)
+        for volume_id in new_volumes:
+            try:
+                backend_volume = manager.get_volume(volume_id)
+            except Exception as e:
+                logger.exception('Failed to import volume with backend ID %s for virtual machine %s',
+                                 volume_id, vm.name)
+                six.reraise(AWSBackendError, six.text_type(e))
+
+            volume = self.to_volume(backend_volume)
+            volume.pop('instance_id')
+            volume.pop('type')
+            volume['backend_id'] = volume.pop('id')
+
+            vm.volume_set.create(region=vm.region, service_project_link=vm.service_project_link, **volume)
+            logger.info('Volume with name %s has been imported.', volume['name'])
 
     def reboot_vm(self, vm):
         try:
@@ -629,7 +645,7 @@ class AWSBackend(AWSBaseBackend):
     def get_volumes_for_import(self):
         cur_volumes = models.Volume.objects.all().values_list('backend_id', flat=True)
         return [
-            self.to_volume(region, volume)
+            self.to_volume(volume)
             for region, volume in self.get_all_volumes()
             if volume.id not in cur_volumes and
             volume.state != StorageVolumeState.DELETED
@@ -656,7 +672,7 @@ class AWSBackend(AWSBaseBackend):
                 # Volume not found
                 pass
             else:
-                return region, self.to_volume(region, volume)
+                return region, self.to_volume(volume)
         raise AWSBackendError("Volume with id %s is not found", volume_id)
 
     def get_managed_resources(self):
@@ -688,7 +704,7 @@ class AWSBackend(AWSBaseBackend):
             logger.exception('Unable to list EC2 volumes')
             six.reraise(AWSBackendError, e)
 
-    def to_volume(self, region, volume):
+    def to_volume(self, volume):
         from nodeconductor.structure import SupportedServices
 
         return {

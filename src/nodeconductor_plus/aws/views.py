@@ -66,14 +66,13 @@ class InstanceViewSet(structure_views.BaseResourceViewSet):
         return serializer or super(InstanceViewSet, self).get_serializer_class()
 
     def perform_provision(self, serializer):
-        resource = serializer.save()
-        backend = resource.get_backend()
-        backend.provision(
-            resource,
-            region=serializer.validated_data['region'],
-            image=serializer.validated_data['image'],
-            size=serializer.validated_data['size'],
-            ssh_key=serializer.validated_data.get('ssh_public_key'))
+        instance = serializer.save()
+        executors.InstanceCreateExecutor.execute(
+            instance,
+            image=serializer.validated_data.get('image'),
+            size=serializer.validated_data.get('size'),
+            ssh_key=serializer.validated_data.get('ssh_public_key')
+        )
 
     @decorators.detail_route(methods=['post'])
     @structure_views.safe_operation(valid_state=models.Instance.States.OFFLINE)
