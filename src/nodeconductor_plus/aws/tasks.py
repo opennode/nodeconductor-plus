@@ -8,16 +8,6 @@ from .models import Instance
 from .backend import AWSBackendError
 
 
-@shared_task(name='nodeconductor.aws.provision')
-def provision(vm_uuid, **kwargs):
-    chain(
-        provision_vm.si(vm_uuid, **kwargs),
-        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
-    ).apply_async(
-        link=set_online.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
-
-
 @shared_task(name='nodeconductor.aws.destroy')
 @transition(Instance, 'begin_deleting')
 @save_error_message
@@ -75,15 +65,6 @@ def wait_for_vm_state(vm_uuid, state=''):
     except AWSBackendError:
         return False
     return backend_vm.state == backend.State.fromstring(state)
-
-
-@shared_task(is_heavy_task=True)
-@transition(Instance, 'begin_provisioning')
-@save_error_message
-def provision_vm(vm_uuid, transition_entity=None, **kwargs):
-    vm = transition_entity
-    backend = vm.get_backend()
-    backend.provision_vm(vm, **kwargs)
 
 
 @shared_task
