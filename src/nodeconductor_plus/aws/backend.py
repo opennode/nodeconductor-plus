@@ -457,34 +457,52 @@ class AWSBackend(AWSBaseBackend):
         vm.save(update_fields=['backend_id'])
         return vm
 
+    def import_volume(self, region, backend_volume_id, service_project_link=None, save=True):
+        try:
+            manager = self._get_api(region.backend_id)
+            backend_volume = manager.get_volume(backend_volume_id)
+        except Exception as e:
+            logger.exception('Failed to get volume with ID %s from the backend', backend_volume_id)
+            six.reraise(AWSBackendError, six.text_type(e))
+
+        volume = self.to_volume(backend_volume)
+        instance_backend_id = volume.pop('instance_id')
+        if instance_backend_id:
+            try:
+                instance = models.Instance.objects.get(region=region, backend_id=instance_backend_id)
+                volume['instance'] = instance
+            except models.Instance.DoesNotExist as e:
+                logger.exception('Instance with backen ID %s must be imported first', instance_backend_id)
+                six.reraise(AWSBackendError, e)
+            else:
+                service_project_link = instance.service_project_link
+
+        volume.pop('type')
+        volume['backend_id'] = volume.pop('id')
+
+        new_volume = models.Volume(region=region, service_project_link=service_project_link, **volume)
+
+        if save:
+            new_volume.save()
+            logger.info('Volume with name %s has been imported.', volume['name'])
+
+        return new_volume
+
     def import_vm_volumes(self, vm):
         try:
             manager = self.get_manager(vm)
             backend_vm = manager.get_node(vm.backend_id)
-            backend_volumes = [mapping['ebs']['volume_id']
-                               for mapping in backend_vm.extra['block_device_mapping']]
+            backend_volume_ids = [mapping['ebs']['volume_id']
+                                  for mapping in backend_vm.extra['block_device_mapping']]
         except Exception as e:
             logger.exception('Failed to get volumes for Amazon virtual machine %s', vm.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
         # Import new volumes
-        volumes = models.Volume.objects.all().values_list('backend_id', flat=True)
-        new_volumes = set(backend_volumes) - set(volumes)
-        for volume_id in new_volumes:
-            try:
-                backend_volume = manager.get_volume(volume_id)
-            except Exception as e:
-                logger.exception('Failed to import volume with backend ID %s for virtual machine %s',
-                                 volume_id, vm.name)
-                six.reraise(AWSBackendError, six.text_type(e))
-
-            volume = self.to_volume(backend_volume)
-            volume.pop('instance_id')
-            volume.pop('type')
-            volume['backend_id'] = volume.pop('id')
-
-            vm.volume_set.create(region=vm.region, service_project_link=vm.service_project_link, **volume)
-            logger.info('Volume with name %s has been imported.', volume['name'])
+        volume_ids = models.Volume.objects.filter(region=vm.region).values_list('backend_id', flat=True)
+        new_volume_ids = set(backend_volume_ids) - set(volume_ids)
+        for volume_id in new_volume_ids:
+            self.import_volume(vm.region, volume_id)
 
     def reboot_vm(self, vm):
         try:
