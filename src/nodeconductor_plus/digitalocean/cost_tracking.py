@@ -1,32 +1,21 @@
-from django.contrib.contenttypes.models import ContentType
-
-from nodeconductor.cost_tracking import CostTrackingBackend
-from nodeconductor.cost_tracking.models import DefaultPriceListItem
+from nodeconductor.cost_tracking import CostTrackingRegister, CostTrackingStrategy, ConsumableItem
 
 from . import models
 
 
-class DigitalOceanCostTrackingBackend(CostTrackingBackend):
+class DropletStrategy(CostTrackingStrategy):
+    resource_class = models.Droplet
+
+    class Types(object):
+        FLAVOR = 'flavor'
 
     @classmethod
-    def get_default_price_list_items(cls):
-        ct = ContentType.objects.get_for_model(models.Droplet)
-
-        for size in models.Size.objects.iterator():
-            yield DefaultPriceListItem(
-                resource_content_type=ct,
-                item_type=CostTrackingBackend.VM_SIZE_ITEM_TYPE,
-                key=size.name,
-                value=size.price,
-                metadata={
-                    'name': size.name,
-                    'disk': size.disk,
-                    'ram': size.ram,
-                    'cores': size.cores,
-                    'transfer': size.transfer,
-                })
+    def get_consumable_items(cls):
+        return [ConsumableItem(item_type=cls.Types.FLAVOR, key=size.name) for size in models.Size.objects.all()]
 
     @classmethod
-    def get_monthly_cost_estimate(cls, resource):
-        backend = resource.get_backend()
-        return backend.get_monthly_cost_estimate(resource)
+    def get_configuration(cls, instance):
+        return {}
+
+
+CostTrackingRegister.register_strategy(DropletStrategy)
