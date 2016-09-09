@@ -11,7 +11,8 @@ class DropletStrategy(CostTrackingStrategy):
 
     @classmethod
     def get_consumable_items(cls):
-        return [ConsumableItem(item_type=cls.Types.FLAVOR, key=size.name) for size in models.Size.objects.all()]
+        return [ConsumableItem(item_type=cls.Types.FLAVOR, key=size.name, default_price=size.price)
+                for size in models.Size.objects.all()]
 
     @classmethod
     def get_configuration(cls, instance):
