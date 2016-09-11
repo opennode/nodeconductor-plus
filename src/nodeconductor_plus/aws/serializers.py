@@ -166,8 +166,7 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
             'state': models.Volume.States.CREATION_SCHEDULED,
             'instance': instance,
             'service_project_link': instance.service_project_link,
-            'region': instance.region,
-            'size': size.disk
+            'region': instance.region
         }
         models.Volume.objects.create(**volume)
 

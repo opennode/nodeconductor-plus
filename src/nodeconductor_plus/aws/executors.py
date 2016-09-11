@@ -97,7 +97,7 @@ class InstanceCreateExecutor(executors.CreateExecutor):
             core_tasks.BackendMethodTask().si(
                 serialized_volume,
                 backend_method='pull_vm_volume',
-                success_runtime_state='in-use',
+                success_runtime_state='inuse',
                 vm_uuid=instance.uuid.hex
             )
         )
