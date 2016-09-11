@@ -2,7 +2,8 @@ from celery import chain
 
 from nodeconductor.core import executors
 from nodeconductor.core import tasks as core_tasks
-from nodeconductor_plus.aws.tasks import PollRuntimeStateTask
+from nodeconductor.core import utils as core_utils
+from nodeconductor_plus.aws.tasks import PollRuntimeStateTask, SetInstanceErredTask
 
 
 class VolumeCreateExecutor(executors.CreateExecutor):
@@ -67,15 +68,21 @@ class VolumeAttachExecutor(executors.ActionExecutor):
 class InstanceCreateExecutor(executors.CreateExecutor):
 
     @classmethod
-    def get_task_signature(cls, instance, serialized_instance, image=None, size=None, ssh_key=None):
+    def get_task_signature(cls, instance, serialized_instance, image=None, size=None, ssh_key=None, volume=None):
         kwargs = {
             'backend_image_id': image.backend_id,
-            'backend_size_id': size.backend_id,
+            'backend_size_id': size.backend_id
         }
         if ssh_key is not None:
             kwargs['ssh_key_uuid'] = ssh_key.uuid.hex
 
+        serialized_volume = core_utils.serialize_instance(volume)
+
         return chain(
+            core_tasks.StateTransitionTask().si(
+                serialized_volume,
+                state_transition='begin_creating'
+            ),
             core_tasks.BackendMethodTask().si(
                 serialized_instance,
                 backend_method='provision_vm',
@@ -88,15 +95,24 @@ class InstanceCreateExecutor(executors.CreateExecutor):
                 erred_state='error'
             ),
             core_tasks.BackendMethodTask().si(
-                serialized_instance,
-                backend_method='import_vm_volumes'
-            ),
+                serialized_volume,
+                backend_method='pull_vm_volume',
+                success_runtime_state='in-use',
+                vm_uuid=instance.uuid.hex
+            )
         )
 
     @classmethod
     def get_success_signature(cls, instance, serialized_instance, **kwargs):
-        # XXX: This method is overridden to support old-style states.
-        return core_tasks.StateTransitionTask().si(serialized_instance, state_transition='set_online')
+        serialized_volume = core_utils.serialize_instance(instance.volume_set.first())
+        return chain(
+            core_tasks.StateTransitionTask().si(serialized_volume, state_transition='set_ok'),
+            core_tasks.StateTransitionTask().si(serialized_instance, state_transition='set_online')
+        )
+
+    @classmethod
+    def get_failure_signature(cls, instance, serialized_instance, **kwargs):
+        return SetInstanceErredTask().s(serialized_instance)
 
 
 class InstanceResizeExecutor(executors.ActionExecutor):

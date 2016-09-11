@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from nodeconductor.core import serializers as core_serializers
@@ -146,6 +147,7 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         size = validated_data.get('size')
         ssh_key = validated_data.get('ssh_public_key')
@@ -158,7 +160,18 @@ class InstanceSerializer(structure_serializers.VirtualMachineSerializer):
             validated_data['key_name'] = ssh_key.name
             validated_data['key_fingerprint'] = ssh_key.fingerprint
 
-        return super(InstanceSerializer, self).create(validated_data)
+        instance = super(InstanceSerializer, self).create(validated_data)
+        volume = {
+            'name': ('temp-%s' % instance.name)[:150],
+            'state': models.Volume.States.CREATION_SCHEDULED,
+            'instance': instance,
+            'service_project_link': instance.service_project_link,
+            'region': instance.region,
+            'size': size.disk
+        }
+        models.Volume.objects.create(**volume)
+
+        return instance
 
 
 class InstanceImportSerializer(AWSImportSerializerMixin,

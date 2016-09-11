@@ -38,13 +38,16 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
 
         return self.list_nodes(ex_node_ids=[node_id])[0]
 
-    def list_volumes(self, node=None, ex_volume_ids=None, ex_filters=None):
+    def list_volumes(self, node_id=None, ex_volume_ids=None, ex_filters=None):
         """
         List all volumes
 
         ex_volume_ids parameter is used to filter the list of
         volumes that should be returned. Only the volumes
         with the corresponding volume ids will be returned.
+
+        :param      node_id: Node identifier
+        :type       node_id: ``str``
 
         :param      ex_volume_ids: List of ``volume.id``
         :type       ex_volume_ids: ``list`` of ``str``
@@ -59,8 +62,8 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
         params = {
             'Action': 'DescribeVolumes',
         }
-        if node:
-            filters = {'attachment.instance-id': node.id}
+        if node_id:
+            filters = {'attachment.instance-id': node_id}
             params.update(self._build_filters(filters))
 
         if ex_volume_ids:
@@ -457,52 +460,20 @@ class AWSBackend(AWSBaseBackend):
         vm.save(update_fields=['backend_id'])
         return vm
 
-    def import_volume(self, region, backend_volume_id, service_project_link=None, save=True):
+    def pull_vm_volume(self, volume, vm_uuid):
+        vm = models.Instance.objects.get(uuid=vm_uuid)
         try:
-            manager = self._get_api(region.backend_id)
-            backend_volume = manager.get_volume(backend_volume_id)
+            manager = self._get_api(volume.region.backend_id)
+            backend_volume = manager.list_volumes(vm.backend_id)[0]
         except Exception as e:
-            logger.exception('Failed to get volume with ID %s from the backend', backend_volume_id)
+            logger.exception('Failed to get volume for Amazon virtual machine %s', vm_uuid)
             six.reraise(AWSBackendError, six.text_type(e))
 
-        volume = self.to_volume(backend_volume)
-        instance_backend_id = volume.pop('instance_id')
-        if instance_backend_id:
-            try:
-                instance = models.Instance.objects.get(region=region, backend_id=instance_backend_id)
-                volume['instance'] = instance
-            except models.Instance.DoesNotExist as e:
-                logger.exception('Instance with backen ID %s must be imported first', instance_backend_id)
-                six.reraise(AWSBackendError, e)
-            else:
-                service_project_link = instance.service_project_link
-
-        volume.pop('type')
-        volume['backend_id'] = volume.pop('id')
-
-        new_volume = models.Volume(region=region, service_project_link=service_project_link, **volume)
-
-        if save:
-            new_volume.save()
-            logger.info('Volume with name %s has been imported.', volume['name'])
-
-        return new_volume
-
-    def import_vm_volumes(self, vm):
-        try:
-            manager = self.get_manager(vm)
-            backend_vm = manager.get_node(vm.backend_id)
-            backend_volume_ids = [mapping['ebs']['volume_id']
-                                  for mapping in backend_vm.extra['block_device_mapping']]
-        except Exception as e:
-            logger.exception('Failed to get volumes for Amazon virtual machine %s', vm.uuid.hex)
-            six.reraise(AWSBackendError, six.text_type(e))
-
-        # Import new volumes
-        volume_ids = models.Volume.objects.filter(region=vm.region).values_list('backend_id', flat=True)
-        new_volume_ids = set(backend_volume_ids) - set(volume_ids)
-        for volume_id in new_volume_ids:
-            self.import_volume(vm.region, volume_id)
+        volume.name = volume.backend_id = backend_volume.id
+        volume.device_name = backend_volume.extra['device']
+        volume.size = backend_volume.size
+        volume.volume_type = backend_volume.extra['type']
+        volume.save(update_fields=['name', 'backend_id', 'device', 'size', 'volume_type'])
 
     def reboot_vm(self, vm):
         try:
@@ -574,7 +545,7 @@ class AWSBackend(AWSBaseBackend):
         manager = self._get_api(region.backend_id)
         # TODO: Connect volume with instance
         try:
-            volumes = {v.id: v.size for v in manager.list_volumes(instance)}
+            volumes = {v.id: v.size for v in manager.list_volumes(instance.id)}
         except Exception as e:
             six.reraise(AWSBackendError, e)
 

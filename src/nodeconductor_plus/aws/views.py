@@ -67,11 +67,14 @@ class InstanceViewSet(structure_views.BaseResourceViewSet):
 
     def perform_provision(self, serializer):
         instance = serializer.save()
+        volume = instance.volume_set.first()
+
         executors.InstanceCreateExecutor.execute(
             instance,
             image=serializer.validated_data.get('image'),
             size=serializer.validated_data.get('size'),
-            ssh_key=serializer.validated_data.get('ssh_public_key')
+            ssh_key=serializer.validated_data.get('ssh_public_key'),
+            volume=volume
         )
 
     @decorators.detail_route(methods=['post'])
