@@ -463,7 +463,7 @@ class AWSBackend(AWSBaseBackend):
     def pull_vm_volume(self, volume, vm_uuid):
         vm = models.Instance.objects.get(uuid=vm_uuid)
         try:
-            manager = self._get_api(volume.region.backend_id)
+            manager = self.get_manager(vm)
             backend_volume = manager.list_volumes(vm.backend_id)[0]
         except Exception as e:
             logger.exception('Failed to get volume for Amazon virtual machine %s', vm_uuid)
