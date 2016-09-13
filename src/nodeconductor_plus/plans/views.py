@@ -7,6 +7,7 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
+from nodeconductor.core.filters import UUIDFilter
 from nodeconductor.structure import filters as structure_filters
 from nodeconductor.structure import models as structure_models
 from nodeconductor_paypal.backend import PaypalBackend
@@ -30,7 +31,7 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class AgreementFilter(django_filters.FilterSet):
-    customer = django_filters.CharFilter(
+    customer = UUIDFilter(
         name='customer__uuid',
         distinct=True,
     )
