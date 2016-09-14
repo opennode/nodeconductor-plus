@@ -85,20 +85,19 @@ class InstanceCreateExecutor(executors.CreateExecutor):
             ),
             core_tasks.BackendMethodTask().si(
                 serialized_instance,
-                backend_method='provision_vm',
+                backend_method='create_instance',
                 state_transition='begin_provisioning',
                 **kwargs),
             PollRuntimeStateTask().si(
                 serialized_instance,
-                backend_pull_method='pull_vm_runtime_state',
+                backend_pull_method='pull_instance_runtime_state',
                 success_state='running',
                 erred_state='error'
             ),
             core_tasks.BackendMethodTask().si(
                 serialized_volume,
-                backend_method='pull_vm_volume',
+                backend_method='pull_instance_volume',
                 success_runtime_state='inuse',
-                vm_uuid=instance.uuid.hex
             )
         )
 
@@ -128,13 +127,13 @@ class InstanceResizeExecutor(executors.ActionExecutor):
         return chain(
             core_tasks.BackendMethodTask().si(
                 serialized_instance,
-                backend_method='resize_vm',
+                backend_method='resize_instance',
                 state_transition='begin_resizing',
                 size_id=size.backend_id
             ),
             PollRuntimeStateTask().si(
                 serialized_instance,
-                backend_pull_method='pull_vm_runtime_state',
+                backend_pull_method='pull_instance_runtime_state',
                 success_state='stopped',
                 erred_state='error'
             ).set(countdown=30)

@@ -11,114 +11,114 @@ from .backend import AWSBackendError
 @shared_task(name='nodeconductor.aws.destroy')
 @transition(Instance, 'begin_deleting')
 @save_error_message
-def destroy(vm_uuid, transition_entity=None):
-    vm = transition_entity
+def destroy(instance_uuid, transition_entity=None):
+    instance = transition_entity
     try:
-        backend = vm.get_backend()
-        backend.destroy_vm(vm)
+        backend = instance.get_backend()
+        backend.destroy_instance(instance)
     except:
-        set_erred(vm_uuid)
+        set_erred(instance_uuid)
         raise
     else:
-        vm.delete()
+        instance.delete()
 
 
 @shared_task(name='nodeconductor.aws.start')
-def start(vm_uuid):
+def start(instance_uuid):
     chain(
-        begin_starting.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
+        begin_starting.s(instance_uuid),
+        wait_for_instance_state.si(instance_uuid, 'RUNNING'),
     ).apply_async(
-        link=set_online.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+        link=set_online.si(instance_uuid),
+        link_error=set_erred.si(instance_uuid))
 
 
 @shared_task(name='nodeconductor.aws.stop')
-def stop(vm_uuid):
+def stop(instance_uuid):
     chain(
-        begin_stopping.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'STOPPED'),
+        begin_stopping.s(instance_uuid),
+        wait_for_instance_state.si(instance_uuid, 'STOPPED'),
     ).apply_async(
-        link=set_offline.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+        link=set_offline.si(instance_uuid),
+        link_error=set_erred.si(instance_uuid))
 
 
 @shared_task(name='nodeconductor.aws.restart')
-def restart(vm_uuid):
-    Instance.objects.get(uuid=vm_uuid)
+def restart(instance_uuid):
+    Instance.objects.get(uuid=instance_uuid)
     chain(
-        begin_restarting.s(vm_uuid),
-        wait_for_vm_state.si(vm_uuid, 'RUNNING'),
+        begin_restarting.s(instance_uuid),
+        wait_for_instance_state.si(instance_uuid, 'RUNNING'),
     ).apply_async(
-        link=set_online.si(vm_uuid),
-        link_error=set_erred.si(vm_uuid))
+        link=set_online.si(instance_uuid),
+        link_error=set_erred.si(instance_uuid))
 
 
 @shared_task(max_retries=300, default_retry_delay=3)
 @retry_if_false
-def wait_for_vm_state(vm_uuid, state=''):
-    vm = Instance.objects.get(uuid=vm_uuid)
+def wait_for_instance_state(instance_uuid, state=''):
+    instance = Instance.objects.get(uuid=instance_uuid)
     try:
-        backend = vm.get_backend()
-        manager = backend.get_manager(vm)
-        backend_vm = manager.get_node(vm.backend_id)
+        backend = instance.get_backend()
+        manager = backend.get_manager(instance)
+        backend_instance = manager.get_node(instance.backend_id)
     except AWSBackendError:
         return False
-    return backend_vm.state == backend.State.fromstring(state)
+    return backend_instance.state == backend.State.fromstring(state)
 
 
 @shared_task
 @transition(Instance, 'begin_starting')
 @save_error_message
-def begin_starting(vm_uuid, transition_entity=None):
-    vm = transition_entity
-    backend = vm.get_backend()
-    backend.start_vm(vm)
+def begin_starting(instance_uuid, transition_entity=None):
+    instance = transition_entity
+    backend = instance.get_backend()
+    backend.start_instance(instance)
 
 
 @shared_task
 @transition(Instance, 'begin_stopping')
 @save_error_message
-def begin_stopping(vm_uuid, transition_entity=None):
-    vm = transition_entity
-    backend = vm.get_backend()
-    backend.stop_vm(vm)
+def begin_stopping(instance_uuid, transition_entity=None):
+    instance = transition_entity
+    backend = instance.get_backend()
+    backend.stop_instance(instance)
 
 
 @shared_task
 @transition(Instance, 'begin_restarting')
 @save_error_message
-def begin_restarting(vm_uuid, transition_entity=None):
-    vm = transition_entity
-    backend = vm.get_backend()
-    backend.reboot_vm(vm)
+def begin_restarting(instance_uuid, transition_entity=None):
+    instance = transition_entity
+    backend = instance.get_backend()
+    backend.reboot_instance(instance)
 
 
 @shared_task
 @transition(Instance, 'set_online')
-def set_online(vm_uuid, transition_entity=None):
-    vm = transition_entity
-    vm.start_time = timezone.now()
+def set_online(instance_uuid, transition_entity=None):
+    instance = transition_entity
+    instance.start_time = timezone.now()
 
-    backend = vm.get_backend()
-    manager = backend.get_manager(vm)
-    backend_vm = manager.get_node(vm.backend_id)
-    vm.external_ips = backend_vm.public_ips[0]
+    backend = instance.get_backend()
+    manager = backend.get_manager(instance)
+    backend_instance = manager.get_node(instance.backend_id)
+    instance.external_ips = backend_instance.public_ips[0]
 
-    vm.save(update_fields=['start_time', 'external_ips'])
+    instance.save(update_fields=['start_time', 'external_ips'])
 
 
 @shared_task
 @transition(Instance, 'set_offline')
-def set_offline(vm_uuid, transition_entity=None):
-    vm = transition_entity
-    vm.start_time = None
-    vm.save(update_fields=['start_time'])
+def set_offline(instance_uuid, transition_entity=None):
+    instance = transition_entity
+    instance.start_time = None
+    instance.save(update_fields=['start_time'])
 
 
 @shared_task
 @transition(Instance, 'set_erred')
-def set_erred(vm_uuid, transition_entity=None):
+def set_erred(instance_uuid, transition_entity=None):
     pass
 
 
