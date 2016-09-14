@@ -469,8 +469,9 @@ class AWSBackend(AWSBaseBackend):
             logger.exception('Failed to get volume for Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-        volume.name = volume.backend_id = backend_volume.id
-        volume.device_name = backend_volume.extra['device']
+        volume.name = ('volume-%s' % instance.name)[:150]
+        volume.backend_id = backend_volume.id
+        volume.device = backend_volume.extra['device']
         volume.size = backend_volume.size
         volume.volume_type = backend_volume.extra['type']
         volume.save(update_fields=['name', 'backend_id', 'device', 'size', 'volume_type'])
