@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import model_utils.fields
 import django.utils.timezone
-import uuidfield.fields
+import nodeconductor.core.fields
 import django_fsm
 
 import nodeconductor.core.validators
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
             name='Contract',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', nodeconductor.core.fields.UUIDField()),
                 ('state', django_fsm.FSMIntegerField(default=1, choices=[(1, b'Requested'), (2, b'Approved'), (3, b'Cancelled')])),
             ],
             options={
@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('description', models.CharField(max_length=500, verbose_name='description', blank=True)),
                 ('name', models.CharField(max_length=150, verbose_name='name', validators=[nodeconductor.core.validators.validate_name])),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', nodeconductor.core.fields.UUIDField()),
                 ('base_rate', models.DecimalField(max_digits=10, decimal_places=2)),
                 ('hour_rate', models.DecimalField(max_digits=10, decimal_places=2)),
             ],
@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                 ('modified', model_utils.fields.AutoLastModifiedField(default=django.utils.timezone.now, verbose_name='modified', editable=False)),
                 ('description', models.CharField(max_length=500, verbose_name='description', blank=True)),
                 ('name', models.CharField(max_length=150, verbose_name='name', validators=[nodeconductor.core.validators.validate_name])),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', nodeconductor.core.fields.UUIDField()),
                 ('object_id', models.PositiveIntegerField(null=True, blank=True)),
                 ('content_type', models.ForeignKey(blank=True, to='contenttypes.ContentType', null=True)),
                 ('contract', models.ForeignKey(to='premium_support.Contract')),
@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('description', models.CharField(max_length=500, verbose_name='description', blank=True)),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', nodeconductor.core.fields.UUIDField()),
                 ('created', model_utils.fields.AutoCreatedField(default=django.utils.timezone.now, editable=False)),
                 ('time_spent', models.PositiveIntegerField()),
                 ('support_case', models.ForeignKey(to='premium_support.SupportCase')),
