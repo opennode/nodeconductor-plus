@@ -5,7 +5,7 @@ from django.db import migrations, models
 import django_fsm
 import django.utils.timezone
 from django.conf import settings
-import uuidfield.fields
+import nodeconductor.core.fields
 import model_utils.fields
 
 
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
             name='Plan',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', nodeconductor.core.fields.UUIDField()),
                 ('name', models.CharField(max_length=120)),
                 ('price', models.DecimalField(max_digits=12, decimal_places=2)),
                 ('backend_id', models.CharField(max_length=255, null=True)),
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', model_utils.fields.AutoCreatedField(default=django.utils.timezone.now, verbose_name='created', editable=False)),
                 ('modified', model_utils.fields.AutoLastModifiedField(default=django.utils.timezone.now, verbose_name='modified', editable=False)),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', nodeconductor.core.fields.UUIDField()),
                 ('backend_id', models.CharField(max_length=255, null=True, blank=True)),
                 ('token', models.CharField(max_length=120, null=True, blank=True)),
                 ('approval_url', models.URLField(null=True, blank=True)),
