@@ -38,13 +38,16 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
 
         return self.list_nodes(ex_node_ids=[node_id])[0]
 
-    def list_volumes(self, node=None, ex_volume_ids=None, ex_filters=None):
+    def list_volumes(self, node_id=None, ex_volume_ids=None, ex_filters=None):
         """
         List all volumes
 
         ex_volume_ids parameter is used to filter the list of
         volumes that should be returned. Only the volumes
         with the corresponding volume ids will be returned.
+
+        :param      node_id: Node identifier
+        :type       node_id: ``str``
 
         :param      ex_volume_ids: List of ``volume.id``
         :type       ex_volume_ids: ``list`` of ``str``
@@ -59,8 +62,8 @@ class ExtendedEC2NodeDriver(EC2NodeDriver):
         params = {
             'Action': 'DescribeVolumes',
         }
-        if node:
-            filters = {'attachment.instance-id': node.id}
+        if node_id:
+            filters = {'attachment.instance-id': node_id}
             params.update(self._build_filters(filters))
 
         if ex_volume_ids:
@@ -178,7 +181,6 @@ class AWSBaseBackend(ServiceBackend):
                ('us-west-1', 'US West (N. California)'),
                ('eu-west-1', 'EU (Ireland)'),
                ('eu-central-1', 'EU (Frankfurt)'),
-               ('ap-south-1', 'Asia Pacific (Mumbai)'),
                ('ap-southeast-1', 'Asia Pacific (Singapore)'),
                ('ap-southeast-2', 'Asia Pacific (Sydney)'),
                ('ap-northeast-1', 'Asia Pacific (Tokyo)'),
@@ -196,42 +198,29 @@ class AWSBaseBackend(ServiceBackend):
     def sync(self):
         self.pull_service_properties()
 
-    def provision(self, vm, region=None, image=None, size=None, ssh_key=None):
-        vm.ram = size.ram
-        vm.disk = size.disk
-        vm.cores = size.cores
-        vm.region = region
-        vm.save()
-
-        send_task('aws', 'provision')(
-            vm.uuid.hex,
-            backend_image_id=image.backend_id,
-            backend_size_id=size.backend_id,
-            ssh_key_uuid=ssh_key.uuid.hex if ssh_key else None)
-
-    def destroy(self, vm, force=False):
+    def destroy(self, instance, force=False):
         if force:
-            vm.delete()
+            instance.delete()
             return
 
-        vm.schedule_deletion()
-        vm.save()
-        send_task('aws', 'destroy')(vm.uuid.hex)
+        instance.schedule_deletion()
+        instance.save()
+        send_task('aws', 'destroy')(instance.uuid.hex)
 
-    def start(self, vm):
-        vm.schedule_starting()
-        vm.save()
-        send_task('aws', 'start')(vm.uuid.hex)
+    def start(self, instance):
+        instance.schedule_starting()
+        instance.save()
+        send_task('aws', 'start')(instance.uuid.hex)
 
-    def stop(self, vm):
-        vm.schedule_stopping()
-        vm.save()
-        send_task('aws', 'stop')(vm.uuid.hex)
+    def stop(self, instance):
+        instance.schedule_stopping()
+        instance.save()
+        send_task('aws', 'stop')(instance.uuid.hex)
 
-    def restart(self, vm):
-        vm.schedule_restarting()
-        vm.save()
-        send_task('aws', 'restart')(vm.uuid.hex)
+    def restart(self, instance):
+        instance.schedule_restarting()
+        instance.save()
+        send_task('aws', 'restart')(instance.uuid.hex)
 
 
 class AWSBackend(AWSBaseBackend):
@@ -438,13 +427,13 @@ class AWSBackend(AWSBaseBackend):
         except LibcloudError as e:
             six.reraise(AWSBackendError, e)
 
-    def provision_vm(self, vm, backend_image_id=None, backend_size_id=None, ssh_key_uuid=None):
-        manager = self.get_manager(vm)
+    def create_instance(self, instance, backend_image_id=None, backend_size_id=None, ssh_key_uuid=None):
+        manager = self.get_manager(instance)
 
-        params = dict(name=vm.name,
+        params = dict(name=instance.name,
                       image=self.get_image(backend_image_id, manager),
                       size=self.get_size(backend_size_id, manager),
-                      ex_custom_data=vm.user_data)
+                      ex_custom_data=instance.user_data)
 
         if ssh_key_uuid:
             ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
@@ -457,70 +446,86 @@ class AWSBackend(AWSBaseBackend):
             params['ex_keyname'] = backend_ssh_key['keyName']
 
         try:
-            backend_vm = manager.create_node(**params)
+            backend_instance = manager.create_node(**params)
         except LibcloudError as e:
-            logger.exception('Failed to provision virtual machine %s', vm.name)
+            logger.exception('Failed to provision virtual machine %s', instance.name)
             six.reraise(AWSBackendError, e)
 
         if ssh_key_uuid:
-            vm.key_name = ssh_key.name
-            vm.key_fingerprint = ssh_key.fingerprint
+            instance.key_name = ssh_key.name
+            instance.key_fingerprint = ssh_key.fingerprint
 
-        vm.backend_id = backend_vm.id
-        vm.save()
-        return vm
+        instance.backend_id = backend_instance.id
+        instance.save(update_fields=['backend_id'])
+        return instance
 
-    def reboot_vm(self, vm):
+    def pull_instance_volume(self, volume):
+        instance = volume.instance
         try:
-            manager = self.get_manager(vm)
-            manager.reboot_node(manager.get_node(vm.backend_id))
+            manager = self.get_manager(instance)
+            backend_volume = manager.list_volumes(instance.backend_id)[0]
         except Exception as e:
-            logger.exception('Unable to reboot Amazon virtual machine %s', vm.uuid.hex)
+            logger.exception('Failed to get volume for Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-    def stop_vm(self, vm):
+        volume.name = ('volume-%s' % instance.name)[:150]
+        volume.backend_id = backend_volume.id
+        volume.device = backend_volume.extra['device']
+        volume.size = backend_volume.size
+        volume.volume_type = backend_volume.extra['type']
+        volume.save(update_fields=['name', 'backend_id', 'device', 'size', 'volume_type'])
+
+    def reboot_instance(self, instance):
         try:
-            manager = self.get_manager(vm)
-            manager.ex_stop_node(manager.get_node(vm.backend_id))
+            manager = self.get_manager(instance)
+            manager.reboot_node(manager.get_node(instance.backend_id))
         except Exception as e:
-            logger.exception('Unable to stop Amazon virtual machine %s', vm.uuid.hex)
+            logger.exception('Unable to reboot Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-    def start_vm(self, vm):
+    def stop_instance(self, instance):
         try:
-            manager = self.get_manager(vm)
-            manager.ex_start_node(manager.get_node(vm.backend_id))
+            manager = self.get_manager(instance)
+            manager.ex_stop_node(manager.get_node(instance.backend_id))
         except Exception as e:
-            logger.exception('Unable to start Amazon virtual machine %s', vm.uuid.hex)
+            logger.exception('Unable to stop Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-    def destroy_vm(self, vm):
+    def start_instance(self, instance):
         try:
-            manager = self.get_manager(vm)
-            manager.destroy_node(manager.get_node(vm.backend_id))
+            manager = self.get_manager(instance)
+            manager.ex_start_node(manager.get_node(instance.backend_id))
         except Exception as e:
-            logger.exception('Unable to destroy Amazon virtual machine %s', vm.uuid.hex)
+            logger.exception('Unable to start Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-    def resize_vm(self, vm, size_id):
+    def destroy_instance(self, instance):
         try:
-            manager = self.get_manager(vm)
-            manager.ex_change_node_size(manager.get_node(vm.backend_id), size_id)
+            manager = self.get_manager(instance)
+            manager.destroy_node(manager.get_node(instance.backend_id))
         except Exception as e:
-            logger.exception('Unable to resize Amazon virtual machine %s', vm.uuid.hex)
+            logger.exception('Unable to destroy Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-    def pull_vm_runtime_state(self, vm):
+    def resize_instance(self, instance, size_id):
         try:
-            manager = self.get_manager(vm)
-            backend_vm = manager.get_node(vm.backend_id)
+            manager = self.get_manager(instance)
+            manager.ex_change_node_size(manager.get_node(instance.backend_id), size_id)
         except Exception as e:
-            logger.exception('Unable to pull state for Amazon virtual machine %s', vm.uuid.hex)
+            logger.exception('Unable to resize Amazon virtual machine %s', instance.uuid.hex)
             six.reraise(AWSBackendError, six.text_type(e))
 
-        if backend_vm.state != vm.runtime_state:
-            vm.runtime_state = backend_vm.state
-            vm.save(update_fields=['runtime_state'])
+    def pull_instance_runtime_state(self, instance):
+        try:
+            manager = self.get_manager(instance)
+            backend_vm = manager.get_node(instance.backend_id)
+        except Exception as e:
+            logger.exception('Unable to pull state for Amazon virtual machine %s', instance.uuid.hex)
+            six.reraise(AWSBackendError, six.text_type(e))
+
+        if backend_vm.state != instance.runtime_state:
+            instance.runtime_state = backend_vm.state
+            instance.save(update_fields=['runtime_state'])
 
     def get_monthly_cost_estimate(self, instance):
         manager = self.get_manager(instance)
@@ -540,7 +545,7 @@ class AWSBackend(AWSBaseBackend):
         manager = self._get_api(region.backend_id)
         # TODO: Connect volume with instance
         try:
-            volumes = {v.id: v.size for v in manager.list_volumes(instance)}
+            volumes = {v.id: v.size for v in manager.list_volumes(instance.id)}
         except Exception as e:
             six.reraise(AWSBackendError, e)
 
@@ -629,7 +634,7 @@ class AWSBackend(AWSBaseBackend):
     def get_volumes_for_import(self):
         cur_volumes = models.Volume.objects.all().values_list('backend_id', flat=True)
         return [
-            self.to_volume(region, volume)
+            self.to_volume(volume)
             for region, volume in self.get_all_volumes()
             if volume.id not in cur_volumes and
             volume.state != StorageVolumeState.DELETED
@@ -656,7 +661,7 @@ class AWSBackend(AWSBaseBackend):
                 # Volume not found
                 pass
             else:
-                return region, self.to_volume(region, volume)
+                return region, self.to_volume(volume)
         raise AWSBackendError("Volume with id %s is not found", volume_id)
 
     def get_managed_resources(self):
@@ -688,7 +693,7 @@ class AWSBackend(AWSBaseBackend):
             logger.exception('Unable to list EC2 volumes')
             six.reraise(AWSBackendError, e)
 
-    def to_volume(self, region, volume):
+    def to_volume(self, volume):
         from nodeconductor.structure import SupportedServices
 
         return {

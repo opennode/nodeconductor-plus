@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.exceptions import PermissionDenied
 
-from nodeconductor.core.filters import MappedChoiceFilter
+from nodeconductor.core.filters import MappedChoiceFilter, UUIDFilter
 from nodeconductor.core.serializers import TimestampIntervalSerializer
 from nodeconductor.structure.filters import GenericRoleFilter
 from nodeconductor_plus.premium_support import models, serializers
@@ -37,7 +37,7 @@ class PlanViewSet(mixins.CreateModelMixin,
 
 
 class SupportContractFilter(django_filters.FilterSet):
-    project_uuid = django_filters.CharFilter(name='project__uuid')
+    project_uuid = UUIDFilter(name='project__uuid')
     state = MappedChoiceFilter(
         choices=[(label, label) for code, label in models.Contract.STATE_CHOICES],
         choice_mappings={label: code for code, label in models.Contract.STATE_CHOICES}
@@ -132,7 +132,7 @@ class SupportContractViewSet(OwnerOrStaffCanCreateMixin,
 
 
 class SupportCaseFilter(django_filters.FilterSet):
-    contract_uuid = django_filters.CharFilter(name='contract__uuid')
+    contract_uuid = UUIDFilter(name='contract__uuid')
 
     class Meta(object):
         model = models.SupportCase
