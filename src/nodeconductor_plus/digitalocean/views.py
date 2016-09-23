@@ -115,7 +115,7 @@ class DropletViewSet(structure_views.VirtualMachineViewSet):
         executors.DropletResizeExecutor.execute(
             droplet,
             disk=disk,
-            backend_size_id=size.backend_id,
+            size=size,
             updated_fields=None,
             async=self.async_executor)
 

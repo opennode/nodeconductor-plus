@@ -32,12 +32,13 @@ class WaitForActionComplete(CeleryTask):
 
 class LogDropletResized(Task):
 
-    def execute(self, droplet, *args, **kwargs):
+    def execute(self, droplet, serialized_size, *args, **kwargs):
+        size = utils.deserialize_instance(serialized_size)
         logger.info('Successfully resized droplet %s', droplet.uuid.hex)
         log.event_logger.droplet_resize.info(
             'Droplet {droplet_name} has been resized.',
             event_type='droplet_resize_succeeded',
-            event_context={'droplet': droplet, 'size': droplet.size}
+            event_context={'droplet': droplet, 'size': size}
         )
 
 
