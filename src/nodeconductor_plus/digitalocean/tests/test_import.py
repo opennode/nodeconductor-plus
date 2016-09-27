@@ -1,6 +1,7 @@
 import collections
-import datetime
 import mock
+
+from django.utils import timezone
 from rest_framework import status, test
 
 from nodeconductor.structure import ServiceBackend
@@ -29,7 +30,7 @@ class ImportDroptetTest(test.APITransactionTestCase):
             ip_address='10.0.0.1',
             status='active',
             size={'transfer': 1},
-            created_at=datetime.datetime.now().isoformat(),
+            created_at=timezone.now().isoformat(),
             image={'distribution': 'CentOS', 'name': '7.1 x64'}
         )
 
