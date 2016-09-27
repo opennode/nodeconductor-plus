@@ -71,6 +71,8 @@ class DropletViewSet(structure_views.VirtualMachineViewSet):
             disk=size.disk,
             transfer=size.transfer)
 
+        # XXX: We do not operate with backend_id`s in views.
+        #      View should pass objects to executor.
         self.create_executor.execute(
             droplet,
             async=self.async_executor,

@@ -5,7 +5,6 @@ from django.utils.encoding import python_2_unicode_compatible, force_text
 from libcloud.compute.drivers.ec2 import REGION_DETAILS
 
 from nodeconductor.core.models import RuntimeStateMixin
-from nodeconductor.cost_tracking.models import PayableMixin
 from nodeconductor.quotas.fields import CounterQuotaField
 from nodeconductor.quotas.models import QuotaModelMixin
 from nodeconductor.structure import models as structure_models
@@ -67,7 +66,7 @@ class Size(structure_models.GeneralServiceProperty):
     price = models.DecimalField('Hourly price rate', default=0, max_digits=11, decimal_places=5)
 
 
-class Instance(structure_models.VirtualMachineMixin, structure_models.Resource, PayableMixin, RuntimeStateMixin):
+class Instance(structure_models.VirtualMachineMixin, structure_models.Resource, RuntimeStateMixin):
     service_project_link = models.ForeignKey(
         AWSServiceProjectLink, related_name='instances', on_delete=models.PROTECT)
 
