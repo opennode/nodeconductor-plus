@@ -3,6 +3,7 @@ from celery import chain
 from nodeconductor.core import executors
 from nodeconductor.core.tasks import StateTransitionTask
 from nodeconductor.core.models import RuntimeStateMixin
+from nodeconductor.core import utils as core_utils
 
 from . import tasks
 
@@ -47,14 +48,16 @@ class DropletStateChangeExecutor(executors.UpdateExecutor):
 class DropletResizeExecutor(executors.UpdateExecutor):
 
     @classmethod
-    def get_task_signature(cls, droplet, serialized_droplet, backend_size_id=None, disk=None, **kwargs):
+    def get_task_signature(cls, droplet, serialized_droplet, **kwargs):
+        size = kwargs.pop('size')
+        disk = kwargs.pop('disk')
         return chain(
             tasks.SafeBackendMethodTask().si(
                 serialized_droplet, 'resize',
                 state_transition='begin_updating',
                 runtime_state='resizing',
                 success_runtime_state=RuntimeStateMixin.RuntimeStates.ONLINE,
-                backend_size_id=backend_size_id,
+                backend_size_id=size.backend_id,
                 disk=disk),
             tasks.WaitForActionComplete().s(serialized_droplet).set(countdown=10),
-            tasks.LogDropletResized().si(serialized_droplet))
+            tasks.LogDropletResized().si(serialized_droplet, core_utils.serialize_instance(size)))
