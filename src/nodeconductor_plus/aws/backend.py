@@ -435,6 +435,7 @@ class AWSBackend(AWSBaseBackend):
                       image=self.get_image(backend_image_id, manager),
                       size=self.get_size(backend_size_id, manager),
                       ex_custom_data=instance.user_data,
+                      # Set volume termination on instance delete
                       ex_blockdevicemappings=[{
                           'DeviceName': '/dev/sda1',
                           'Ebs': {'DeleteOnTermination': 'true'}
