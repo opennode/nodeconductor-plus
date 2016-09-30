@@ -434,7 +434,12 @@ class AWSBackend(AWSBaseBackend):
         params = dict(name=instance.name,
                       image=self.get_image(backend_image_id, manager),
                       size=self.get_size(backend_size_id, manager),
-                      ex_custom_data=instance.user_data)
+                      ex_custom_data=instance.user_data,
+                      # Set volume termination on instance delete
+                      ex_blockdevicemappings=[{
+                          'DeviceName': '/dev/sda1',
+                          'Ebs': {'DeleteOnTermination': 'true'}
+                      }])
 
         if ssh_key_uuid:
             ssh_key = SshPublicKey.objects.get(uuid=ssh_key_uuid)
