@@ -27,7 +27,7 @@ def check_services():
 
 @shared_task(name='nodeconductor.insights.check_customers')
 def check_customers():
-    for customer in Customer.objects.exclude(billing_backend_id=''):
+    for customer in Customer.objects.all():
         check_customer_costs.delay(customer.uuid)
 
 
