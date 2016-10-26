@@ -97,7 +97,8 @@ class BaseAuthView(RefreshTokenMixin, views.APIView):
                 user = get_user_model().objects.create_user(
                     username=generate_username(user_name),
                     password=generate_password(),
-                    full_name=user_name
+                    full_name=user_name,
+                    registration_method=self.provider
                 )
                 setattr(user.auth_profile, self.provider, user_id)
                 user.auth_profile.save()
