@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='planquota',
             name='name',
-            field=models.CharField(max_length=50, choices=[(b'nc_service_project_link_count', b'nc_service_project_link_count'), (b'nc_private_cloud_count', b'nc_private_cloud_count'), (b'nc_user_count', b'nc_user_count'), (b'nc_app_count', b'nc_app_count'), (b'nc_project_count', b'nc_project_count'), (b'nc_vm_count', b'nc_vm_count'), (b'nc_resource_count', b'nc_resource_count'), (b'nc_service_count', b'nc_service_count')]),
+            field=models.CharField(max_length=50, choices=[(b'nc_service_project_link_count', b'nc_service_project_link_count'), (b'nc_private_cloud_count', b'nc_private_cloud_count'), (b'nc_user_count', b'nc_user_count'), (b'nc_app_count', b'nc_app_count'), (b'nc_project_count', b'nc_project_count'), (b'nc_vm_count', b'nc_vm_count'), (b'nc_resource_count', b'nc_resource_count'), (b'nc_storage_count', b'nc_storage_count'), (b'nc_service_count', b'nc_service_count')]),
             preserve_default=True,
         ),
     ]
