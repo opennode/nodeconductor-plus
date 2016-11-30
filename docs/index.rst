@@ -3,7 +3,6 @@ Welcome to NodeConductor Plus documentation!
 
 NodeConductor Plus implements premium features, such as
 
-* backends for cloud service providers, such as DigitalOcean;
 * backends for social authentication, such as Google and Facebook;
 * insights detection, premium support and paid plans.
 

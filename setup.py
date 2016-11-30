@@ -19,7 +19,6 @@ install_requires = [
     'html5lib<0.99999999',  # Transient dependency for nodeconductor_paypal
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
     'nodeconductor_paypal>0.3.5',
-    'python-digitalocean>=1.5'
 ]
 
 setup(
@@ -40,7 +39,6 @@ setup(
     },
     entry_points={
         'nodeconductor_extensions': (
-            'digitalocean = nodeconductor_plus.digitalocean.extension:DigitalOceanExtension',
             'insights = nodeconductor_plus.insights.extension:InsightsExtension',
             'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.extension:AuthExtension',
             'plans = nodeconductor_plus.plans.extension:PlansExtension',

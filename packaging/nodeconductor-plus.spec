@@ -9,7 +9,6 @@ Source0: %{name}-%{version}.tar.gz
 
 Requires: nodeconductor > 0.109.0
 Requires: nodeconductor-paypal > 0.3.5
-Requires: python-digitalocean >= 1.5
 
 BuildArch: noarch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
