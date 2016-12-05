@@ -268,4 +268,4 @@ from django.core.wsgi import get_wsgi_application
 get_wsgi_application()
 
 from nodeconductor.core.management.commands.drfdocs import Command
-Command().handle('insights', 'nodeconductor_auth', 'plans', 'premium_support', path='docs/drfapi')
+Command().handle('insights', 'plans', 'premium_support', path='docs/drfapi')

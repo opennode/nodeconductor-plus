@@ -40,7 +40,6 @@ setup(
     entry_points={
         'nodeconductor_extensions': (
             'insights = nodeconductor_plus.insights.extension:InsightsExtension',
-            'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.extension:AuthExtension',
             'plans = nodeconductor_plus.plans.extension:PlansExtension',
             'premium_support = nodeconductor_plus.premium_support.extension:SupportExtension',
         ),
