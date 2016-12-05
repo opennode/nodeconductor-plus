@@ -147,7 +147,7 @@ def check_customer_costs(customer_uuid):
     except PriceEstimate.DoesNotExist:
         pass
     else:
-        nc_settings = getattr(settings, 'NODECONDUCTOR_PLUS', {})
+        nc_settings = getattr(settings, 'NODECONDUCTOR_INSIGHTS', {})
         max_excess = nc_settings.get('PROJECTED_COSTS_EXCESS')
 
         try:
