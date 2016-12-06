@@ -3,6 +3,11 @@ from nodeconductor.core import NodeConductorExtension
 
 class InsightsExtension(NodeConductorExtension):
 
+    class Settings:
+        NODECONDUCTOR_INSIGHTS = {
+            'PROJECTED_COSTS_EXCESS': 20,
+        }
+
     @staticmethod
     def django_app():
         return 'nodeconductor_plus.insights'

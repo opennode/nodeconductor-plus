@@ -1,1 +1,0 @@
-default_app_config = 'nodeconductor_plus.nodeconductor_auth.apps.NodeConductorAuthConfig'

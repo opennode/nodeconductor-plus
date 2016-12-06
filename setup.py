@@ -15,12 +15,10 @@ tests_require = [
 ]
 
 install_requires = [
-    'apache-libcloud>=1.1.0',
     'nodeconductor>0.109.0',
     'html5lib<0.99999999',  # Transient dependency for nodeconductor_paypal
     # Consider moving nodeconductor_plus.plans to nodeconductor_paypal
     'nodeconductor_paypal>0.3.5',
-    'python-digitalocean>=1.5'
 ]
 
 setup(
@@ -41,10 +39,7 @@ setup(
     },
     entry_points={
         'nodeconductor_extensions': (
-            'aws = nodeconductor_plus.aws.extension:AWSExtension',
-            'digitalocean = nodeconductor_plus.digitalocean.extension:DigitalOceanExtension',
             'insights = nodeconductor_plus.insights.extension:InsightsExtension',
-            'nodeconductor_auth = nodeconductor_plus.nodeconductor_auth.extension:AuthExtension',
             'plans = nodeconductor_plus.plans.extension:PlansExtension',
             'premium_support = nodeconductor_plus.premium_support.extension:SupportExtension',
         ),
