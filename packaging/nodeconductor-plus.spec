@@ -3,7 +3,7 @@ Summary: Extension of NodeConductor with extra features
 Group: Development/Libraries
 Version: 0.2.0
 Release: 1.el7
-License: Copyright 2016 OpenNode LLC. All rights reserved.
+License: MIT
 Url: http://nodeconductor.com
 Source0: %{name}-%{version}.tar.gz
 
